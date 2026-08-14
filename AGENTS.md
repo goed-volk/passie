@@ -40,6 +40,9 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
 
 ## 2. Kilo Code Working Agreement
 
+- **Local Package Isolation:** All dependencies and project tools must be installed locally within this repository (`node_modules`), never globally across the machine.
+- **Tool Transparency & Permission:** Be explicit about which CLI tools and scripts are executed, explaining why and how they are used. Do not use unapproved third-party or community tools without explicit user permission. Official tools (such as Cloudflare's `wrangler` and `@cloudflare/next-on-pages` / `create-cloudflare`) are permitted.
+- **Manual Cloudflare Configuration:** Not every Cloudflare setup step needs automation via CLI/API. The repository owner can manually create applications, bindings, or routes in the Cloudflare dashboard if preferred.
 - **Todo Tool:** Drive every non-trivial task using the native `todowrite` tool. Maintain one `in_progress` item at a time. Mark completed immediately when verified. Never batch completions.
 - **Question Tool:** Use the `question` tool with a recommended option when a requirement is ambiguous or irreversible. Do not guess or ask in plain prose.
 - **Agent Roles:**
