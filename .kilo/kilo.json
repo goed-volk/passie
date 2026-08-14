@@ -1,0 +1,21 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    "docs/reference/README.md",
+    "docs/architecture.md"
+  ],
+  "permission": {
+    "edit": {
+      "drizzle/**": "ask",
+      "src/domain/**": "ask",
+      "*": "allow"
+    },
+    "bash": {
+      "wrangler d1 * --remote*": "ask",
+      "pnpm deploy*": "ask",
+      "git push*": "ask",
+      "*": "allow"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+# deps / build
+node_modules/
+.pnpm-store/
+.next/
+out/
+build/
+dist/
+.open-next/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+cloudflare-env.d.ts
+worker-configuration.d.ts
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+.cloudflared/
+
+# local data
+*.sqlite
+*.sqlite3
+*.db
+
+# private seed / personal data
+seed/*.local.json
+seed/local/
+docs/reference/vendor/
+
+# verification artefacts
+.verify/
+
+# kilo code: keep shared config, ignore generated state
+.kilo/worktrees/
+.kilo/agent-manager.json
+.kilo/cache/
+.kilo/node_modules/
+.kilo/package-lock.json
+.kilo/package.json
+.kilocode/
+.opencode/
+.claude/
+.aider*
+
+# tooling & os
+coverage/
+.vitest/
+.eslintcache
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
