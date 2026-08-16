@@ -195,10 +195,22 @@ export function diffToStatements(
     }
   }
 
-  // 3. Check pass game state diffs
+  // 3. Check pass game state diffs and pass holder updates
   const oldPassesMap = new Map(snapshot.state.passes.map((p) => [p.id, p]));
   for (const newPass of resultState.passes) {
     const oldPass = oldPassesMap.get(newPass.id);
+
+    // 3a. If pass holder changed (e.g. via RecordHandover)
+    if (oldPass && oldPass.holderMemberId !== newPass.holderMemberId) {
+      statements.push(
+        db
+          .update(schema.passes)
+          .set({ holderMemberId: newPass.holderMemberId })
+          .where(eq(schema.passes.id, newPass.id))
+      );
+    }
+
+    // 3b. Pass game state updates
     if (
       !oldPass ||
       oldPass.status !== newPass.status ||
@@ -239,7 +251,7 @@ export function diffToStatements(
     }
   }
 
-  // 4. Activity events insertions
+  // 4. Activity events and possession events insertions
   for (const evt of events) {
     statements.push(
       db.insert(schema.activityEvents).values({
@@ -253,6 +265,31 @@ export function diffToStatements(
         createdAt: evt.createdAt,
       })
     );
+
+    if (evt.type === "possession.handover" || evt.type === "possession.corrected") {
+      const payload = evt.payload as {
+        passId: string;
+        fromMemberId: string | null;
+        toMemberId: string;
+        kind: "handover" | "correction";
+        note?: string | null;
+      };
+      if (evt.actorMemberId) {
+        statements.push(
+          db.insert(schema.possessionEvents).values({
+            id: `poss_${evt.id}`,
+            passId: payload.passId,
+            fromMemberId: payload.fromMemberId,
+            toMemberId: payload.toMemberId,
+            actorMemberId: evt.actorMemberId,
+            fixtureId: snapshot.state.fixtureId ?? null,
+            kind: payload.kind,
+            note: payload.note ?? null,
+            createdAt: evt.createdAt,
+          })
+        );
+      }
+    }
   }
 
   return statements;

@@ -26,8 +26,13 @@ export function reduce(
   action: Action,
   ctx: ReduceContext
 ): ReduceResult {
-  // Pool status guard: Only MarkFixtureRescheduled and MarkFixtureCancelled can run on non-open pools.
-  if (state.status !== "open" && action.type !== "MarkFixtureRescheduled" && action.type !== "MarkFixtureCancelled") {
+  // Pool status guard: Only MarkFixtureRescheduled, MarkFixtureCancelled, and RecordHandover can run on non-open pools.
+  if (
+    state.status !== "open" &&
+    action.type !== "MarkFixtureRescheduled" &&
+    action.type !== "MarkFixtureCancelled" &&
+    action.type !== "RecordHandover"
+  ) {
     return {
       error: {
         code: "POOL_NOT_OPEN",
@@ -49,11 +54,12 @@ export function reduce(
       }
 
       const pass = state.passes[passIndex]!;
-      if (!pass.owners.includes(ctx.actor)) {
+      const actor = ctx.actor;
+      if (!actor || !pass.owners.includes(actor)) {
         return {
           error: {
             code: "NOT_PASS_OWNER",
-            message: `Member ${ctx.actor} is not an owner of pass ${action.passId}`,
+            message: `Member ${actor ?? "unknown"} is not an owner of pass ${action.passId}`,
           },
         };
       }
@@ -124,11 +130,12 @@ export function reduce(
       }
 
       const pass = state.passes[passIndex]!;
-      if (!pass.owners.includes(ctx.actor)) {
+      const actor = ctx.actor;
+      if (!actor || !pass.owners.includes(actor)) {
         return {
           error: {
             code: "NOT_PASS_OWNER",
-            message: `Member ${ctx.actor} is not an owner of pass ${action.passId}`,
+            message: `Member ${actor ?? "unknown"} is not an owner of pass ${action.passId}`,
           },
         };
       }
@@ -213,6 +220,15 @@ export function reduce(
     }
 
     case "JoinQueue": {
+      if (!ctx.actor) {
+        return {
+          error: {
+            code: "INVALID_ACTION",
+            message: "Actor required for JoinQueue",
+          },
+        };
+      }
+
       // Create new queue entry
       const newEntry = {
         id: action.nextEntryId,
@@ -363,7 +379,7 @@ export function reduce(
         return {
           error: {
             code: "NOT_CLAIMANT",
-            message: `Member ${ctx.actor} is not the claimant of pass ${action.passId}`,
+            message: `Member ${ctx.actor ?? "unknown"} is not the claimant of pass ${action.passId}`,
           },
         };
       }
@@ -420,6 +436,65 @@ export function reduce(
           queue: allocation.queue,
         },
         events: [unassignedEvent, ...allocation.events],
+      };
+    }
+
+    case "RecordHandover": {
+      const passIndex = state.passes.findIndex((p) => p.id === action.passId);
+      if (passIndex === -1) {
+        return {
+          error: {
+            code: "PASS_NOT_FOUND",
+            message: `Pass ${action.passId} not found in game pool`,
+          },
+        };
+      }
+
+      const pass = state.passes[passIndex]!;
+      const fromMemberId = pass.holderMemberId;
+      const kind = action.kind ?? "handover";
+
+      // Idempotency: if already held by toMemberId, return state as-is with no events
+      if (fromMemberId === action.toMemberId) {
+        return {
+          state,
+          events: [],
+        };
+      }
+
+      const updatedPass: PassState = {
+        ...pass,
+        holderMemberId: action.toMemberId,
+        updatedAt: ctx.now,
+      };
+
+      const newPasses = [...state.passes];
+      newPasses[passIndex] = updatedPass;
+
+      const eventType = kind === "correction" ? "possession.corrected" : "possession.handover";
+      const event: ActivityEvent = {
+        id: ctx.nextEventId(eventType),
+        gamePoolId: state.id,
+        passId: pass.id,
+        actorMemberId: ctx.actor,
+        type: eventType,
+        payload: {
+          passId: pass.id,
+          fromMemberId,
+          toMemberId: action.toMemberId,
+          kind,
+          note: action.note ?? null,
+        },
+        idempotencyKey: ctx.idempotencyKey,
+        createdAt: ctx.now,
+      };
+
+      return {
+        state: {
+          ...state,
+          passes: newPasses,
+        },
+        events: [event],
       };
     }
 

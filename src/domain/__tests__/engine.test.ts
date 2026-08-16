@@ -330,6 +330,43 @@ describe("Domain Engine Edge Cases", () => {
     }
   });
 
+  it("RecordHandover updates holderMemberId and emits possession event", () => {
+    let state = createInitialState();
+    const ctx = createMockContext({ actor: "member_sam" });
+
+    const handover = reduce(
+      state,
+      { type: "RecordHandover", passId: "pass_1", toMemberId: "member_eva", kind: "handover" },
+      ctx
+    );
+
+    expect("state" in handover).toBe(true);
+    if ("state" in handover) {
+      state = handover.state;
+      const pass1 = state.passes.find((p) => p.id === "pass_1");
+      expect(pass1?.holderMemberId).toBe("member_eva");
+      expect(handover.events).toHaveLength(1);
+      expect(handover.events[0]?.type).toBe("possession.handover");
+      expect(handover.events[0]?.payload).toMatchObject({
+        passId: "pass_1",
+        fromMemberId: "member_sam",
+        toMemberId: "member_eva",
+        kind: "handover",
+      });
+    }
+
+    // Idempotency: repeating handover to member_eva produces 0 events
+    const repeated = reduce(
+      state,
+      { type: "RecordHandover", passId: "pass_1", toMemberId: "member_eva", kind: "handover" },
+      ctx
+    );
+    expect("state" in repeated).toBe(true);
+    if ("state" in repeated) {
+      expect(repeated.events).toHaveLength(0);
+    }
+  });
+
   // Edge case 8: Kickoff moves -> deadline recomputed, pass/queue state preserved, timeline entry fixture.rescheduled
   it("Edge case 8: MarkFixtureRescheduled updates indication deadline and emits fixture.rescheduled event", () => {
     const state = createInitialState();

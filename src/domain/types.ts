@@ -115,6 +115,13 @@ export type Action =
       passId: PassId;
     }
   | {
+      type: "RecordHandover";
+      passId: PassId;
+      toMemberId: MemberId;
+      kind?: "handover" | "correction";
+      note?: string | null;
+    }
+  | {
       type: "MarkFixtureRescheduled";
       newKickoffAt: number;
       newDeadlineAt: number;
@@ -125,7 +132,7 @@ export type Action =
 
 export interface ReduceContext {
   now: number; // Unix seconds UTC
-  actor: MemberId;
+  actor: MemberId | null;
   nextEventId: (type: ActivityEventType) => ActivityEventId;
   idempotencyKey?: string | null;
 }
