@@ -1,0 +1,113 @@
+{
+  "club": {
+    "slug": "excelsior",
+    "name": "Excelsior Rotterdam",
+    "shortName": "Excelsior",
+    "city": "Rotterdam",
+    "colorPrimary": "#E30613",
+    "colorSecondary": "#000000",
+    "colorAccent": "#FFFFFF",
+    "colorOnPrimary": "#FFFFFF",
+    "logoUrl": null,
+    "icsHomeFeedUrl": "https://ics.fixtur.es/v2/home/excelsior.ics"
+  },
+  "season": {
+    "label": "2026/27",
+    "startsOn": "2026-08-01",
+    "endsOn": "2027-06-30"
+  },
+  "group": {
+    "slug": "goedvolk",
+    "name": "Goedvolk",
+    "timezone": "Europe/Amsterdam"
+  },
+  "members": [
+    { "slug": "sam", "displayName": "Sam", "initials": "S", "avatarColor": "#E30613", "sortOrder": 1 },
+    { "slug": "ilse", "displayName": "Ilse", "initials": "I", "avatarColor": "#2563EB", "sortOrder": 2 },
+    { "slug": "noor", "displayName": "Noor", "initials": "N", "avatarColor": "#D97706", "sortOrder": 3 },
+    { "slug": "bram", "displayName": "Bram", "initials": "B", "avatarColor": "#059669", "sortOrder": 4 },
+    { "slug": "daan", "displayName": "Daan", "initials": "D", "avatarColor": "#7C3AED", "sortOrder": 5 },
+    { "slug": "eva", "displayName": "Eva", "initials": "E", "avatarColor": "#DB2777", "sortOrder": 6 },
+    { "slug": "finn", "displayName": "Finn", "initials": "F", "avatarColor": "#0891B2", "sortOrder": 7 },
+    { "slug": "gijs", "displayName": "Gijs", "initials": "G", "avatarColor": "#4F46E5", "sortOrder": 8 },
+    { "slug": "hannah", "displayName": "Hannah", "initials": "H", "avatarColor": "#EA580C", "sortOrder": 9 },
+    { "slug": "jasper", "displayName": "Jasper", "initials": "J", "avatarColor": "#16A34A", "sortOrder": 10 },
+    { "slug": "koen", "displayName": "Koen", "initials": "K", "avatarColor": "#9333EA", "sortOrder": 11 },
+    { "slug": "lars", "displayName": "Lars", "initials": "L", "avatarColor": "#0D9488", "sortOrder": 12 },
+    { "slug": "milan", "displayName": "Milan", "initials": "M", "avatarColor": "#CA8A04", "sortOrder": 13 },
+    { "slug": "nina", "displayName": "Nina", "initials": "N", "avatarColor": "#E11D48", "sortOrder": 14 },
+    { "slug": "olaf", "displayName": "Olaf", "initials": "O", "avatarColor": "#475569", "sortOrder": 15 }
+  ],
+  "passes": [
+    {
+      "label": "Pas 1",
+      "seatInfo": "Vak K, rij 12, stoel 1",
+      "owners": ["sam"],
+      "holder": "sam",
+      "sortOrder": 1
+    },
+    {
+      "label": "Pas 2",
+      "seatInfo": "Vak K, rij 12, stoel 2",
+      "owners": ["ilse", "noor"],
+      "holder": "ilse",
+      "sortOrder": 2
+    },
+    {
+      "label": "Pas 3",
+      "seatInfo": "Vak K, rij 12, stoel 3",
+      "owners": ["bram"],
+      "holder": "daan",
+      "sortOrder": 3
+    },
+    {
+      "label": "Pas 4",
+      "seatInfo": "Vak K, rij 12, stoel 4",
+      "owners": ["daan"],
+      "holder": "daan",
+      "sortOrder": 4
+    },
+    {
+      "label": "Pas 5",
+      "seatInfo": "Vak K, rij 12, stoel 5",
+      "owners": ["eva", "finn"],
+      "holder": "eva",
+      "sortOrder": 5
+    },
+    {
+      "label": "Pas 6",
+      "seatInfo": "Vak K, rij 12, stoel 6",
+      "owners": ["finn"],
+      "holder": "finn",
+      "sortOrder": 6
+    },
+    {
+      "label": "Pas 7",
+      "seatInfo": "Vak K, rij 12, stoel 7",
+      "owners": ["gijs"],
+      "holder": "gijs",
+      "sortOrder": 7
+    },
+    {
+      "label": "Pas 8",
+      "seatInfo": "Vak K, rij 12, stoel 8",
+      "owners": ["hannah", "jasper"],
+      "holder": "jasper",
+      "sortOrder": 8
+    },
+    {
+      "label": "Pas 9",
+      "seatInfo": "Vak K, rij 12, stoel 9",
+      "owners": ["koen"],
+      "holder": "koen",
+      "sortOrder": 9
+    },
+    {
+      "label": "Pas 10",
+      "seatInfo": "Vak K, rij 12, stoel 10",
+      "owners": ["lars"],
+      "holder": "lars",
+      "sortOrder": 10
+    }
+  ]
+}

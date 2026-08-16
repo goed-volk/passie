@@ -14,7 +14,8 @@
     {
       "binding": "DB",
       "database_name": "passie",
-      "database_id": "xxxx-local-placeholder"
+      "database_id": "xxxx-local-placeholder",
+      "migrations_dir": "drizzle"
     }
   ],
   "triggers": {
