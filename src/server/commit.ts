@@ -17,14 +17,23 @@ export type MutateResult =
     }
   | {
       ok: false;
-      error: DomainError | { code: "CONFLICT_RETRY_EXHAUSTED" | "POOL_NOT_FOUND" | "IDEMPOTENT_REPLAY"; message: string };
+      error:
+        | DomainError
+        | {
+            code:
+              | "CONFLICT_RETRY_EXHAUSTED"
+              | "POOL_NOT_FOUND"
+              | "IDEMPOTENT_REPLAY"
+              | "INTERNAL_ERROR";
+            message: string;
+          };
     };
 
 export async function mutate(
   db: DbClient,
   gamePoolId: string,
   action: Action,
-  actor: MemberId,
+  actor: MemberId | null,
   options?: MutateOptions
 ): Promise<MutateResult> {
   const maxAttempts = options?.maxAttempts ?? 8;
@@ -141,10 +150,12 @@ export async function mutate(
     } catch (err: unknown) {
       const errStr = err instanceof Error ? err.message : String(err);
       const isSentinelConflict =
-        errStr.includes("pool_version_guards") ||
-        errStr.includes("UNIQUE constraint failed") ||
-        errStr.includes("SQLITE_CONSTRAINT_PRIMARYKEY") ||
-        errStr.includes("SQLITE_CONSTRAINT");
+        (errStr.includes("pool_version_guards") &&
+          (errStr.includes("UNIQUE") ||
+            errStr.includes("PRIMARYKEY") ||
+            errStr.includes("constraint") ||
+            errStr.includes("SQLITE_CONSTRAINT"))) ||
+        (errStr.includes("activity_events") && errStr.includes("idempotency_key"));
 
       if (!isSentinelConflict) {
         // Fatal non-concurrency error (e.g. syntax, foreign key corruption)
@@ -152,8 +163,8 @@ export async function mutate(
         return {
           ok: false,
           error: {
-            code: "CONFLICT_RETRY_EXHAUSTED",
-            message: "Database mutation error",
+            code: "INTERNAL_ERROR",
+            message: "An internal database error occurred",
           },
         };
       }

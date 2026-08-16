@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import { mutate } from "../commit";
 import { createTestDb, setupIsolatedTestPool, cleanupTestPoolData } from "./helpers/testDb";
 import type { DbClient } from "../db";
@@ -220,6 +220,88 @@ describe("mutate integration tests", () => {
     expect(queueAfter[1]?.status).toBe("waiting");
   });
 
+  it("handles RecordHandover: updates pass holder, inserts possession and activity events", async () => {
+    const result = await mutate(
+      db,
+      poolId,
+      {
+        type: "RecordHandover",
+        passId: "pass_goedvolk_1",
+        toMemberId: "member_goedvolk_eva",
+        kind: "handover",
+        note: "Handed over at stadium",
+      },
+      "member_goedvolk_sam",
+      { idempotencyKey: "test-handover-sam-1" }
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.version).toBe(1);
+
+    // Verify passes table updated
+    const pass = await db.query.passes.findFirst({
+      where: eq(schema.passes.id, "pass_goedvolk_1"),
+    });
+    expect(pass?.holderMemberId).toBe("member_goedvolk_eva");
+
+    // Verify possessionEvents record inserted
+    const possEvents = await db.query.possessionEvents.findMany({
+      where: eq(schema.possessionEvents.passId, "pass_goedvolk_1"),
+    });
+    expect(possEvents.length).toBeGreaterThanOrEqual(1);
+    const lastPoss = possEvents[possEvents.length - 1];
+    expect(lastPoss?.toMemberId).toBe("member_goedvolk_eva");
+    expect(lastPoss?.fromMemberId).toBe("member_goedvolk_sam");
+    expect(lastPoss?.actorMemberId).toBe("member_goedvolk_sam");
+
+    // Reset pass holder back to Sam for test isolation
+    await db
+      .update(schema.passes)
+      .set({ holderMemberId: "member_goedvolk_sam" })
+      .where(eq(schema.passes.id, "pass_goedvolk_1"));
+  });
+
+  it("handles MarkFixtureRescheduled & MarkFixtureCancelled via mutate() with null actor", async () => {
+    const reschedResult = await mutate(
+      db,
+      poolId,
+      {
+        type: "MarkFixtureRescheduled",
+        newKickoffAt: 1788000000,
+        newDeadlineAt: 1787913600,
+      },
+      null
+    );
+
+    expect(reschedResult.ok).toBe(true);
+    if (!reschedResult.ok) return;
+    expect(reschedResult.version).toBe(1);
+
+    const pool = await db.query.gamePools.findFirst({
+      where: eq(schema.gamePools.id, poolId),
+    });
+    expect(pool?.indicationDeadlineAt).toBe(1787913600);
+
+    const cancelResult = await mutate(
+      db,
+      poolId,
+      {
+        type: "MarkFixtureCancelled",
+      },
+      null
+    );
+
+    expect(cancelResult.ok).toBe(true);
+    if (!cancelResult.ok) return;
+    expect(cancelResult.version).toBe(2);
+
+    const cancelledPool = await db.query.gamePools.findFirst({
+      where: eq(schema.gamePools.id, poolId),
+    });
+    expect(cancelledPool?.status).toBe("cancelled");
+  });
+
   it("allocates strictly monotonic IDs for sequential joins", async () => {
     const r1 = await mutate(
       db,
@@ -352,7 +434,10 @@ describe("mutate integration tests", () => {
     expect(pool?.version).toBe(2);
   });
 
-  it("returns CONFLICT_RETRY_EXHAUSTED when non-concurrency database error occurs", async () => {
+  it("returns INTERNAL_ERROR when non-concurrency database error occurs", async () => {
+    // Spy on console.error to avoid polluting test output with expected error logging
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
     // Create a mock DB that throws an unexpected error on batch
     const brokenDb = new Proxy(db, {
       get(target, prop) {
@@ -374,7 +459,10 @@ describe("mutate integration tests", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.code).toBe("CONFLICT_RETRY_EXHAUSTED");
-    expect(result.error.message).toBe("Database mutation error");
+    expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(result.error.message).toBe("An internal database error occurred");
+
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 });

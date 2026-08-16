@@ -20,6 +20,7 @@ export async function cleanupTestPoolData(
   poolId: string,
   fixtureId: string
 ) {
+  await db.delete(schema.possessionEvents).where(eq(schema.possessionEvents.fixtureId, fixtureId));
   await db.delete(schema.activityEvents).where(eq(schema.activityEvents.gamePoolId, poolId));
   await db.delete(schema.poolVersionGuards).where(eq(schema.poolVersionGuards.gamePoolId, poolId));
   await db.delete(schema.passGameStates).where(eq(schema.passGameStates.gamePoolId, poolId));
