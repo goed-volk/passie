@@ -44,7 +44,8 @@ docs/reference/vendor/
 .kilo/worktrees/
 .kilo/agent-manager.json
 .kilo/cache/
-.kilo/plans/
+.kilo/plans/*
+!.kilo/plans/1786885513481-passie-mvp-code-review-findings.md
 .kilo/node_modules/
 .kilo/package-lock.json
 .kilo/package.json
