@@ -30,25 +30,25 @@ export async function mutate(
   const maxAttempts = options?.maxAttempts ?? 8;
   const idempotencyKey = options?.idempotencyKey ?? null;
 
-  // Check if idempotency key was already recorded
-  if (idempotencyKey) {
-    const existingEvent = await db.query.activityEvents.findFirst({
-      where: eq(schema.activityEvents.idempotencyKey, idempotencyKey),
-    });
-    if (existingEvent) {
-      const snapshot = await loadGamePoolState(db, gamePoolId);
-      return {
-        ok: true,
-        version: snapshot?.version ?? 0,
-      };
-    }
-  }
-
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
       // Jitter backoff between retries to avoid contention thundering herd
       const delayMs = 15 * attempt + Math.floor(Math.random() * 37);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    // Check if idempotency key was already recorded (either before or during a retry)
+    if (idempotencyKey) {
+      const existingEvent = await db.query.activityEvents.findFirst({
+        where: eq(schema.activityEvents.idempotencyKey, idempotencyKey),
+      });
+      if (existingEvent) {
+        const snapshot = await loadGamePoolState(db, gamePoolId);
+        return {
+          ok: true,
+          version: snapshot?.version ?? 0,
+        };
+      }
     }
 
     const snapshot = await loadGamePoolState(db, gamePoolId);

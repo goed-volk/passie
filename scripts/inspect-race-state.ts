@@ -1,12 +1,11 @@
 import { getPlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../src/server/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray } from "drizzle-orm";
 
 async function main() {
   const poolId = process.argv[2] ?? "pool_group_goedvolk_fix_test_1";
 
-  // Suppress wrangler stdout banners by redirecting or extracting JSON
   const proxy = await getPlatformProxy<{ DB: D1Database }>({
     configPath: "wrangler.jsonc",
     persist: { path: ".wrangler/state/v3" },
@@ -27,6 +26,16 @@ async function main() {
     where: eq(schema.passGameStates.gamePoolId, poolId),
   });
 
+  const passIds = passStates.map((p) => p.passId);
+  const passesList =
+    passIds.length > 0
+      ? await db.query.passes.findMany({
+          where: inArray(schema.passes.id, passIds),
+        })
+      : [];
+
+  const passSortOrderMap = new Map(passesList.map((p) => [p.id, p.sortOrder]));
+
   const events = await db.query.activityEvents.findMany({
     where: eq(schema.activityEvents.gamePoolId, poolId),
     orderBy: [asc(schema.activityEvents.createdAt)],
@@ -46,18 +55,29 @@ async function main() {
         queue: queue.map((q) => ({
           id: q.id,
           memberId: q.memberId,
+          kind: q.kind,
+          guestName: q.guestName,
           status: q.status,
           assignedPassId: q.assignedPassId,
+          createdAt: q.createdAt,
         })),
-        passStates: passStates.map((p) => ({
-          passId: p.passId,
-          status: p.status,
-          claimantEntryId: p.claimantEntryId,
-        })),
+        passStates: passStates
+          .map((p) => ({
+            passId: p.passId,
+            sortOrder: passSortOrderMap.get(p.passId) ?? 0,
+            status: p.status,
+            claimantEntryId: p.claimantEntryId,
+            indicatedByMemberId: p.indicatedByMemberId,
+          }))
+          .sort((a, b) => a.sortOrder - b.sortOrder),
         events: events.map((e) => ({
+          id: e.id,
           type: e.type,
-          idempotencyKey: e.idempotencyKey,
+          passId: e.passId,
           actorMemberId: e.actorMemberId,
+          idempotencyKey: e.idempotencyKey,
+          payloadJson: e.payloadJson,
+          createdAt: e.createdAt,
         })),
       }) +
       "__STATE_END__\n"
