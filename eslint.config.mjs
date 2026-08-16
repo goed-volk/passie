@@ -10,6 +10,18 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    ignores: [
+      ".next/**",
+      ".open-next/**",
+      ".wrangler/**",
+      "drizzle/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "out/**"
+    ],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     files: ["src/domain/**/*.ts"],
@@ -28,15 +40,15 @@ const eslintConfig = [
       "no-restricted-syntax": [
         "error",
         {
-          selector: "MemberExpression[object.name='process'][property.name='env']",
+          selector: "MemberExpression[object.name=process][property.name=env]",
           message: "process.env is forbidden in src/domain.",
         },
         {
-          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          selector: "CallExpression[callee.object.name=Date][callee.property.name=now]",
           message: "Date.now() is forbidden in src/domain. Pass timestamps as parameters.",
         },
         {
-          selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+          selector: "CallExpression[callee.object.name=Math][callee.property.name=random]",
           message: "Math.random() is forbidden in src/domain.",
         },
       ],
