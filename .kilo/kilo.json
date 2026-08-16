@@ -16,10 +16,15 @@
       "pnpm test*": "allow",
       "pnpm lint*": "allow",
       "pnpm typecheck*": "allow",
+      "pnpm build": "allow",
       "wrangler d1 * --remote*": "ask",
       "pnpm deploy*": "ask",
       "git push*": "ask",
       "git commit*": "ask",
+      "git log": "allow",
+      "git add": "allow",
+      "git diff": "allow",
+      "git status": "allow",
       "*": "ask"
     }
   }

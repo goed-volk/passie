@@ -70,6 +70,28 @@ Open [http://localhost:3000](http://localhost:3000) (or the port output by the r
 
 ---
 
+## Available Scripts & Commands
+
+| Command | Server? | Remote? | Description |
+| :--- | :---: | :---: | :--- |
+| `pnpm dev` | Yes (Local) | No | Starts Next.js development server with hot module reloading. |
+| `pnpm build` | No | No | Validates and compiles the Next.js app to `.next/`. Exits on completion. |
+| `pnpm preview` | Yes (Local) | No | Builds with OpenNext and runs a local Cloudflare `workerd` runtime preview. |
+| `pnpm deploy` | No | Yes | Packages the app for OpenNext and deploys Worker and assets to Cloudflare via Wrangler. |
+| `pnpm typecheck` | No | No | Runs TypeScript type validation (`tsc --noEmit`). |
+| `pnpm lint` | No | No | Runs ESLint checks across the codebase. |
+| `pnpm test` | No | No | Runs test suite once via Vitest. |
+| `pnpm test:watch` | No | No | Runs Vitest in interactive watch mode. |
+| `pnpm db:generate` | No | No | Generates SQL migrations from Drizzle schema. |
+| `pnpm db:migrate:local` | No | No | Applies pending migrations to local D1 SQLite database. |
+| `pnpm db:migrate:prod` | No | Yes | Applies pending migrations to production Cloudflare D1 database. |
+| `pnpm seed:example` | No | No | Populates local D1 database with fictional seed data. |
+| `pnpm seed:local` | No | No | Seeds D1 with local group data (`--confirm` required for production). |
+| `pnpm ingest:local` | No | No | Ingests upcoming fixtures from the iCal feed into local D1. |
+| `pnpm cf-typegen` | No | No | Generates Cloudflare Worker runtime environment types (`worker-configuration.d.ts`). |
+
+---
+
 ## Deployment Runbook
 
 Deployments target Cloudflare Workers using OpenNext.
