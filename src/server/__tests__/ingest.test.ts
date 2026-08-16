@@ -5,7 +5,7 @@ import { ingestClubFixtures } from "../ingest";
 import { createTestDb } from "./helpers/testDb";
 import type { DbClient } from "../db";
 import * as schema from "../schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { PlatformProxy } from "wrangler";
 import { ensurePool } from "../ensurePool";
 
@@ -93,9 +93,18 @@ describe("ingestClubFixtures tests", () => {
     });
     expect(fixture?.kickoffAt).toBe(Math.floor(Date.parse("2026-09-13T14:30:00Z") / 1000));
 
+    // Verify game_pools.version was incremented under mutate()
+    const updatedPool = await db.query.gamePools.findFirst({
+      where: eq(schema.gamePools.id, pool.id),
+    });
+    expect(updatedPool?.version).toBe(1);
+
     // Verify activity event fixture.rescheduled recorded
     const rescheduleEvent = await db.query.activityEvents.findFirst({
-      where: eq(schema.activityEvents.type, "fixture.rescheduled"),
+      where: and(
+        eq(schema.activityEvents.type, "fixture.rescheduled"),
+        eq(schema.activityEvents.gamePoolId, pool.id)
+      ),
     });
     expect(rescheduleEvent).toBeDefined();
     expect(rescheduleEvent?.gamePoolId).toBe(pool.id);

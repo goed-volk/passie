@@ -3,6 +3,7 @@ import type { DbClient } from "./db";
 import * as schema from "./schema";
 import { parseIcsEvents } from "./ics";
 import { computeIndicationDeadline } from "../domain/deadlines";
+import { mutate } from "./commit";
 
 export interface IngestResult {
   clubSlug: string;
@@ -105,7 +106,7 @@ export async function ingestClubFixtures(
 
         updated++;
 
-        // If kickoff or status changed, update any linked game pools
+        // If kickoff or status changed, update any linked game pools via mutate()
         const pools = await db.query.gamePools.findMany({
           where: eq(schema.gamePools.fixtureId, existing.id),
         });
@@ -113,46 +114,27 @@ export async function ingestClubFixtures(
         for (const p of pools) {
           if (kickoffChanged) {
             const newDeadline = computeIndicationDeadline(fix.kickoffAt);
-            await db
-              .update(schema.gamePools)
-              .set({
-                indicationDeadlineAt: newDeadline,
-                updatedAt: now,
-              })
-              .where(eq(schema.gamePools.id, p.id));
-
-            await db.insert(schema.activityEvents).values({
-              id: `evt_${Date.now()}_rescheduled_${p.id}`,
-              gamePoolId: p.id,
-              passId: null,
-              actorMemberId: null,
-              type: "fixture.rescheduled",
-              payloadJson: JSON.stringify({
+            await mutate(
+              db,
+              p.id,
+              {
+                type: "MarkFixtureRescheduled",
                 newKickoffAt: fix.kickoffAt,
                 newDeadlineAt: newDeadline,
-              }),
-              createdAt: now,
-            });
+              },
+              null
+            );
           }
 
           if (statusChanged && fix.status === "cancelled") {
-            await db
-              .update(schema.gamePools)
-              .set({
-                status: "cancelled",
-                updatedAt: now,
-              })
-              .where(eq(schema.gamePools.id, p.id));
-
-            await db.insert(schema.activityEvents).values({
-              id: `evt_${Date.now()}_cancelled_${p.id}`,
-              gamePoolId: p.id,
-              passId: null,
-              actorMemberId: null,
-              type: "fixture.cancelled",
-              payloadJson: JSON.stringify({}),
-              createdAt: now,
-            });
+            await mutate(
+              db,
+              p.id,
+              {
+                type: "MarkFixtureCancelled",
+              },
+              null
+            );
           }
         }
       }

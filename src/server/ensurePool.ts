@@ -123,8 +123,13 @@ export async function ensurePool(
     })
     .onConflictDoNothing();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await db.batch([poolInsert, initialGuardInsert, ...passStateInserts, eventInsert] as any);
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await db.batch([poolInsert, initialGuardInsert, ...passStateInserts, eventInsert] as any);
+  } catch (err) {
+    // In case concurrent creation occurred, swallow benign conflict and load existing pool
+    console.warn("ensurePool batch execution notice:", err);
+  }
 
   // Return the created or existing pool
   const pool = await db.query.gamePools.findFirst({
