@@ -133,8 +133,34 @@ export function reduce(
         };
       }
 
-      // Idempotency: if already released or assigned, return state as-is (e.g. double tap by co-owners)
-      if (pass.status === "released" || pass.status === "assigned") {
+      // Idempotency: if already assigned, or already released, check if any waiting entry needs reconciliation
+      if (pass.status === "assigned") {
+        return {
+          state,
+          events: [],
+        };
+      }
+
+      if (pass.status === "released") {
+        // If already released, run allocation reconciliation in case a queue entry joined in between
+        const allocation = runAllocation(
+          state.passes,
+          state.queue,
+          ctx,
+          state.id
+        );
+
+        if (allocation.events.length > 0) {
+          return {
+            state: {
+              ...state,
+              passes: allocation.passes,
+              queue: allocation.queue,
+            },
+            events: allocation.events,
+          };
+        }
+
         return {
           state,
           events: [],

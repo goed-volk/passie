@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DbClient } from "./db";
 import * as schema from "./schema";
 import { loadGamePoolState, diffToStatements } from "./repo";
@@ -47,7 +47,7 @@ export async function mutate(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
       // Jitter backoff between retries to avoid contention thundering herd
-      const delayMs = 15 * attempt + Math.floor((Date.now() % 37));
+      const delayMs = 15 * attempt + Math.floor(Math.random() * 37);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
 
@@ -65,16 +65,11 @@ export async function mutate(
     const now = Math.floor(Date.now() / 1000);
     let eventCounter = 0;
 
-    // For JoinQueue, calculate the next auto-increment id in memory for the reducer
-    let nextEntryId = 1;
+    // For JoinQueue, use monotonic nextQueueEntryId derived from snapshot
     if (action.type === "JoinQueue") {
-      const maxIdResult = await db
-        .select({ maxId: sql<number | null>`max(${schema.queueEntries.id})` })
-        .from(schema.queueEntries);
-      nextEntryId = (maxIdResult[0]?.maxId ?? 0) + 1;
       action = {
         ...action,
-        nextEntryId,
+        nextEntryId: snapshot.nextQueueEntryId,
       };
     }
 
@@ -103,10 +98,23 @@ export async function mutate(
       };
     }
 
-    const guard = db
+    const targetVersion = snapshot.version + 1;
+
+    // 1. Hard version sentinel: inserting (gamePoolId, targetVersion) fails HARD if another transaction
+    // already committed targetVersion, causing D1 to abort and roll back the whole batch.
+    const sentinelGuard = db
+      .insert(schema.poolVersionGuards)
+      .values({
+        gamePoolId,
+        version: targetVersion,
+        createdAt: now,
+      });
+
+    // 2. Pool version update
+    const poolUpdate = db
       .update(schema.gamePools)
       .set({
-        version: snapshot.version + 1,
+        version: targetVersion,
         updatedAt: now,
       })
       .where(
@@ -117,28 +125,46 @@ export async function mutate(
       );
 
     try {
-      // Execute atomic batch
+      // Execute atomic batch with sentinel guard first
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const batchResults = (await db.batch([guard, ...writes] as any)) as Array<{
+      const batchResults = (await db.batch([sentinelGuard, poolUpdate, ...writes] as any)) as Array<{
         meta?: { changes?: number };
       }>;
 
-      const guardResult = batchResults[0];
-      if (guardResult && guardResult.meta?.changes === 1) {
+      const poolUpdateResult = batchResults[1];
+      if (poolUpdateResult && poolUpdateResult.meta?.changes === 1) {
         return {
           ok: true,
-          version: snapshot.version + 1,
+          version: targetVersion,
         };
       }
     } catch (err: unknown) {
-      // If a concurrent transaction landed first and caused a constraint conflict,
-      // allow optimistic retry up to maxAttempts.
+      const errStr = err instanceof Error ? err.message : String(err);
+      const isSentinelConflict =
+        errStr.includes("pool_version_guards") ||
+        errStr.includes("UNIQUE constraint failed") ||
+        errStr.includes("SQLITE_CONSTRAINT_PRIMARYKEY") ||
+        errStr.includes("SQLITE_CONSTRAINT");
+
+      if (!isSentinelConflict) {
+        // Fatal non-concurrency error (e.g. syntax, foreign key corruption)
+        console.error("Non-retryable database error during mutate:", err);
+        return {
+          ok: false,
+          error: {
+            code: "CONFLICT_RETRY_EXHAUSTED",
+            message: "Database mutation error",
+          },
+        };
+      }
+
+      // If max attempts exhausted on genuine concurrency conflicts
       if (attempt === maxAttempts - 1) {
         return {
           ok: false,
           error: {
             code: "CONFLICT_RETRY_EXHAUSTED",
-            message: `Conflict retry exhausted: ${err instanceof Error ? err.message : String(err)}`,
+            message: "Concurrent mutation conflict: please retry",
           },
         };
       }

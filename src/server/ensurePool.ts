@@ -63,7 +63,7 @@ export async function ensurePool(
     orderBy: [asc(schema.passes.sortOrder)],
   });
 
-  // 4. Create pool and pass_game_states in atomic batch
+  // 4. Create pool, pass_game_states, initial version guard, and event in atomic batch
   const poolInsert = db
     .insert(schema.gamePools)
     .values({
@@ -75,6 +75,15 @@ export async function ensurePool(
       version: 0,
       createdAt: now,
       updatedAt: now,
+    })
+    .onConflictDoNothing();
+
+  const initialGuardInsert = db
+    .insert(schema.poolVersionGuards)
+    .values({
+      gamePoolId: poolId,
+      version: 0,
+      createdAt: now,
     })
     .onConflictDoNothing();
 
@@ -96,23 +105,26 @@ export async function ensurePool(
       .onConflictDoNothing()
   );
 
-  const eventInsert = db.insert(schema.activityEvents).values({
-    id: `evt_${Date.now()}_pool_opened`,
-    gamePoolId: poolId,
-    passId: null,
-    actorMemberId: null,
-    type: "pool.opened",
-    payloadJson: JSON.stringify({
-      groupId,
-      fixtureId,
-      kickoffAt: fixture.kickoffAt,
-      indicationDeadlineAt,
-    }),
-    createdAt: now,
-  });
+  const eventInsert = db
+    .insert(schema.activityEvents)
+    .values({
+      id: `evt_pool_opened_${poolId}`,
+      gamePoolId: poolId,
+      passId: null,
+      actorMemberId: null,
+      type: "pool.opened",
+      payloadJson: JSON.stringify({
+        groupId,
+        fixtureId,
+        kickoffAt: fixture.kickoffAt,
+        indicationDeadlineAt,
+      }),
+      createdAt: now,
+    })
+    .onConflictDoNothing();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await db.batch([poolInsert, ...passStateInserts, eventInsert] as any);
+  await db.batch([poolInsert, initialGuardInsert, ...passStateInserts, eventInsert] as any);
 
   // Return the created or existing pool
   const pool = await db.query.gamePools.findFirst({

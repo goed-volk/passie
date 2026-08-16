@@ -14,6 +14,7 @@ async function main() {
 
   console.log("Cleaning up previous test pool state...");
   await db.delete(schema.activityEvents);
+  await db.delete(schema.poolVersionGuards);
   await db.delete(schema.passGameStates);
   await db.delete(schema.queueEntries);
   await db.delete(schema.gamePools);

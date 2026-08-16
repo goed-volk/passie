@@ -158,3 +158,11 @@ export const activityEvents = sqliteTable("activity_events", {
 }, (table) => [
   uniqueIndex("activity_events_idempotency_idx").on(table.idempotencyKey),
 ]);
+
+export const poolVersionGuards = sqliteTable("pool_version_guards", {
+  gamePoolId: text("game_pool_id").notNull().references(() => gamePools.id),
+  version: integer("version").notNull(),
+  createdAt: integer("created_at").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.gamePoolId, table.version] }),
+]);

@@ -180,12 +180,55 @@ describe("Domain Engine Edge Cases", () => {
       expect(rel1.events.length).toBeGreaterThan(0);
     }
 
-    // Second co-owner releases pass_2 again
+    // Second co-owner releases pass_2 again with no queue entries waiting
     const rel2 = reduce(state, { type: "IndicateRelease", passId: "pass_2" }, ctxOwner2);
     expect("state" in rel2).toBe(true);
     if ("state" in rel2) {
       expect(rel2.events).toHaveLength(0);
       expect(rel2.state.passes.find((p) => p.id === "pass_2")?.status).toBe("released");
+    }
+  });
+
+  it("IndicateRelease on an already released pass reconciles allocation if a queue entry is waiting", () => {
+    let state = createInitialState();
+    const ctxOwner1 = createMockContext({ actor: "member_ilse" });
+    const ctxOwner2 = createMockContext({ actor: "member_noor" });
+
+    // 1. Release pass_2 with empty queue
+    const rel1 = reduce(state, { type: "IndicateRelease", passId: "pass_2" }, ctxOwner1);
+    expect("state" in rel1).toBe(true);
+    if ("state" in rel1) state = rel1.state;
+
+    expect(state.passes.find((p) => p.id === "pass_2")?.status).toBe("released");
+
+    // 2. Queue entry joins without triggering allocation (simulate state)
+    state = {
+      ...state,
+      queue: [
+        {
+          id: 1,
+          memberId: "member_daan",
+          kind: "self",
+          guestName: null,
+          status: "waiting",
+          assignedPassId: null,
+          assignedAt: null,
+          cancelledAt: null,
+          cancelledByMemberId: null,
+          createdAt: 1700000020,
+        },
+      ],
+    };
+
+    // 3. Retry / re-call IndicateRelease on pass_2 -> should reconcile and assign pass_2 to entry 1
+    const rel2 = reduce(state, { type: "IndicateRelease", passId: "pass_2" }, ctxOwner2);
+    expect("state" in rel2).toBe(true);
+    if ("state" in rel2) {
+      expect(rel2.events).toHaveLength(1);
+      expect(rel2.events[0]?.type).toBe("pass.assigned");
+      expect(rel2.state.passes.find((p) => p.id === "pass_2")?.status).toBe("assigned");
+      expect(rel2.state.passes.find((p) => p.id === "pass_2")?.claimantEntryId).toBe(1);
+      expect(rel2.state.queue[0]?.status).toBe("assigned");
     }
   });
 

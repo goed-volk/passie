@@ -74,3 +74,13 @@ export function runAllocation(
     events,
   };
 }
+
+export function reconcileAllocation(
+  passes: PassState[],
+  queue: QueueEntryState[],
+  ctx: ReduceContext,
+  gamePoolId: string
+): AllocationResult {
+  return runAllocation(passes, queue, ctx, gamePoolId);
+}
+

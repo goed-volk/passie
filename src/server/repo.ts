@@ -1,4 +1,4 @@
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, asc, inArray, sql } from "drizzle-orm";
 import type { DbClient } from "./db";
 import * as schema from "./schema";
 import type {
@@ -15,6 +15,7 @@ import type {
 export interface LoadedPoolSnapshot {
   state: GamePoolState;
   version: number;
+  nextQueueEntryId: number;
 }
 
 export async function loadGamePoolState(
@@ -69,6 +70,12 @@ export async function loadGamePoolState(
     orderBy: [asc(schema.queueEntries.id)],
   });
 
+  // 6. Query maximum queue entry ID across all pools to derive next monotonic ID
+  const maxIdResult = await db
+    .select({ maxId: sql<number | null>`max(${schema.queueEntries.id})` })
+    .from(schema.queueEntries);
+  const nextQueueEntryId = (maxIdResult[0]?.maxId ?? 0) + 1;
+
   // Assemble passes state
   const passes: PassState[] = passesList.map((p) => {
     const gameState = passGameStateMap.get(p.id);
@@ -114,6 +121,7 @@ export async function loadGamePoolState(
   return {
     state,
     version: pool.version,
+    nextQueueEntryId,
   };
 }
 
