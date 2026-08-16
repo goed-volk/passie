@@ -1,0 +1,16 @@
+{
+  "name": "Passie",
+  "short_name": "Passie",
+  "description": "Seizoenkaarten delen met je vrienden",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#E30613",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
