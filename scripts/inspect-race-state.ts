@@ -1,4 +1,4 @@
-import { getPlatformProxy } from "wrangler";
+import { getPlatformProxy } from "./proxy";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../src/server/schema";
 import { eq, asc, inArray } from "drizzle-orm";

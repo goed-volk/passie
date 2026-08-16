@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getPlatformProxy } from "wrangler";
+import { getPlatformProxy } from "./proxy";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and } from "drizzle-orm";
 import * as schema from "../src/server/schema";
