@@ -129,6 +129,8 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
 ## 7. Anti-patterns to Avoid
 
 - ❌ Treating D1 `batch()` as an interactive transaction that can query between writes.
+- ❌ Putting `pass_game_states` before `queue_entries` in D1 `batch()` (violates `claimant_entry_id` foreign key).
+- ❌ Propagating root `Idempotency-Key` to cascading sub-events (violates `idempotency_key UNIQUE`).
 - ❌ Ordering queue entries by `created_at` instead of `id ASC`.
 - ❌ Allowing a non-owner to indicate a pass's state.
 - ❌ Modifying `PoolSnapshot` shape without updating schema & snapshot tests.

@@ -39,10 +39,12 @@ Cloudflare D1 does not offer interactive multi-query transactions. To prevent ra
 1. `loadGamePoolState(gamePoolId)` reads current aggregate snapshot including `version`.
 2. `reduce(snapshot.state, action, ctx)` produces target state in memory.
 3. `diffToStatements(snapshot, result)` calculates the minimal set of SQL updates and inserts.
+   - **Statement Ordering:** `queue_entries` writes are always placed before `pass_game_states` so that foreign key references (`claimant_entry_id`) resolve within the atomic batch.
+   - **Idempotency Scoping:** Root `idempotency_key` applies only to the user action event, never to cascading allocation events.
 4. Execute single atomic D1 `batch()` containing:
    - Guard statement: `UPDATE game_pools SET version = version + 1 WHERE id = ? AND version = snapshot.version`
    - Diff statements.
-5. If `guardResult.meta.changes === 1`, mutation succeeded. If `0`, another transaction committed concurrently -> retry up to 4 times.
+5. If `guardResult.meta.changes === 1`, mutation succeeded. If `0` or constraint collision occurs due to concurrent execution, retry with randomized exponential jitter backoff up to 8 times.
 
 ---
 
