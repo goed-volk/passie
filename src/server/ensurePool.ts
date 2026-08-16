@@ -124,7 +124,6 @@ export async function ensurePool(
     .onConflictDoNothing();
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.batch([poolInsert, initialGuardInsert, ...passStateInserts, eventInsert] as any);
   } catch (err) {
     // In case concurrent creation occurred, swallow benign conflict and load existing pool

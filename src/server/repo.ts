@@ -131,7 +131,6 @@ export function diffToStatements(
   resultState: GamePoolState,
   events: ActivityEvent[]
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const statements: any[] = [];
 
   // 1. Check pool changes (status or deadline)

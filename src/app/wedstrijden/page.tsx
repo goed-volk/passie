@@ -11,10 +11,14 @@ import { t } from "@/i18n/t";
 
 export const dynamic = "force-dynamic";
 
+function getCurrentUnixTimestamp(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
 export default async function WedstrijdenPage() {
   const db = await getDb();
   const actingMember = await getActingMember(db);
-  const now = Math.floor(Date.now() / 1000);
+  const now = getCurrentUnixTimestamp();
 
   // Next 5 upcoming fixtures
   const upcomingFixtures = await db.query.fixtures.findMany({

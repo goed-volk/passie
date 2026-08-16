@@ -135,7 +135,6 @@ export async function mutate(
 
     try {
       // Execute atomic batch with sentinel guard first
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const batchResults = (await db.batch([sentinelGuard, poolUpdate, ...writes] as any)) as Array<{
         meta?: { changes?: number };
       }>;
