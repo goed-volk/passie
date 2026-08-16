@@ -7,15 +7,20 @@
   ],
   "permission": {
     "edit": {
+      ".kilo/**": "ask",
       "drizzle/**": "ask",
       "src/domain/**": "ask",
       "*": "allow"
     },
     "bash": {
+      "pnpm test*": "allow",
+      "pnpm lint*": "allow",
+      "pnpm typecheck*": "allow",
       "wrangler d1 * --remote*": "ask",
       "pnpm deploy*": "ask",
       "git push*": "ask",
-      "*": "allow"
+      "git commit*": "ask",
+      "*": "ask"
     }
   }
 }
