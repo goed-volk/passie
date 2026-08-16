@@ -144,9 +144,13 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
       toMemberId: string;
       fixtureId?: string;
     }) => {
+      const idempotencyKey = `poss_${passId}_${toMemberId}_${Date.now()}`;
       const res = await fetch(`/api/pass/${passId}/holder`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify({ toMemberId, fixtureId, kind: "handover" }),
       });
 
@@ -156,6 +160,17 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
       }
 
       toast.success("Pas overgedragen!");
+      const data = (await res.json()) as { pool?: PoolSnapshot };
+      return data.pool;
+    },
+    onSuccess: (newPool) => {
+      if (newPool) {
+        queryClient.setQueryData(queryKey, newPool);
+      } else {
+        queryClient.invalidateQueries({ queryKey });
+      }
+    },
+    onError: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });

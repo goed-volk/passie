@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/server/db";
-import { getActingMemberId } from "@/server/actingMember";
-import { eq } from "drizzle-orm";
+import { getActingMember } from "@/server/actingMember";
+import { and, desc, eq } from "drizzle-orm";
 import * as schema from "@/server/schema";
+import { mutate } from "@/server/commit";
+import { buildPoolSnapshot } from "@/server/snapshot";
+import { ensurePool, findNextHomeFixture } from "@/server/ensurePool";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +23,15 @@ export async function POST(
 ) {
   const { passId } = await props.params;
   const db = await getDb();
-  const actorId = await getActingMemberId();
+  const actor = await getActingMember(db);
 
-  if (!actorId) {
+  if (!actor) {
     return NextResponse.json(
       { error: "Authentication required", code: "UNAUTHORIZED" },
       { status: 401 }
     );
   }
+  const actorId = actor.id;
 
   const body = await request.json().catch(() => ({}));
   const parsed = SetHolderSchema.safeParse(body);
@@ -43,60 +47,99 @@ export async function POST(
   });
 
   if (!pass) {
-    return NextResponse.json({ error: "Pass not found" }, { status: 404 });
+    return NextResponse.json({ error: "Pass not found", code: "PASS_NOT_FOUND" }, { status: 404 });
   }
 
   const toMember = await db.query.members.findFirst({
-    where: eq(schema.members.id, parsed.data.toMemberId),
+    where: and(
+      eq(schema.members.id, parsed.data.toMemberId),
+      eq(schema.members.groupId, pass.groupId),
+      eq(schema.members.isActive, 1)
+    ),
   });
 
   if (!toMember) {
-    return NextResponse.json({ error: "Target member not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Target member not found or inactive", code: "MEMBER_NOT_FOUND" },
+      { status: 404 }
+    );
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  const fromMemberId = pass.holderMemberId;
+  // Resolve pool for the group
+  let gamePool;
+  if (parsed.data.fixtureId) {
+    gamePool = await db.query.gamePools.findFirst({
+      where: and(
+        eq(schema.gamePools.groupId, pass.groupId),
+        eq(schema.gamePools.fixtureId, parsed.data.fixtureId)
+      ),
+    });
 
-  // 1. Update pass holder
-  const updatePass = db
-    .update(schema.passes)
-    .set({ holderMemberId: toMember.id })
-    .where(eq(schema.passes.id, passId));
+    if (!gamePool) {
+      const fixture = await db.query.fixtures.findFirst({
+        where: eq(schema.fixtures.id, parsed.data.fixtureId),
+      });
+      if (!fixture) {
+        return NextResponse.json(
+          { error: "Fixture not found", code: "FIXTURE_NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+      gamePool = await ensurePool(db, pass.groupId, fixture.id);
+    }
+  } else {
+    const nextFixture = await findNextHomeFixture(db);
+    if (nextFixture) {
+      gamePool = await ensurePool(db, pass.groupId, nextFixture.id);
+    } else {
+      gamePool = await db.query.gamePools.findFirst({
+        where: eq(schema.gamePools.groupId, pass.groupId),
+        orderBy: [desc(schema.gamePools.createdAt)],
+      });
+    }
+  }
 
-  // 2. Append possession event
-  const insertEvent = db.insert(schema.possessionEvents).values({
-    id: `poss_${Date.now()}_${passId}`,
+  if (!gamePool) {
+    return NextResponse.json(
+      { error: "Game pool not found", code: "POOL_NOT_FOUND" },
+      { status: 404 }
+    );
+  }
+
+  const idempotencyKey = request.headers.get("Idempotency-Key");
+
+  const domainAction = {
+    type: "RecordHandover" as const,
     passId,
-    fromMemberId,
     toMemberId: toMember.id,
-    actorMemberId: actorId,
-    fixtureId: parsed.data.fixtureId ?? null,
     kind: parsed.data.kind,
     note: parsed.data.note ?? null,
-    createdAt: now,
+  };
+
+  const result = await mutate(db, gamePool.id, domainAction, actorId, {
+    idempotencyKey,
   });
 
-  // 3. Append activity event for timeline if fixtureId is provided or generic
-  const insertActivity = db.insert(schema.activityEvents).values({
-    id: `evt_${Date.now()}_possession`,
-    gamePoolId: parsed.data.fixtureId ? `pool_${pass.groupId}_${parsed.data.fixtureId}` : null,
-    passId,
-    actorMemberId: actorId,
-    type: parsed.data.kind === "handover" ? "possession.handover" : "possession.corrected",
-    payloadJson: JSON.stringify({
-      passId,
-      fromMemberId,
-      toMemberId: toMember.id,
-      kind: parsed.data.kind,
-    }),
-    createdAt: now,
-  });
+  if (!result.ok) {
+    let status = 422;
+    if (result.error.code === "CONFLICT_RETRY_EXHAUSTED") {
+      status = 409;
+    } else if (result.error.code === "POOL_NOT_FOUND") {
+      status = 404;
+    } else if (result.error.code === "INTERNAL_ERROR") {
+      status = 500;
+    }
+    return NextResponse.json(
+      { error: result.error.message, code: result.error.code },
+      { status }
+    );
+  }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await db.batch([updatePass, insertEvent, insertActivity] as any);
+  const snapshot = await buildPoolSnapshot(db, gamePool.id, actorId);
 
   return NextResponse.json({
     ok: true,
+    pool: snapshot,
     pass: {
       id: passId,
       holderMemberId: toMember.id,
