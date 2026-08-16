@@ -35,7 +35,25 @@ Access is controlled by obscurity (`noindex`, unguessable URL). Identity is sele
 
 ---
 
-## Quickstart (Local Development)
+## Environment Variables & Secrets
+
+Passie uses environment variables for build-time analytics and Cloudflare secrets for scheduled background ingestion.
+
+| Variable | Target | Required? | Description |
+| :--- | :--- | :---: | :--- |
+| `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Optional | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint. |
+| `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (local) / Cloudflare dashboard (prod) | Optional | PostHog project API key. If left blank or unset, all analytics tracking is completely disabled. |
+| `NEXT_PUBLIC_POSTHOG_HOST` | `.env.local` (local) / Cloudflare dashboard (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
+
+For local development, copy the templates:
+```bash
+cp .env.example .env.local
+cp .dev.vars.example .dev.vars
+```
+
+---
+
+## Quickstart & First-Time Initialization
 
 ### Prerequisites
 
@@ -43,30 +61,47 @@ Access is controlled by obscurity (`noindex`, unguessable URL). Identity is sele
 - pnpm `^10.0.0`
 - Cloudflare Wrangler CLI (`pnpm add -g wrangler`)
 
-### Installation & Setup
+### Step-by-Step Initialization Flow
 
-1. Clone the repository and install dependencies:
+1. **Clone the repository and install dependencies:**
    ```bash
    git clone https://github.com/jvanu/passie.git
    cd passie
    pnpm install
    ```
 
-2. Initialize local database and seed data:
+2. **Configure local environment files:**
    ```bash
+   cp .env.example .env.local
+   cp .dev.vars.example .dev.vars
+   ```
+
+3. **Initialize local database and seed data:**
+   Passie stores local state in Cloudflare D1's local SQLite storage (`.wrangler/state/v3/d1`).
+   ```bash
+   # Apply migrations to local D1 SQLite database
    pnpm db:migrate:local
+
+   # Populate club, season, group members, and passes (fictional data)
    pnpm seed:example
+
+   # Ingest upcoming Excelsior home fixtures from iCal feed
    pnpm ingest:local
    ```
 
-3. Start development server:
+4. **Start the development server:**
    ```bash
    pnpm dev
    # Or using Kilo Code run script:
    .kilo/run-script.sh
    ```
 
-Open [http://localhost:3000](http://localhost:3000) (or the port output by the run script) to view the application.
+5. **First-Time User Walkthrough:**
+   - Open [http://localhost:3000](http://localhost:3000) in your browser.
+   - You will automatically be redirected to `/wie-ben-jij` because no session cookie exists.
+   - Select a member profile (e.g. **Sam** or **Ilse**) to set your identity cookie.
+   - On the home screen (`/`), indicate pass availability, join the queue, or transfer physical tickets.
+   - Switch identity at any time via `/instellingen` or by visiting `/wie-ben-jij`.
 
 ---
 

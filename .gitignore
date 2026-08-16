@@ -44,6 +44,7 @@ docs/reference/vendor/
 .kilo/worktrees/
 .kilo/agent-manager.json
 .kilo/cache/
+.kilo/plans/
 .kilo/node_modules/
 .kilo/package-lock.json
 .kilo/package.json
