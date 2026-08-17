@@ -426,7 +426,7 @@ describe("Domain Engine Edge Cases", () => {
       }
     });
 
-    it("owner cannot revoke assigned pass via IndicateKeep", () => {
+    it("owner can reclaim assigned pass via IndicateKeep, bumping claimant back to waiting", () => {
       let state = createInitialState();
       const ctxJoin = createMockContext({ actor: "member_eva" });
       const ctxRel = createMockContext({ actor: "member_sam" });
@@ -435,10 +435,22 @@ describe("Domain Engine Edge Cases", () => {
       state = applyAction(state, { type: "IndicateRelease", passId: "pass_1" }, ctxRel);
 
       // pass_1 is now assigned to entry 1
-      const tryKeep = reduce(state, { type: "IndicateKeep", passId: "pass_1" }, ctxRel);
-      expect("error" in tryKeep).toBe(true);
-      if ("error" in tryKeep) {
-        expect(tryKeep.error.code).toBe("PASS_ALREADY_ASSIGNED");
+      const passAssigned = state.passes.find((p) => p.id === "pass_1");
+      expect(passAssigned?.status).toBe("assigned");
+      expect(passAssigned?.claimantEntryId).toBe(1);
+
+      // Sam reclaims pass_1
+      const keep = reduce(state, { type: "IndicateKeep", passId: "pass_1" }, ctxRel);
+      expect("state" in keep).toBe(true);
+      if ("state" in keep) {
+        const passKept = keep.state.passes.find((p) => p.id === "pass_1");
+        expect(passKept?.status).toBe("kept");
+        expect(passKept?.indicatedByMemberId).toBe("member_sam");
+        expect(passKept?.claimantEntryId).toBeNull();
+
+        const entryWaiting = keep.state.queue.find((q) => q.id === 1);
+        expect(entryWaiting?.status).toBe("waiting");
+        expect(entryWaiting?.assignedPassId).toBeNull();
       }
     });
 

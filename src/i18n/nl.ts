@@ -43,6 +43,7 @@ export const nl = {
   // Pass Actions
   actionKeep: "Ik ga",
   actionRelease: "Pas vrijgeven",
+  actionReclaim: "Pas terugclaimen",
   actionGiveBack: "Pas teruggeven",
 
   // Queue Actions

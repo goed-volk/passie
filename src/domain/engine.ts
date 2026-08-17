@@ -64,22 +64,28 @@ export function reduce(
         };
       }
 
-      // If already assigned, owner cannot revoke through the app
-      if (pass.status === "assigned") {
-        return {
-          error: {
-            code: "PASS_ALREADY_ASSIGNED",
-            message: `Pass ${action.passId} is already assigned to a queue claimant`,
-          },
-        };
-      }
-
       // Idempotency: if already kept by this actor, return state as-is
       if (pass.status === "kept" && pass.indicatedByMemberId === ctx.actor) {
         return {
           state,
           events: [],
         };
+      }
+
+      const intermediateQueue = [...state.queue];
+
+      // If reclaiming a pass that was assigned to a queue entry, return that queue entry to 'waiting'
+      if (pass.status === "assigned" && pass.claimantEntryId !== null) {
+        const claimantEntryIdx = intermediateQueue.findIndex((q) => q.id === pass.claimantEntryId);
+        if (claimantEntryIdx !== -1) {
+          const entry = intermediateQueue[claimantEntryIdx]!;
+          intermediateQueue[claimantEntryIdx] = {
+            ...entry,
+            status: "waiting",
+            assignedPassId: null,
+            assignedAt: null,
+          };
+        }
       }
 
       const updatedPass: PassState = {
@@ -93,10 +99,10 @@ export function reduce(
         updatedAt: ctx.now,
       };
 
-      const newPasses = [...state.passes];
-      newPasses[passIndex] = updatedPass;
+      const intermediatePasses = [...state.passes];
+      intermediatePasses[passIndex] = updatedPass;
 
-      const event: ActivityEvent = {
+      const keepEvent: ActivityEvent = {
         id: ctx.nextEventId("pass.kept"),
         gamePoolId: state.id,
         passId: pass.id,
@@ -109,12 +115,21 @@ export function reduce(
         createdAt: ctx.now,
       };
 
+      // Run allocation on remaining released passes in case other passes can be assigned to waiting queue entries
+      const allocation = runAllocation(
+        intermediatePasses,
+        intermediateQueue,
+        ctx,
+        state.id
+      );
+
       return {
         state: {
           ...state,
-          passes: newPasses,
+          passes: allocation.passes,
+          queue: allocation.queue,
         },
-        events: [event],
+        events: [keepEvent, ...allocation.events],
       };
     }
 

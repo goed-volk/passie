@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, Check, ArrowUpRight } from "lucide-react";
+import { ArrowRightLeft, Check, ArrowUpRight, RotateCcw } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -244,6 +244,21 @@ export function PassCard({
           </div>
         )}
 
+        {pass.canReclaim && (
+          <div className="pt-1">
+            <Button
+              size="sm"
+              variant="club"
+              disabled={loading}
+              onClick={() => onIndicate(pass.id, "keep")}
+              className="w-full flex items-center justify-center space-x-1.5 shadow-sm font-semibold"
+            >
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+              <span>{t("actionReclaim")}</span>
+            </Button>
+          </div>
+        )}
+
         {pass.canGiveBack && (
           <div className="pt-1">
             <Button
@@ -251,9 +266,9 @@ export function PassCard({
               variant="destructive"
               disabled={loading}
               onClick={() => onIndicate(pass.id, "giveBack")}
-              className="w-full"
+              className="w-full flex items-center justify-center space-x-1.5"
             >
-              {t("actionGiveBack")}
+              <span>{t("actionGiveBack")}</span>
             </Button>
           </div>
         )}

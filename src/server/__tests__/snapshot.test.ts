@@ -137,22 +137,24 @@ describe("buildPoolSnapshot tests", () => {
       })
       .where(eq(schema.passGameStates.id, `pgs_${poolId}_pass_goedvolk_3`));
 
-    // Test permissions as Sam (owner of pass 1, but pass 1 is assigned -> cannot indicate; claimant is Daan -> cannot give back)
+    // Test permissions as Sam (owner of pass 1, but pass 1 is assigned -> cannot indicate, can reclaim; claimant is Daan -> cannot give back)
     const samSnapshot = await buildPoolSnapshot(db, poolId, "member_goedvolk_sam");
     expect(samSnapshot).not.toBeNull();
     if (!samSnapshot) return;
 
     const samPass1 = samSnapshot.passes.find((p) => p.id === "pass_goedvolk_1");
     expect(samPass1?.canIndicate).toBe(false); // already assigned
+    expect(samPass1?.canReclaim).toBe(true); // Sam is owner -> can reclaim
     expect(samPass1?.canGiveBack).toBe(false); // Sam is not claimant
 
-    // Test permissions as Daan (claimant of pass 1 -> can give back; not owner -> cannot indicate)
+    // Test permissions as Daan (claimant of pass 1 -> can give back, cannot reclaim; not owner -> cannot indicate)
     const daanSnapshot = await buildPoolSnapshot(db, poolId, "member_goedvolk_daan");
     expect(daanSnapshot).not.toBeNull();
     if (!daanSnapshot) return;
 
     const daanPass1 = daanSnapshot.passes.find((p) => p.id === "pass_goedvolk_1");
     expect(daanPass1?.canGiveBack).toBe(true);
+    expect(daanPass1?.canReclaim).toBe(false);
     expect(daanPass1?.canIndicate).toBe(false);
 
     // Test permissions as Noor (co-owner of pass 2 -> can indicate; pass 2 unindicated)
@@ -162,6 +164,8 @@ describe("buildPoolSnapshot tests", () => {
 
     const noorPass2 = noorSnapshot.passes.find((p) => p.id === "pass_goedvolk_2");
     expect(noorPass2?.canIndicate).toBe(true);
+    expect(noorPass2?.canReclaim).toBe(false);
+    expect(noorPass2?.canGiveBack).toBe(false);
 
     // Queue entries permissions and positions
     // Eva is acting member -> entry 2 isMine=true, canCancel=true, position=1

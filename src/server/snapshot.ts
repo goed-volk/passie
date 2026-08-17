@@ -57,6 +57,7 @@ export interface PoolSnapshot {
     } | null;
     expectedHolder: MemberRef | null;
     canIndicate: boolean;
+    canReclaim: boolean;
     canGiveBack: boolean;
   }>;
   queue: Array<{
@@ -258,8 +259,9 @@ export async function buildPoolSnapshot(
       indicatedBy,
       claimant,
       expectedHolder,
-      canIndicate: isOwner && status !== "assigned",
-      canGiveBack: Boolean(isClaimant && status === "assigned"),
+      canIndicate: Boolean(isOwner && status !== "assigned"),
+      canReclaim: Boolean(isOwner && status === "assigned"),
+      canGiveBack: Boolean(isClaimant && !isOwner && status === "assigned"),
     };
   });
 
