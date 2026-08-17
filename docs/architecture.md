@@ -42,9 +42,15 @@ Cloudflare D1 does not offer interactive multi-query transactions. To prevent ra
    - **Statement Ordering:** `queue_entries` writes are always placed before `pass_game_states` so that foreign key references (`claimant_entry_id`) resolve within the atomic batch.
    - **Idempotency Scoping:** Root `idempotency_key` applies only to the user action event, never to cascading allocation events.
 4. Execute single atomic D1 `batch()` containing:
-   - Guard statement: `UPDATE game_pools SET version = version + 1 WHERE id = ? AND version = snapshot.version`
+   - Guard statement: `INSERT INTO pool_version_guards (game_pool_id, version, created_at) VALUES (?, ?, ?)` (enforcing serializable optimistic concurrency via primary key constraint)
    - Diff statements.
-5. If `guardResult.meta.changes === 1`, mutation succeeded. If `0` or constraint collision occurs due to concurrent execution, retry with randomized exponential jitter backoff up to 8 times.
+5. If batch execution succeeds, mutation succeeded. If a primary key constraint collision occurs on `pool_version_guards` due to concurrent execution, retry with randomized exponential jitter backoff up to 8 times.
+
+### Fixture Lifecycle & Ingestion Flow
+Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`) and on demand (`/api/fixtures/refresh`) with a configurable cooldown:
+- **Rescheduled Matches (`fixture.rescheduled`):** When kickoff timestamp changes in the feed, `fixtures.kickoff_at` is updated and `MarkFixtureRescheduled` recalculates `indication_deadline_at` via `mutate()`. The pool remains open and existing claims/queue positions are preserved.
+- **Cancelled Matches (`fixture.cancelled`):** When marked `STATUS:CANCELLED` or omitted from upcoming feed matches, `fixtures.status` and `game_pools.status` flip to `"cancelled"` via `mutate()`, making the pool read-only.
+- **Compensating Logs:** All changes append compensating activity events with formatted Dutch timestamps in `Europe/Amsterdam` rather than deleting historical rows.
 
 ---
 
