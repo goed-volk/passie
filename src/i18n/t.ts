@@ -75,6 +75,16 @@ export function formatEventText(
     }
     case "pass.unassigned":
       return `${actor} geeft ${pass} terug`;
+    case "pass.reclaimed": {
+      const fromMemberId = payload.reclaimedFromMemberId as string | undefined;
+      const claimantName =
+        (fromMemberId && memberNames.get(fromMemberId)) ?? "iemand";
+      const forGuest = payload.reclaimedFromKind === "guest";
+      const target = forGuest
+        ? `${claimantName}'s gast${payload.reclaimedFromGuestName ? ` (${payload.reclaimedFromGuestName})` : ""}`
+        : claimantName;
+      return `${actor} claimt ${pass} terug van ${target}`;
+    }
     case "queue.joined": {
       const forGuest = payload.kind === "guest";
       const kind = forGuest

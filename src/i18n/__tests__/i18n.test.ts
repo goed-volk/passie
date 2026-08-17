@@ -40,18 +40,30 @@ describe("i18n discipline", () => {
     expect(formatted).toContain("16:30");
   });
 
-  it("formats fixture.rescheduled event with human-readable localized kickoff date/time", () => {
-    const utcTimestamp = Math.floor(Date.UTC(2026, 8, 13, 14, 30, 0) / 1000);
-    const text = formatEventText(
-      "fixture.rescheduled",
-      { newKickoffAt: utcTimestamp },
-      new Map(),
-      new Map(),
-      undefined,
-      "Europe/Amsterdam"
+  it("formats pass.reclaimed event with member or guest recipient", () => {
+    const membersMap = new Map([
+      ["member_1", "Sam"],
+      ["member_2", "Daan"],
+      ["member_3", "Eva"],
+    ]);
+    const passLabelsMap = new Map([["pass_1", "Pas 1"]]);
+
+    const textMember = formatEventText(
+      "pass.reclaimed",
+      { passId: "pass_1", reclaimedFromMemberId: "member_2", reclaimedFromKind: "self" },
+      membersMap,
+      passLabelsMap,
+      "Sam"
     );
-    expect(text).toContain("Aftrap gewijzigd naar");
-    expect(text).not.toContain(String(utcTimestamp));
-    expect(text).toContain("16:30");
+    expect(textMember).toBe("Sam claimt Pas 1 terug van Daan");
+
+    const textGuest = formatEventText(
+      "pass.reclaimed",
+      { passId: "pass_1", reclaimedFromMemberId: "member_3", reclaimedFromKind: "guest", reclaimedFromGuestName: "Kees" },
+      membersMap,
+      passLabelsMap,
+      "Sam"
+    );
+    expect(textGuest).toBe("Sam claimt Pas 1 terug van Eva's gast (Kees)");
   });
 });

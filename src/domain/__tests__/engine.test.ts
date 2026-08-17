@@ -451,6 +451,10 @@ describe("Domain Engine Edge Cases", () => {
         const entryWaiting = keep.state.queue.find((q) => q.id === 1);
         expect(entryWaiting?.status).toBe("waiting");
         expect(entryWaiting?.assignedPassId).toBeNull();
+
+        const reclaimEvent = keep.events.find((e) => e.type === "pass.reclaimed");
+        expect(reclaimEvent).toBeDefined();
+        expect(reclaimEvent?.payload.reclaimedFromMemberId).toBe("member_eva");
       }
     });
 

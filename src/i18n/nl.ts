@@ -107,6 +107,7 @@ export const nl = {
     passReleased: "{actor} geeft {pass} vrij",
     passAssigned: "{pass} toegewezen aan {claimant}",
     passUnassigned: "{actor} geeft {pass} terug",
+    passReclaimed: "{actor} claimt {pass} terug van {claimant}",
     queueJoined: "{actor} sluit aan in de wachtrij ({kind})",
     queueCancelled: "{actor} stapt uit de wachtrij",
     possessionHandover: "{pass} overgedragen van {from} naar {to}",

@@ -7,6 +7,7 @@ import type {
   Action,
   ReduceContext,
   ActivityEvent,
+  ActivityEventType,
   DomainError,
   PassState,
 } from "./types";
@@ -73,12 +74,14 @@ export function reduce(
       }
 
       const intermediateQueue = [...state.queue];
+      let previousClaimant: (typeof state.queue)[number] | null = null;
 
       // If reclaiming a pass that was assigned to a queue entry, return that queue entry to 'waiting'
       if (pass.status === "assigned" && pass.claimantEntryId !== null) {
         const claimantEntryIdx = intermediateQueue.findIndex((q) => q.id === pass.claimantEntryId);
         if (claimantEntryIdx !== -1) {
           const entry = intermediateQueue[claimantEntryIdx]!;
+          previousClaimant = entry;
           intermediateQueue[claimantEntryIdx] = {
             ...entry,
             status: "waiting",
@@ -102,14 +105,24 @@ export function reduce(
       const intermediatePasses = [...state.passes];
       intermediatePasses[passIndex] = updatedPass;
 
+      const isReclaim = pass.status === "assigned" && previousClaimant !== null;
+      const eventType: ActivityEventType = isReclaim ? "pass.reclaimed" : "pass.kept";
+
       const keepEvent: ActivityEvent = {
-        id: ctx.nextEventId("pass.kept"),
+        id: ctx.nextEventId(eventType),
         gamePoolId: state.id,
         passId: pass.id,
         actorMemberId: ctx.actor,
-        type: "pass.kept",
+        type: eventType,
         payload: {
           passId: pass.id,
+          ...(isReclaim && previousClaimant
+            ? {
+                reclaimedFromMemberId: previousClaimant.memberId,
+                reclaimedFromKind: previousClaimant.kind,
+                reclaimedFromGuestName: previousClaimant.guestName,
+              }
+            : {}),
         },
         idempotencyKey: ctx.idempotencyKey,
         createdAt: ctx.now,

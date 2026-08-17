@@ -55,6 +55,7 @@ export type ActivityEventType =
   | "pass.released"
   | "pass.assigned"
   | "pass.unassigned"
+  | "pass.reclaimed"
   | "queue.joined"
   | "queue.cancelled"
   | "queue.assigned"
