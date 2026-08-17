@@ -10,7 +10,8 @@ const eslintConfig = [
       "node_modules/**",
       "dist/**",
       "build/**",
-      "out/**"
+      "out/**",
+      "worker-configuration.d.ts"
     ],
   },
   ...nextConfig,
