@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "preview": "opennextjs-cloudflare preview",
+    "build": "opennextjs-cloudflare build",
+    "build:next": "next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

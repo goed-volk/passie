@@ -12,6 +12,10 @@ This document tracks verified external documentation, checked dates, and known p
   - Config: `main: .open-next/worker.js`, `assets.directory: .open-next/assets`, `WORKER_SELF_REFERENCE` service binding.
   - Development: Requires `initOpenNextCloudflareForDev()` in `next.config.ts` for local bindings. `.open-next` is gitignored.
   - **Critical Gotcha:** `export const runtime = 'edge'` is unsupported in `@opennextjs/cloudflare`.
+  - **OpenNext Build Lifecycle & Preview Gotcha:**
+    - `pnpm dev` compiles on-the-fly via Next.js Turbopack.
+    - `pnpm preview` runs Cloudflare `workerd` on the bundle in `.open-next/`.
+    - `opennextjs-cloudflare build` must execute prior to `preview` or `deploy` to avoid executing stale artifacts.
 
 - **Cloudflare Workers / Wrangler / Cron Triggers / D1**
   - URL: `https://developers.cloudflare.com/workers/wrangler/configuration/` | `/workers/configuration/cron-triggers/` | `/d1/`

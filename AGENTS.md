@@ -92,10 +92,10 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm dev` | Start Next.js development server |
-| `pnpm build` | Build application for Cloudflare Workers |
-| `pnpm preview` | Run local OpenNext Cloudflare workerd preview |
-| `pnpm deploy` | Deploy application to Cloudflare Workers |
+| `pnpm dev` | Start Next.js development server (Turbopack JIT) |
+| `pnpm build` | Build application for Cloudflare Workers (`opennextjs-cloudflare build`) |
+| `pnpm preview` | Build and run local OpenNext Cloudflare workerd preview |
+| `pnpm deploy` | Build and deploy application to Cloudflare Workers |
 | `pnpm typecheck` | Run TypeScript type validation (`tsc --noEmit`) |
 | `pnpm lint` | Run ESLint checks |
 | `pnpm test` | Run vitest suite |

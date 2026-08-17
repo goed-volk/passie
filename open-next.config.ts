@@ -11,6 +11,7 @@ const config: OpenNextConfig = {
       queue: "dummy",
     },
   },
+  buildCommand: "pnpm build:next",
   edgeExternals: ["node:crypto"],
   middleware: {
     external: true,
