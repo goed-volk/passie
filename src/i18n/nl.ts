@@ -73,6 +73,17 @@ export const nl = {
   privacyTitle: "Privacy & Gegevens",
   privacyText: "Passie slaat alleen groeps- en pasactiviteiten op binnen Cloudflare D1. Geen wachtwoorden, geen trackingcookies.",
 
+  // Fixtures page
+  upcomingFixtures: "Aankomende wedstrijden",
+  pastFixtures: "Eerdere wedstrijden",
+  noUpcomingFixtures: "Geen aankomende wedstrijden gepland.",
+  refreshFixtures: "Wedstrijden ophalen",
+  refreshingFixtures: "Ophalen...",
+  refreshSuccess: "Wedstrijdkalender bijgewerkt!",
+  refreshCooldown: "Wacht nog {seconds}s",
+  refreshError: "Kon wedstrijdkalender niet ophalen",
+  cancelledBadge: "Afgelast",
+
   // Activity Event Descriptions
   events: {
     poolOpened: "Aanmelding geopend voor deze wedstrijd",
