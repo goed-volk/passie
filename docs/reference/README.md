@@ -20,6 +20,9 @@ This document tracks verified external documentation, checked dates, and known p
 - **Cloudflare Workers / Wrangler / Cron Triggers / D1**
   - URL: `https://developers.cloudflare.com/workers/wrangler/configuration/` | `/workers/configuration/cron-triggers/` | `/d1/`
   - **Critical Gotcha:** D1 `batch()` executes all statements within a single transaction but cannot branch on intermediate results. No interactive transactions exist in D1. Use `guardResult.meta.changes === 1` to detect whether an optimistic concurrency guard succeeded.
+  - **Concurrency Suite (`scripts/race-check.sh`) Execution Gotcha:**
+    - The complete 5-iteration suite runs 20 D1 setup/inspection cycles and 20 concurrent HTTP burst cycles against the local dev server (~120–140s total runtime).
+    - Automated runners and AI agent shell executions must set an explicit timeout (e.g. `timeout: 180000`) or configure custom iterations (`RACE_CHECK_ITERATIONS=2 bash scripts/race-check.sh` or `bash scripts/race-check.sh 2`) to avoid premature command timeout.
 
 - **Drizzle ORM (SQLite / D1)**
   - URL: `https://orm.drizzle.team/docs/get-started/d1-new` | `/docs/migrations`
@@ -47,8 +50,8 @@ This document tracks verified external documentation, checked dates, and known p
 - **Kilo Code**
   - URL: `https://kilo.ai/docs` | `https://kilo.ai/docs/automate/agent-manager` | `https://kilo.ai/docs/code-with-ai/features/browser-use`
   - Verified: `.kilo/setup-script.sh` runs once per worktree with `WORKTREE_PATH` and `REPO_PATH` environment variables (5-minute timeout).
-  - `.kilo/run-script.sh` powers the Run button and should output the dev URL on line 1.
-  - Browser Use is built-in (Playwright-based internally) and requires a Sonnet-4-class model. No MCP browser tools are registered in this project.
+  - `.kilo/run-script.sh` powers the Run button and outputs the dev URL on line 1.
+  - Browser Automation: Built-in for the **VS Code extension** (enabled via Settings → Web Tools → Browser Automation); the **CLI** uses Playwright MCP (`pnpm exec playwright-mcp`). Tool names are `browser_*`. Advanced agentic models are recommended for complex DOM interaction, but no hard model allowlist exists.
 
 ---
 

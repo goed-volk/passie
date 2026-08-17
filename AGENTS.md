@@ -71,9 +71,10 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
   - `PASSIE_PORT=3111 .kilo/run-script.sh` pins a custom port for automated verification.
   - `PASSIE_PREVIEW=1 .kilo/run-script.sh` runs the preview server under workerd.
 - **UI & Concurrency Verification:**
-  - **No MCP servers are registered.** UI automation uses Kilo Code's built-in Browser Use.
+  - UI automation uses Kilo Code's Browser Use (`browser_*` tools). In the **VS Code extension**, browser automation is built-in (Settings → Web Tools → Browser Automation); in the **CLI**, it runs via local Playwright MCP.
   - Concurrency and FCFS race safety are verified deterministically via `scripts/race-check.sh` (hits dev server, fires concurrent requests with curl, inspects local D1).
-  - Built-in Browser Use is used for the golden-path UI walkthrough (requires a high-capability agentic model like Sonnet-4 class).
+    - **Execution & Timeout:** The full 5-iteration suite (20 D1 setups + 20 concurrent HTTP burst cycles) takes ~120–140s under local Next.js dev server JIT compilation. When running `scripts/race-check.sh` via AI agent shell tools, set an explicit `timeout: 180000` (180s) to prevent command timeout. For fast intermediate verification, pass a custom iteration count (e.g. `bash scripts/race-check.sh 2` or `RACE_CHECK_ITERATIONS=2 bash scripts/race-check.sh`, ~45–55s).
+  - Browser Use is used for the golden-path UI walkthrough and scenario verification (recent high-capability agentic models are recommended for complex DOM interaction).
   - Mobile responsiveness (safe areas, 100dvh, iOS momentum scrolling) must be validated on physical iOS/Android devices by the owner.
 
 ---

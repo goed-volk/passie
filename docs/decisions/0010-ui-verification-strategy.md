@@ -7,7 +7,7 @@ Accepted
 Automated end-to-end browser testing can introduce fragile dependencies and heavy MCP server requirements in AI agent workflows.
 
 ## Decision
-1. Verify FCFS race safety and concurrency deterministically using `scripts/race-check.sh` (concurrent `curl` requests hitting the dev server and inspecting local D1).
+1. Verify FCFS race safety and concurrency deterministically using `scripts/race-check.sh` (concurrent `curl` requests hitting the dev server and inspecting local D1). The full 5-iteration suite takes ~120–140s on local dev servers, requiring a ≥180s timeout in AI agent shell executions (or custom iterations via `RACE_CHECK_ITERATIONS=<N>` / `bash scripts/race-check.sh <N>`).
 2. Use Kilo Code's built-in Browser Use for the single-user golden path walkthrough.
 3. Keep `@playwright/mcp` on the post-MVP roadmap.
 4. Delegate responsive mobile layout validation to real iOS and Android physical devices.
@@ -15,3 +15,4 @@ Automated end-to-end browser testing can introduce fragile dependencies and heav
 ## Consequences
 - Zero external MCP dependencies.
 - Deterministic verification of critical concurrency logic.
+- Automated runners require ≥180s tool timeout for the complete 5-iteration suite.
