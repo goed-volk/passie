@@ -23,6 +23,62 @@ export interface IngestResult {
   lastModified?: string | null;
 }
 
+// In-memory timestamp tracker for cooldown checks across requests within the worker/server instance
+let lastIngestCompletedAt: number | null = null;
+
+export function getLastIngestCompletedAt(): number | null {
+  return lastIngestCompletedAt;
+}
+
+export function setLastIngestCompletedAt(timestampSec: number | null): void {
+  lastIngestCompletedAt = timestampSec;
+}
+
+export function getIngestCooldownSeconds(): number {
+  const envVal = process.env.PASSIE_INGEST_COOLDOWN_SECONDS;
+  if (envVal) {
+    const parsed = parseInt(envVal, 10);
+    if (!isNaN(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+  return 300; // Default 5 minutes (300 seconds)
+}
+
+export function checkIngestCooldown(nowSec: number = Math.floor(Date.now() / 1000)): {
+  allowed: boolean;
+  cooldownSeconds: number;
+  remainingSeconds: number;
+  lastIngestAt: number | null;
+} {
+  const cooldownSeconds = getIngestCooldownSeconds();
+  if (lastIngestCompletedAt === null || cooldownSeconds <= 0) {
+    return {
+      allowed: true,
+      cooldownSeconds,
+      remainingSeconds: 0,
+      lastIngestAt: lastIngestCompletedAt,
+    };
+  }
+
+  const elapsed = nowSec - lastIngestCompletedAt;
+  if (elapsed >= cooldownSeconds) {
+    return {
+      allowed: true,
+      cooldownSeconds,
+      remainingSeconds: 0,
+      lastIngestAt: lastIngestCompletedAt,
+    };
+  }
+
+  return {
+    allowed: false,
+    cooldownSeconds,
+    remainingSeconds: cooldownSeconds - elapsed,
+    lastIngestAt: lastIngestCompletedAt,
+  };
+}
+
 export async function ingestClubFixtures(
   db: DbClient,
   clubSlug: string,
@@ -277,6 +333,8 @@ export async function ingestClubFixtures(
       }
     }
   }
+
+  lastIngestCompletedAt = now;
 
   return {
     clubSlug,

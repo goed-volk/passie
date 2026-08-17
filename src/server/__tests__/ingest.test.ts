@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { ingestClubFixtures } from "../ingest";
+import {
+  ingestClubFixtures,
+  checkIngestCooldown,
+  setLastIngestCompletedAt,
+  getIngestCooldownSeconds,
+} from "../ingest";
 import { createTestDb } from "./helpers/testDb";
 import type { DbClient } from "../db";
 import * as schema from "../schema";
@@ -32,7 +37,28 @@ describe("ingestClubFixtures tests", () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    setLastIngestCompletedAt(null);
     await db.delete(schema.fixtures).where(eq(schema.fixtures.source, "ics"));
+  });
+
+  it("handles ingest cooldown tracking accurately", () => {
+    expect(getIngestCooldownSeconds()).toBeGreaterThanOrEqual(0);
+    const initialCheck = checkIngestCooldown(1786900000);
+    expect(initialCheck.allowed).toBe(true);
+    expect(initialCheck.remainingSeconds).toBe(0);
+
+    // Set last ingest at 1786900000
+    setLastIngestCompletedAt(1786900000);
+
+    // 100 seconds later -> cooldown still active
+    const check1 = checkIngestCooldown(1786900100);
+    expect(check1.allowed).toBe(false);
+    expect(check1.remainingSeconds).toBe(200);
+
+    // 350 seconds later -> cooldown expired
+    const check2 = checkIngestCooldown(1786900350);
+    expect(check2.allowed).toBe(true);
+    expect(check2.remainingSeconds).toBe(0);
   });
 
   it("throws error for non-existent club", async () => {
