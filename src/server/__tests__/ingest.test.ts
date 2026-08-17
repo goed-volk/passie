@@ -44,6 +44,11 @@ describe("ingestClubFixtures tests", () => {
   it("parses ICS feed and inserts fixtures into database", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: new Headers({
+        etag: '"test-etag-1"',
+        "last-modified": "Mon, 10 Aug 2026 12:00:00 GMT",
+      }),
       text: async () => sampleIcs,
     } as Response);
 
@@ -51,6 +56,7 @@ describe("ingestClubFixtures tests", () => {
     expect(result.clubSlug).toBe("excelsior");
     expect(result.totalParsed).toBe(4);
     expect(result.inserted).toBeGreaterThanOrEqual(1);
+    expect(result.eTag).toBe('"test-etag-1"');
 
     const fixture = await db.query.fixtures.findFirst({
       where: eq(schema.fixtures.sourceUid, "64235e165487771765001@fixtur.es"),
@@ -59,12 +65,136 @@ describe("ingestClubFixtures tests", () => {
     expect(fixture?.opponent).toBe("NEC");
     expect(fixture?.status).toBe("scheduled");
     expect(fixture?.isHome).toBe(1);
+    expect(fixture?.competition).toBe("Eredivisie");
+  });
+
+  it("supports HTTP 304 Not Modified conditional fetching", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      status: 304,
+      headers: new Headers({
+        etag: '"cached-etag"',
+      }),
+      text: async () => "",
+    } as unknown as Response);
+
+    const result = await ingestClubFixtures(db, "excelsior", {
+      eTag: '"cached-etag"',
+      ifModifiedSince: "Mon, 10 Aug 2026 12:00:00 GMT",
+    });
+
+    expect(result.notModified).toBe(true);
+    expect(result.totalParsed).toBe(0);
+    expect(result.inserted).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.eTag).toBe('"cached-etag"');
+  });
+
+  it("updates existing fixture when LAST-MODIFIED, venue, or opponent changes", async () => {
+    // 1. Initial ingestion
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => sampleIcs,
+    } as Response);
+
+    await ingestClubFixtures(db, "excelsior");
+
+    const fixtureId = "fix_excelsior_64235e165487771765001@fixtur.es";
+
+    // 2. Change venue and last-modified
+    const updatedIcs = sampleIcs
+      .replace(
+        "LOCATION:Van Donge & De Roo Stadion\\, Rotterdam\\, Netherlands",
+        "LOCATION:Woudestein Stadium"
+      )
+      .replace(
+        "LAST-MODIFIED:20260810T120000Z",
+        "LAST-MODIFIED:20260815T160000Z"
+      );
+
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => updatedIcs,
+    } as Response);
+
+    const result = await ingestClubFixtures(db, "excelsior");
+    expect(result.updated).toBeGreaterThanOrEqual(1);
+
+    const updatedFix = await db.query.fixtures.findFirst({
+      where: eq(schema.fixtures.id, fixtureId),
+    });
+    expect(updatedFix?.venue).toBe("Woudestein Stadium");
+    expect(updatedFix?.sourceLastModified).toBe(Math.floor(Date.UTC(2026, 7, 15, 16, 0, 0) / 1000));
+  });
+
+  it("handles disappeared fixtures by marking upcoming match cancelled via mutate()", async () => {
+    // 1. Initial ingestion
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => sampleIcs,
+    } as Response);
+
+    await ingestClubFixtures(db, "excelsior");
+
+    const disappearingFixtureId = "fix_excelsior_64235e165487771765002@fixtur.es"; // Feyenoord match
+    const pool = await ensurePool(db, "group_goedvolk", disappearingFixtureId);
+
+    // 2. Feed with Feyenoord match removed
+    const lines = sampleIcs.split("\n");
+    const filteredLines = [];
+    let skipping = false;
+    for (const line of lines) {
+      if (line.includes("64235e165487771765002@fixtur.es")) {
+        skipping = true;
+      }
+      if (!skipping) {
+        filteredLines.push(line);
+      }
+      if (skipping && line.startsWith("END:VEVENT")) {
+        skipping = false;
+      }
+    }
+    const reducedIcs = filteredLines.join("\n");
+
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => reducedIcs,
+    } as Response);
+
+    const result = await ingestClubFixtures(db, "excelsior");
+    expect(result.cancelled).toBe(1);
+
+    const fix = await db.query.fixtures.findFirst({
+      where: eq(schema.fixtures.id, disappearingFixtureId),
+    });
+    expect(fix?.status).toBe("cancelled");
+
+    const cancelledPool = await db.query.gamePools.findFirst({
+      where: eq(schema.gamePools.id, pool.id),
+    });
+    expect(cancelledPool?.status).toBe("cancelled");
+
+    // Clean up
+    await db.delete(schema.activityEvents).where(eq(schema.activityEvents.gamePoolId, pool.id));
+    await db.delete(schema.poolVersionGuards).where(eq(schema.poolVersionGuards.gamePoolId, pool.id));
+    await db.delete(schema.passGameStates).where(eq(schema.passGameStates.gamePoolId, pool.id));
+    await db.delete(schema.gamePools).where(eq(schema.gamePools.id, pool.id));
   });
 
   it("updates existing fixture and triggers pool reschedule event when kickoff changes", async () => {
     // 1. Initial ingestion
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: new Headers(),
       text: async () => sampleIcs,
     } as Response);
 
@@ -81,6 +211,8 @@ describe("ingestClubFixtures tests", () => {
 
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: new Headers(),
       text: async () => updatedIcs,
     } as Response);
 

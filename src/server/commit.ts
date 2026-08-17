@@ -8,6 +8,7 @@ import type { Action, MemberId, DomainError, ReduceContext, ActivityEventType } 
 export interface MutateOptions {
   idempotencyKey?: string | null;
   maxAttempts?: number;
+  now?: number;
 }
 
 export type MutateResult =
@@ -71,7 +72,7 @@ export async function mutate(
       };
     }
 
-    const now = Math.floor(Date.now() / 1000);
+    const now = options?.now ?? Math.floor(Date.now() / 1000);
     let eventCounter = 0;
 
     // For JoinQueue, use monotonic nextQueueEntryId derived from snapshot
