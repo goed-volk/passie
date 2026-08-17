@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -13,20 +14,24 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#E30613",
+  themeColor: "#E2001A",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("passie_theme")?.value;
+  const isDark = themeCookie === "black-red";
+
   return (
-    <html lang="nl">
-      <body className="antialiased">
+    <html lang="nl" className={isDark ? "dark" : ""} data-theme={isDark ? "black-red" : "red-black"}>
+      <body className="antialiased bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 min-h-[100dvh]">
         <Providers>{children}</Providers>
       </body>
     </html>
