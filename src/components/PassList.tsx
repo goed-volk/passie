@@ -25,7 +25,7 @@ export function PassList({ passes, onIndicate, loading }: PassListProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="space-y-2.5">
         {sortedPasses.map((pass) => (
           <PassCard
             key={pass.id}

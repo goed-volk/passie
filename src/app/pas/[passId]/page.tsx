@@ -62,6 +62,8 @@ export default async function PassPage(props: {
     slug: m.slug,
   }));
 
+  const ownersDisplayName = owners.map((o) => o.displayName).join(" & ");
+
   return (
     <main className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-20">
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
@@ -75,9 +77,11 @@ export default async function PassPage(props: {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{pass.label}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {ownersDisplayName ? `Pas van ${ownersDisplayName}` : pass.label}
+            </h1>
             {pass.seatInfo && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">{pass.seatInfo}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{pass.seatInfo}</p>
             )}
           </div>
         </div>

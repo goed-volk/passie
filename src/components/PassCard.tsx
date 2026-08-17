@@ -33,39 +33,51 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
     }
   };
 
+  const ownersDisplayName = pass.owners.map((o) => o.displayName).join(" & ");
+
   return (
     <Card className="overflow-hidden">
-      <CardContent className="p-4 sm:p-5 space-y-4">
-        <div className="flex items-start justify-between">
-          <div>
+      <CardContent className="p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
             <Link
               href={`/pas/${pass.id}`}
-              className="text-base font-bold text-slate-900 dark:text-slate-100 hover:underline"
+              className="text-base font-bold text-slate-900 dark:text-slate-100 hover:underline inline-flex items-center gap-2"
             >
-              {pass.label}
+              <span>{ownersDisplayName || pass.label}</span>
             </Link>
             {pass.seatInfo && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">{pass.seatInfo}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                {pass.seatInfo}
+              </p>
             )}
           </div>
-          {getStatusBadge()}
+          <div className="shrink-0">{getStatusBadge()}</div>
         </div>
 
         {/* Owners & Holder Information */}
-        <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
           <div className="flex items-center space-x-2">
             <span className="text-slate-400 dark:text-slate-500">{t("coOwners")}:</span>
-            <div className="flex -space-x-1.5 overflow-hidden">
+            <div className="flex items-center space-x-1.5">
               {pass.owners.map((owner) => (
-                <Avatar
+                <div
                   key={owner.id}
-                  className="h-6 w-6 border-2 border-white dark:border-[#131B2E]"
-                  style={{ backgroundColor: owner.avatarColor }}
+                  title={owner.displayName}
+                  className="group relative cursor-help"
                 >
-                  <AvatarFallback style={{ backgroundColor: owner.avatarColor }}>
-                    {owner.initials}
-                  </AvatarFallback>
-                </Avatar>
+                  <Avatar
+                    className="h-6 w-6 ring-1 ring-black/10 dark:ring-white/10"
+                    style={{ backgroundColor: owner.avatarColor }}
+                  >
+                    <AvatarFallback style={{ backgroundColor: owner.avatarColor }}>
+                      {owner.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-50 whitespace-nowrap rounded-md bg-slate-900 dark:bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-white dark:text-slate-900 shadow-md">
+                    {owner.displayName}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
