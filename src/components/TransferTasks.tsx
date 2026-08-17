@@ -20,15 +20,15 @@ export function TransferTasks({
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-bold text-slate-900">{t("step3Title")}</h2>
-        <p className="text-xs text-slate-500">{t("step3Subtitle")}</p>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t("step3Title")}</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{t("step3Subtitle")}</p>
       </div>
 
       {transfers.length === 0 ? (
-        <Card className="bg-emerald-50/50 border-emerald-200/60">
+        <Card className="bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-800/40">
           <CardContent className="p-5 text-center flex flex-col items-center justify-center space-y-1">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600 mb-1" />
-            <p className="text-sm font-semibold text-emerald-900">
+            <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mb-1" />
+            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
               {t("noTransfersNeeded")}
             </p>
           </CardContent>
@@ -39,31 +39,33 @@ export function TransferTasks({
             <Card
               key={task.passId}
               className={`${
-                task.involvesMe ? "border-amber-300 bg-amber-50/30" : ""
+                task.involvesMe ? "border-[var(--club-primary)] ring-1 ring-[var(--club-primary)]/50" : ""
               }`}
             >
               <CardContent className="p-3.5 sm:p-4 flex items-center justify-between">
                 <div className="space-y-1">
-                  <div className="font-bold text-sm text-slate-900">
+                  <div className="font-bold text-sm text-slate-900 dark:text-slate-100">
                     {task.passLabel}
                   </div>
-                  <div className="flex items-center space-x-2 text-xs text-slate-600">
+                  <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
                     <span>{task.from ? task.from.displayName : "Niemand"}</span>
-                    <ArrowRight className="h-3 w-3 text-slate-400" />
-                    <span className="font-semibold text-slate-900">
+                    <ArrowRight className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
                       {task.to.displayName}
                     </span>
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant={task.involvesMe ? "default" : "outline"}
-                  disabled={loading}
-                  onClick={() => onTransfer(task.passId, task.to.id, fixtureId)}
-                >
-                  {t("markTransferred")}
-                </Button>
+                {task.involvesMe && (
+                  <Button
+                    size="sm"
+                    variant="club"
+                    disabled={loading}
+                    onClick={() => onTransfer(task.passId, task.to.id, fixtureId)}
+                  >
+                    {t("markTransferred")}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

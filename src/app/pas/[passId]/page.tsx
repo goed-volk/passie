@@ -63,29 +63,29 @@ export default async function PassPage(props: {
   }));
 
   return (
-    <main className="min-h-[100dvh] bg-slate-50 text-slate-900 pb-20">
+    <main className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-20">
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
         <TopNav actingMember={actingMember} />
 
         <div className="flex items-center space-x-3">
           <Link
             href="/"
-            className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="p-2 -ml-2 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{pass.label}</h1>
             {pass.seatInfo && (
-              <p className="text-xs text-slate-500">{pass.seatInfo}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{pass.seatInfo}</p>
             )}
           </div>
         </div>
 
         {/* Owners Card */}
-        <Card>
+        <Card className="dark:bg-[#131B2E] dark:border-slate-800">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center space-x-2 text-slate-600">
+            <CardTitle className="text-sm font-semibold flex items-center space-x-2 text-slate-600 dark:text-slate-300">
               <ShieldCheck className="h-4 w-4" />
               <span>{t("coOwners")}</span>
             </CardTitle>
@@ -95,7 +95,7 @@ export default async function PassPage(props: {
               {owners.map((owner) => (
                 <div
                   key={owner.id}
-                  className="flex items-center space-x-2 bg-slate-100 rounded-xl px-3 py-1.5"
+                  className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-1.5"
                 >
                   <Avatar
                     className="h-6 w-6"
@@ -105,7 +105,7 @@ export default async function PassPage(props: {
                       {owner.initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-slate-800">
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
                     {owner.displayName}
                   </span>
                 </div>
@@ -124,16 +124,16 @@ export default async function PassPage(props: {
         {/* Possession History */}
         <section className="space-y-3">
           <div className="flex items-center space-x-2">
-            <History className="h-4 w-4 text-slate-500" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+            <History className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Geschiedenis overdrachten
             </h2>
           </div>
 
-          <Card>
-            <CardContent className="p-4 space-y-3 divide-y divide-slate-100">
+          <Card className="dark:bg-[#131B2E] dark:border-slate-800">
+            <CardContent className="p-4 space-y-3 divide-y divide-slate-100 dark:divide-slate-800">
               {possessionEvents.length === 0 ? (
-                <div className="text-center text-xs text-slate-400 py-3">
+                <div className="text-center text-xs text-slate-400 dark:text-slate-500 py-3">
                   Nog geen overdrachten geregistreerd voor deze pas.
                 </div>
               ) : (
@@ -159,15 +159,15 @@ export default async function PassPage(props: {
                       className="pt-2.5 first:pt-0 flex items-center justify-between text-xs"
                     >
                       <div className="flex items-center space-x-2">
-                        <span className="text-slate-600">
+                        <span className="text-slate-600 dark:text-slate-400">
                           {fromMember ? fromMember.displayName : "Niemand"}
                         </span>
-                        <ArrowRight className="h-3 w-3 text-slate-400" />
-                        <span className="font-semibold text-slate-900">
+                        <ArrowRight className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
                           {toMember ? toMember.displayName : "Onbekend"}
                         </span>
                       </div>
-                      <span className="text-slate-400 tabular-nums">{date}</span>
+                      <span className="text-slate-400 dark:text-slate-500 tabular-nums">{date}</span>
                     </div>
                   );
                 })

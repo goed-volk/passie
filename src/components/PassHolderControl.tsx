@@ -50,9 +50,9 @@ export function PassHolderControl({
   };
 
   return (
-    <Card>
+    <Card className="dark:bg-[#131B2E] dark:border-slate-800">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold flex items-center justify-between text-slate-600">
+        <CardTitle className="text-sm font-semibold flex items-center justify-between text-slate-600 dark:text-slate-300">
           <div className="flex items-center space-x-2">
             <UserCheck className="h-4 w-4" />
             <span>{t("holder")}</span>
@@ -60,13 +60,13 @@ export function PassHolderControl({
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="h-8 text-xs">
+              <Button size="sm" variant="outline" className="h-8 text-xs dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                 Houder wijzigen
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">
               <DialogHeader>
-                <DialogTitle>Wie heeft de pas nu?</DialogTitle>
+                <DialogTitle className="dark:text-slate-100">Wie heeft de pas nu?</DialogTitle>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-2 pt-2 max-h-72 overflow-y-auto">
                 {allMembers.map((m) => (
@@ -74,7 +74,7 @@ export function PassHolderControl({
                     key={m.id}
                     disabled={loading}
                     onClick={() => handleSelectNewHolder(m.id)}
-                    className="p-2.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center space-x-2 text-left transition-colors"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 flex items-center space-x-2 text-left transition-colors"
                   >
                     <Avatar
                       className="h-6 w-6"
@@ -84,7 +84,7 @@ export function PassHolderControl({
                         {m.initials}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs font-semibold text-slate-800 truncate">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                       {m.displayName}
                     </span>
                   </button>
@@ -96,7 +96,7 @@ export function PassHolderControl({
       </CardHeader>
       <CardContent>
         {currentHolder ? (
-          <div className="flex items-center space-x-3 bg-slate-50 border border-slate-100 rounded-2xl p-3">
+          <div className="flex items-center space-x-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 rounded-2xl p-3">
             <Avatar
               className="h-9 w-9"
               style={{ backgroundColor: currentHolder.avatarColor }}
@@ -106,16 +106,16 @@ export function PassHolderControl({
               </AvatarFallback>
             </Avatar>
             <div>
-              <div className="font-bold text-sm text-slate-900">
+              <div className="font-bold text-sm text-slate-900 dark:text-slate-100">
                 {currentHolder.displayName}
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-500 dark:text-slate-400">
                 Heeft de fysieke kaart nu in bezit
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-sm text-slate-500">Onbekend</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">Onbekend</div>
         )}
       </CardContent>
     </Card>

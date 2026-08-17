@@ -42,7 +42,7 @@ export function HomeScreen({
   const isMutating = isIndicating || isJoining || isCancelling || isTransferring;
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 text-slate-900 pb-28">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-28">
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
         <TopNav actingMember={pool.actingMember} />
         <FixtureHeader pool={pool} />

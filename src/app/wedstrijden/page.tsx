@@ -38,7 +38,7 @@ export default async function WedstrijdenPage() {
   });
 
   return (
-    <main className="min-h-[100dvh] bg-slate-50 text-slate-900 pb-20">
+    <main className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-20">
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
         <TopNav actingMember={actingMember} />
 
@@ -46,7 +46,7 @@ export default async function WedstrijdenPage() {
           <div className="flex items-center space-x-3">
             <Link
               href="/"
-              className="p-2 -ml-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="p-2 -ml-2 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -60,13 +60,13 @@ export default async function WedstrijdenPage() {
 
         {/* Upcoming fixtures */}
         <section className="space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {t("upcomingFixtures")}
           </h2>
 
           {upcomingFixtures.length === 0 ? (
             <Card>
-              <CardContent className="p-6 text-center text-xs text-slate-500">
+              <CardContent className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
                 {t("noUpcomingFixtures")}
               </CardContent>
             </Card>
@@ -90,14 +90,14 @@ export default async function WedstrijdenPage() {
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-bold text-sm text-slate-900">
+                          <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
                             Excelsior {t("vs")} {fix.opponent}
                           </span>
                           {fix.status === "cancelled" && (
                             <Badge variant="destructive">{t("cancelledBadge")}</Badge>
                           )}
                         </div>
-                        <div className="flex items-center space-x-3 text-xs text-slate-500">
+                        <div className="flex items-center space-x-3 text-xs text-slate-500 dark:text-slate-400">
                           <span className="flex items-center space-x-1">
                             <Calendar className="h-3.5 w-3.5" />
                             <span>{date}</span>
@@ -119,7 +119,7 @@ export default async function WedstrijdenPage() {
         {/* Past fixtures */}
         {pastFixtures.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {t("pastFixtures")}
             </h2>
 
@@ -139,10 +139,10 @@ export default async function WedstrijdenPage() {
                   <Card key={fix.id} className="opacity-75">
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="space-y-1">
-                        <span className="font-semibold text-sm text-slate-800">
+                        <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">
                           Excelsior {t("vs")} {fix.opponent}
                         </span>
-                        <div className="text-xs text-slate-500">{date}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{date}</div>
                       </div>
                     </CardContent>
                   </Card>

@@ -20,8 +20,8 @@ export function PassList({ passes, onIndicate, loading }: PassListProps) {
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">{t("step1Title")}</h2>
-          <p className="text-xs text-slate-500">{t("step1Subtitle")}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t("step1Title")}</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t("step1Subtitle")}</p>
         </div>
       </div>
 

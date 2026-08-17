@@ -107,11 +107,11 @@ export function RefreshFixturesButton({
       size="sm"
       onClick={handleRefresh}
       disabled={isLoading || isCooldown}
-      className="h-8 px-2.5 text-xs text-slate-700 bg-white border-slate-200 hover:bg-slate-50 shadow-sm"
+      className="h-8 px-2.5 text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm"
     >
       <RefreshCw
-        className={`h-3.5 w-3.5 mr-1.5 text-slate-500 ${
-          isLoading ? "animate-spin text-slate-800" : ""
+        className={`h-3.5 w-3.5 mr-1.5 text-slate-500 dark:text-slate-400 ${
+          isLoading ? "animate-spin text-slate-800 dark:text-slate-200" : ""
         }`}
       />
       <span>

@@ -40,26 +40,26 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
           <div>
             <Link
               href={`/pas/${pass.id}`}
-              className="text-base font-bold text-slate-900 hover:underline"
+              className="text-base font-bold text-slate-900 dark:text-slate-100 hover:underline"
             >
               {pass.label}
             </Link>
             {pass.seatInfo && (
-              <p className="text-xs text-slate-500">{pass.seatInfo}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{pass.seatInfo}</p>
             )}
           </div>
           {getStatusBadge()}
         </div>
 
         {/* Owners & Holder Information */}
-        <div className="flex items-center justify-between text-xs text-slate-600 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
           <div className="flex items-center space-x-2">
-            <span className="text-slate-400">{t("coOwners")}:</span>
+            <span className="text-slate-400 dark:text-slate-500">{t("coOwners")}:</span>
             <div className="flex -space-x-1.5 overflow-hidden">
               {pass.owners.map((owner) => (
                 <Avatar
                   key={owner.id}
-                  className="h-6 w-6 border-2 border-white"
+                  className="h-6 w-6 border-2 border-white dark:border-[#131B2E]"
                   style={{ backgroundColor: owner.avatarColor }}
                 >
                   <AvatarFallback style={{ backgroundColor: owner.avatarColor }}>
@@ -72,8 +72,8 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
 
           {pass.holder && (
             <div className="flex items-center space-x-1.5">
-              <span className="text-slate-400">{t("holder")}:</span>
-              <span className="font-semibold text-slate-800">
+              <span className="text-slate-400 dark:text-slate-500">{t("holder")}:</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {pass.holder.displayName}
               </span>
             </div>
@@ -97,7 +97,7 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
               variant={pass.status === "released" ? "default" : "outline"}
               disabled={loading}
               onClick={() => onIndicate(pass.id, "release")}
-              className="w-full text-amber-900 border-amber-200 hover:bg-amber-50"
+              className="w-full text-amber-900 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/30"
             >
               {t("actionRelease")}
             </Button>
