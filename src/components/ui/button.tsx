@@ -8,14 +8,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-slate-900 text-white hover:bg-slate-800 shadow-sm",
+        default: "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white shadow-sm",
         destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-        outline: "border border-slate-200 bg-white hover:bg-slate-100 text-slate-900 shadow-xs",
-        secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
-        ghost: "hover:bg-slate-100 text-slate-900",
-        link: "text-slate-900 underline-offset-4 hover:underline",
+        outline: "border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs",
+        secondary: "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700",
+        ghost: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100",
+        link: "text-slate-900 dark:text-slate-100 underline-offset-4 hover:underline",
         club: "bg-[var(--club-primary)] text-white hover:opacity-95 shadow-sm font-semibold",
-        clubOutline: "border-2 border-[var(--club-primary)] text-[var(--club-primary)] bg-white hover:bg-red-50",
+        clubOutline: "border-2 border-[var(--club-primary)] text-[var(--club-primary)] bg-white dark:bg-slate-900 hover:bg-red-50 dark:hover:bg-red-950/30",
       },
       size: {
         default: "h-11 px-4 py-2",
