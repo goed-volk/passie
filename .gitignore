@@ -39,6 +39,8 @@ docs/reference/vendor/
 
 # verification artefacts
 .verify/
+screenshots/
+.playwright-mcp/
 
 # kilo code: keep shared config, ignore generated state
 .kilo/worktrees/
