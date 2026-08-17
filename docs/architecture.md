@@ -34,6 +34,23 @@ Passie is a mobile-first web app for groups sharing season tickets (*seizoenkaar
 - Input: `GamePoolState`, `Action`, `{ now: number; actor: MemberId }`.
 - Output: `{ state: GamePoolState; events: ActivityEvent[] }` or `{ error: DomainError }`.
 
+### Pass Indication, Reclaim & Give-Back Lifecycle
+- **Owner Indication (`IndicateKeep` / `IndicateRelease`):**
+  - Pass owners indicate attendance for each matchday (*"Ik ga"* or *"Pas vrijgeven"*).
+  - Unindicated passes prioritize owner choice with a dynamic bottom action bar and contextual deadline reminder banner.
+- **Owner Reclaim (*Pas Terugclaimen* & `pass.reclaimed`):**
+  - Season ticket owners retain ultimate right of use: an owner can reclaim their own pass even after it has been released and assigned to a queue claimant.
+  - Reclaiming marks the pass as `kept` by the owner and returns the bumped claimant's queue entry back to `status = 'waiting'` with its original monotonic `id` preserved (or reallocates them immediately if another released pass is available).
+  - Reclaiming requires explicit user confirmation in the UI and emits a structured `pass.reclaimed` activity event (`{ actor, passId, reclaimedFromMemberId, reclaimedFromKind, reclaimedFromGuestName }`).
+- **Claimant Yield (*Pas Teruggeven* & `pass.unassigned`):**
+  - When a non-owner claimant who received a pass from the queue can no longer attend, they yield the pass via `GiveBackAssignedPass`.
+  - The claimant's queue entry is marked `status = 'cancelled'`, the pass returns to `released`, and the allocation engine immediately reassigns the seat to the next waiting queue entry.
+- **Permission Matrix (`buildPoolSnapshot`):**
+  - `canIndicate: Boolean(isOwner && status !== 'assigned')` — Owner indication before assignment.
+  - `canReclaim: Boolean(isOwner && status === 'assigned')` — Owner reclaim of an already assigned card.
+  - `canGiveBack: Boolean(isClaimant && !isOwner && status === 'assigned')` — Claimant yielding someone else's pass.
+  - Bystanders (members who neither own nor claimed the pass) receive zero action buttons.
+
 ### Guarded Atomic Mutation (`src/server/commit.ts`)
 Cloudflare D1 does not offer interactive multi-query transactions. To prevent race conditions in a first-come-first-served queue:
 1. `loadGamePoolState(gamePoolId)` reads current aggregate snapshot including `version`.
@@ -80,10 +97,11 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 
 - Responsive layout built with Tailwind CSS and Radix UI primitives.
 - Club branding injected as CSS variables on `<html>` (`--club-primary`, `--club-secondary`, `--club-accent`, `--club-on-primary`, `--page-bg`, `--page-fg`).
-- **Club-Aware Light/Dark Modes:** Supports primary/secondary color pairing (e.g. Excelsior *Rood-Zwart* light and *Zwart-Rood* dark). Dark mode uses custom deep-slate surfaces (`#0B0F19` background, `#131B2E` cards, `#232F46` borders) and tuned primary accents to guarantee WCAG AA (≥4.5:1) text contrast across all states.
+- **Club-Aware Light/Dark Modes:** System color scheme default with user toggle, persisted via `passie_theme` cookie + localStorage and synchronized via `useSyncExternalStore` + inline pre-hydration script to prevent flashes. Dark mode uses custom deep-slate surfaces (`#0B0F19` background, `#131B2E` cards, `#232F46` borders) and tuned primary accents to guarantee WCAG AA (≥4.5:1) text contrast across all states.
+- **Dynamic Contextual Action Bars & Deadline Reminders:** Bottom navigation surfaces priority actions (owner indication *"Ik ga"* / *"Pas vrijgeven"* when unindicated, or seat request *"Ik wil een pas"* / *"Ik neem iemand mee"* when indicated). Owners with unindicated passes receive prominent contextual deadline reminder banners with formatted Dutch timestamps.
+- **Interactive Physical Possession Handover:** Tappable holder pill affordance allows group members to immediately record physical pass transfers from matchday cards or detail views.
 - User copy strictly resolved via `src/i18n/` dictionary.
 - Cookie-based session identity (`passie_member`) with `/wie-ben-jij` picker.
-- Persistent user theme selection (`passie_theme` cookie + localStorage).
 
 ---
 
