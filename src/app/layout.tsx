@@ -28,11 +28,12 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get("passie_theme")?.value;
   const isDark = themeCookie === "black-red";
+  const initialTheme = isDark ? "black-red" : "red-black";
 
   return (
-    <html lang="nl" className={isDark ? "dark" : ""} data-theme={isDark ? "black-red" : "red-black"}>
+    <html lang="nl" className={isDark ? "dark" : ""} data-theme={initialTheme} suppressHydrationWarning>
       <body className="antialiased bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 min-h-[100dvh]">
-        <Providers>{children}</Providers>
+        <Providers initialTheme={initialTheme}>{children}</Providers>
       </body>
     </html>
   );

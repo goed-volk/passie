@@ -79,6 +79,7 @@ export function ThemeToggle({
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
+      suppressHydrationWarning
       className={`rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${className || ""}`}
       title={theme === "red-black" ? t("themeBlackRed") : t("themeRedBlack")}
       aria-label={theme === "red-black" ? t("themeBlackRed") : t("themeRedBlack")}

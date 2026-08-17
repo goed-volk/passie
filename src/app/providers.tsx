@@ -4,9 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { initPostHog } from "@/lib/posthog";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeProvider, type Theme } from "@/components/ThemeProvider";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialTheme = "red-black",
+}: {
+  children: React.ReactNode;
+  initialTheme?: Theme;
+}) {
   useEffect(() => {
     initPostHog();
   }, []);
@@ -24,7 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider>
+    <ThemeProvider initialTheme={initialTheme}>
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster position="top-center" />

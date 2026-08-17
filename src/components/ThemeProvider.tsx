@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useTransition } from "react";
+import React, { createContext, useContext, useSyncExternalStore, useCallback } from "react";
 
 export type Theme = "red-black" | "black-red";
 
@@ -14,8 +14,10 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = "passie_theme";
 const THEME_COOKIE_KEY = "passie_theme";
+const THEME_CHANGE_EVENT = "passie_theme_change";
 
 function applyThemeClass(newTheme: Theme) {
+  if (typeof document === "undefined") return;
   const root = document.documentElement;
   if (newTheme === "black-red") {
     root.classList.add("dark");
@@ -26,6 +28,16 @@ function applyThemeClass(newTheme: Theme) {
   }
 }
 
+function subscribe(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(THEME_CHANGE_EVENT, callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener(THEME_CHANGE_EVENT, callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
 export function ThemeProvider({
   children,
   initialTheme = "red-black",
@@ -33,43 +45,38 @@ export function ThemeProvider({
   children: React.ReactNode;
   initialTheme?: Theme;
 }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-        if (stored === "red-black" || stored === "black-red") {
-          return stored;
-        }
-      } catch {
-        // Ignore localStorage error
-      }
-    }
-    return initialTheme;
-  });
-
-  const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    applyThemeClass(theme);
-  }, [theme]);
-
-  const setTheme = (newTheme: Theme) => {
-    startTransition(() => {
-      setThemeState(newTheme);
-    });
-    applyThemeClass(newTheme);
+  const getSnapshot = useCallback((): Theme => {
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
-      // Also set cookie so SSR / head can pick it up without flash
-      document.cookie = `${THEME_COOKIE_KEY}=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+      const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+      if (stored === "red-black" || stored === "black-red") {
+        return stored;
+      }
     } catch {
       // Ignore storage errors
     }
-  };
+    return initialTheme;
+  }, [initialTheme]);
 
-  const toggleTheme = () => {
+  const getServerSnapshot = useCallback((): Theme => {
+    return initialTheme;
+  }, [initialTheme]);
+
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  const setTheme = useCallback((newTheme: Theme) => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      document.cookie = `${THEME_COOKIE_KEY}=${newTheme}; path=/; max-age=31536000; SameSite=Lax`;
+      window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+    } catch {
+      // Ignore storage errors
+    }
+    applyThemeClass(newTheme);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
     setTheme(theme === "red-black" ? "black-red" : "red-black");
-  };
+  }, [theme, setTheme]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
