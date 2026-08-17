@@ -41,6 +41,10 @@ export function HomeScreen({
 
   const isMutating = isIndicating || isJoining || isCancelling || isTransferring;
 
+  const unindicatedOwnedPass = pool.passes.find(
+    (p) => p.canIndicate && p.status === "unindicated"
+  );
+
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-28">
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
@@ -49,8 +53,12 @@ export function HomeScreen({
 
         <PassList
           passes={pool.passes}
+          allMembers={pool.members}
           onIndicate={async (passId, action) => {
             await indicatePass({ passId, action });
+          }}
+          onTransfer={async (passId, toMemberId) => {
+            await transferPass({ passId, toMemberId, fixtureId: pool.fixture.id });
           }}
           loading={isMutating}
         />
@@ -76,6 +84,10 @@ export function HomeScreen({
       </div>
 
       <QueueJoinSheet
+        unindicatedPass={unindicatedOwnedPass}
+        onIndicate={async (passId, action) => {
+          await indicatePass({ passId, action });
+        }}
         onJoin={async (kind, guestName) => {
           await joinQueue({ kind, guestName });
         }}

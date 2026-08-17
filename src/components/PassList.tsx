@@ -1,14 +1,22 @@
 import { PassCard } from "./PassCard";
 import { t } from "@/i18n/t";
-import type { PoolSnapshot } from "@/server/snapshot";
+import type { PoolSnapshot, MemberRef } from "@/server/snapshot";
 
 interface PassListProps {
   passes: PoolSnapshot["passes"];
+  allMembers?: MemberRef[];
   onIndicate: (passId: string, action: "keep" | "release" | "giveBack") => Promise<void>;
+  onTransfer?: (passId: string, toMemberId: string) => Promise<void>;
   loading: boolean;
 }
 
-export function PassList({ passes, onIndicate, loading }: PassListProps) {
+export function PassList({
+  passes,
+  allMembers,
+  onIndicate,
+  onTransfer,
+  loading,
+}: PassListProps) {
   // Sort passes so unindicated float to top, followed by sortOrder
   const sortedPasses = [...passes].sort((a, b) => {
     if (a.status === "unindicated" && b.status !== "unindicated") return -1;
@@ -30,7 +38,9 @@ export function PassList({ passes, onIndicate, loading }: PassListProps) {
           <PassCard
             key={pass.id}
             pass={pass}
+            allMembers={allMembers}
             onIndicate={onIndicate}
+            onTransfer={onTransfer}
             loading={loading}
           />
         ))}

@@ -10,9 +10,10 @@ import {
 import { createTestDb } from "./helpers/testDb";
 import type { DbClient } from "../db";
 import * as schema from "../schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { PlatformProxy } from "wrangler";
 import { ensurePool } from "../ensurePool";
+import { cleanupTestPoolData } from "./helpers/testDb";
 
 describe("ingestClubFixtures tests", () => {
   let proxy: PlatformProxy<{ DB: D1Database }>;
@@ -38,7 +39,20 @@ describe("ingestClubFixtures tests", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     setLastIngestCompletedAt(null);
-    await db.delete(schema.fixtures).where(eq(schema.fixtures.source, "ics"));
+    const icsFixtures = await db.query.fixtures.findMany({
+      where: eq(schema.fixtures.source, "ics"),
+    });
+    const icsFixtureIds = icsFixtures.map((f) => f.id);
+    if (icsFixtureIds.length > 0) {
+      const pools = await db.query.gamePools.findMany({
+        where: inArray(schema.gamePools.fixtureId, icsFixtureIds),
+      });
+      for (const pool of pools) {
+        await cleanupTestPoolData(db, pool.id, pool.fixtureId);
+      }
+      await db.delete(schema.possessionEvents).where(inArray(schema.possessionEvents.fixtureId, icsFixtureIds));
+      await db.delete(schema.fixtures).where(eq(schema.fixtures.source, "ics"));
+    }
   });
 
   it("handles ingest cooldown tracking accurately", () => {

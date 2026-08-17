@@ -39,6 +39,7 @@ export interface PoolSnapshot {
     passed: boolean;
   };
   actingMember: MemberRef | null;
+  members: MemberRef[];
   passes: Array<{
     id: string;
     label: string;
@@ -361,6 +362,7 @@ export async function buildPoolSnapshot(
     },
     deadline,
     actingMember,
+    members: Array.from(membersMap.values()),
     passes: passesView,
     queue: queueView,
     transfers,

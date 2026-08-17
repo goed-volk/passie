@@ -6,6 +6,18 @@ This document outlines features, architectural enhancements, and refinements def
 
 ## Next up
 
+- **Direct Pass Transfer / Delegation (*Pas Overdragen*):** Allow pass owners to directly delegate their seat for a match to a specific friend, relative, or member, bypassing the general FIFO queue.
+  - *Context & Motivation:* Season tickets belong to specific owners. While owners frequently donate unused passes to the shared group queue (*"Pas vrijgeven"*), they occasionally want to bring a personal guest or lend their own card to a specific person for a matchday.
+  - *UI / UX Flow:*
+    - The pass indication interface presents three primary actions: *"Ik ga"* (Keep), *"Pas vrijgeven"* (Release to group queue), and *"Pas overdragen"* (Direct transfer/delegation).
+    - Selecting *"Pas overdragen"* opens a dialog prompting for the target recipient (a group member or custom guest name, e.g. *"Vader"*, *"Vriend Jan"*).
+  - *Domain & Queue Engine Architecture:*
+    - Creates a new `queue_entry` with monotonic SQLite `AUTOINCREMENT id`, tagged with `kind: "delegated"` and `delegated_from_pass_id: passId`.
+    - Directly transitions `pass_game_states.status = 'assigned'` bound to this specific queue entry, overruling general queue priority without disrupting the position of waiting members.
+    - Appends a transparent `pass.delegated` event to `activity_events` recording `{ passId, ownerMemberId, recipientName }` so the group timeline remains fully auditable.
+    - If the delegated recipient cancels, the pass reverts to `unindicated` for the owner to decide anew.
+  - *Why deferred beyond MVP:* Requires extending domain action types (`DelegatePass`), updating queue allocation logic to handle bypassed assignment, adding schema fields, and testing precedence rules.
+
 - **Cloudflare Zero Trust / Access:** Secure the app with Cloudflare Access JWT validation and email-to-member mapping.
   - *Why not in MVP:* Kept frictionless for friend-group testing via cookie picker.
 - **Member & Pass Admin UI:** Web interface to manage members, avatars, pass ownership shares, and active status without editing JSON/DB directly.

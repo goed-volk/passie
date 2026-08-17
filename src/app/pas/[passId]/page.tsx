@@ -78,7 +78,7 @@ export default async function PassPage(props: {
           </Link>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {ownersDisplayName ? `Pas van ${ownersDisplayName}` : pass.label}
+              {pass.label}
             </h1>
             {pass.seatInfo && (
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{pass.seatInfo}</p>

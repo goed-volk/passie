@@ -1,18 +1,41 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { ArrowRightLeft } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { t } from "@/i18n/t";
-import type { PoolSnapshot } from "@/server/snapshot";
+import type { PoolSnapshot, MemberRef } from "@/server/snapshot";
 
 interface PassCardProps {
   pass: PoolSnapshot["passes"][number];
+  allMembers?: MemberRef[];
   onIndicate: (passId: string, action: "keep" | "release" | "giveBack") => Promise<void>;
+  onTransfer?: (passId: string, toMemberId: string) => Promise<void>;
   loading: boolean;
 }
 
-export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
+export function PassCard({
+  pass,
+  allMembers,
+  onIndicate,
+  onTransfer,
+  loading,
+}: PassCardProps) {
+  const [openHolderDialog, setOpenHolderDialog] = useState(false);
+  const [isTransferringLocal, setIsTransferringLocal] = useState(false);
+
   const getStatusBadge = () => {
     switch (pass.status) {
       case "unindicated":
@@ -33,7 +56,16 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
     }
   };
 
-  const ownersDisplayName = pass.owners.map((o) => o.displayName).join(" & ");
+  const handleSelectNewHolder = async (toMemberId: string) => {
+    if (!onTransfer || isTransferringLocal) return;
+    setIsTransferringLocal(true);
+    try {
+      await onTransfer(pass.id, toMemberId);
+      setOpenHolderDialog(false);
+    } finally {
+      setIsTransferringLocal(false);
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -44,7 +76,7 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
               href={`/pas/${pass.id}`}
               className="text-base font-bold text-slate-900 dark:text-slate-100 hover:underline inline-flex items-center gap-2"
             >
-              <span>{ownersDisplayName || pass.label}</span>
+              <span>{pass.label}</span>
             </Link>
             {pass.seatInfo && (
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -56,9 +88,10 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
         </div>
 
         {/* Owners & Holder Information */}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
+          {/* Owners / Pas van */}
           <div className="flex items-center space-x-2">
-            <span className="text-slate-400 dark:text-slate-500">{t("coOwners")}:</span>
+            <span className="text-slate-400 dark:text-slate-500 font-medium">{t("coOwners")}:</span>
             <div className="flex items-center space-x-1.5">
               {pass.owners.map((owner) => (
                 <div
@@ -70,7 +103,7 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
                     className="h-6 w-6 ring-1 ring-black/10 dark:ring-white/10"
                     style={{ backgroundColor: owner.avatarColor }}
                   >
-                    <AvatarFallback style={{ backgroundColor: owner.avatarColor }}>
+                    <AvatarFallback style={{ backgroundColor: owner.avatarColor }} className="text-[10px]">
                       {owner.initials}
                     </AvatarFallback>
                   </Avatar>
@@ -82,14 +115,97 @@ export function PassCard({ pass, onIndicate, loading }: PassCardProps) {
             </div>
           </div>
 
-          {pass.holder && (
-            <div className="flex items-center space-x-1.5">
-              <span className="text-slate-400 dark:text-slate-500">{t("holder")}:</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                {pass.holder.displayName}
-              </span>
-            </div>
-          )}
+          {/* Holder / Momenteel in bezit van */}
+          <div className="flex items-center space-x-1.5">
+            <span className="text-slate-400 dark:text-slate-500 font-medium">{t("holder")}:</span>
+            {onTransfer && allMembers && allMembers.length > 0 ? (
+              <Dialog open={openHolderDialog} onOpenChange={setOpenHolderDialog}>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={loading || isTransferringLocal}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer group shadow-2xs focus:outline-none focus:ring-2 focus:ring-[var(--club-primary)]"
+                    title="Pashouder wijzigen"
+                  >
+                    {pass.holder ? (
+                      <>
+                        <Avatar
+                          className="h-4 w-4 ring-1 ring-black/5 dark:ring-white/10"
+                          style={{ backgroundColor: pass.holder.avatarColor }}
+                        >
+                          <AvatarFallback
+                            style={{ backgroundColor: pass.holder.avatarColor }}
+                            className="text-[9px]"
+                          >
+                            {pass.holder.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
+                          {pass.holder.displayName}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-medium text-xs text-slate-500">{t("unknownHolder")}</span>
+                    )}
+                    <ArrowRightLeft className="h-3 w-3 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors shrink-0 ml-0.5" />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">
+                  <DialogHeader>
+                    <DialogTitle className="dark:text-slate-100">{t("changeHolderTitle")}</DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+                      {t("changeHolderDesc")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-2 gap-2 pt-2 max-h-72 overflow-y-auto">
+                    {allMembers.map((m) => (
+                      <button
+                        key={m.id}
+                        disabled={loading || isTransferringLocal}
+                        onClick={() => handleSelectNewHolder(m.id)}
+                        className={`p-2.5 rounded-xl border flex items-center space-x-2 text-left transition-colors ${
+                          pass.holder?.id === m.id
+                            ? "border-[var(--club-primary)] bg-red-50/50 dark:bg-red-950/20 ring-1 ring-[var(--club-primary)]"
+                            : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                        }`}
+                      >
+                        <Avatar
+                          className="h-6 w-6"
+                          style={{ backgroundColor: m.avatarColor }}
+                        >
+                          <AvatarFallback style={{ backgroundColor: m.avatarColor }} className="text-[10px]">
+                            {m.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {m.displayName}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : (
+              pass.holder && (
+                <div className="flex items-center space-x-1.5">
+                  <Avatar
+                    className="h-4 w-4 ring-1 ring-black/5 dark:ring-white/10"
+                    style={{ backgroundColor: pass.holder.avatarColor }}
+                  >
+                    <AvatarFallback
+                      style={{ backgroundColor: pass.holder.avatarColor }}
+                      className="text-[9px]"
+                    >
+                      {pass.holder.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {pass.holder.displayName}
+                  </span>
+                </div>
+              )
+            )}
+          </div>
         </div>
 
         {/* Action buttons */}

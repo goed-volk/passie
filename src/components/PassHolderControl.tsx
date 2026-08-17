@@ -36,7 +36,7 @@ export function PassHolderControl({
       });
 
       if (res.ok) {
-        toast.success("Houder bijgewerkt");
+        toast.success(t("holderUpdated"));
         setOpen(false);
         router.refresh();
       } else {

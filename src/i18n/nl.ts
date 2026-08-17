@@ -24,10 +24,14 @@ export const nl = {
   // Pass Card
   passLabel: "Pas",
   seat: "Plaats",
-  holder: "Huidige pashouder",
+  holder: "Momenteel in bezit van",
   expectedHolder: "Moet naar",
   indicatedBy: "Aangegeven door",
-  coOwners: "Mede-eigenaren",
+  coOwners: "Pas van",
+  changeHolderTitle: "Wie heeft de pas nu?",
+  changeHolderDesc: "Selecteer wie de fysieke seizoenkaart momenteel in bezit heeft.",
+  holderUpdated: "Pashouder bijgewerkt",
+  unknownHolder: "Onbekend",
 
   // Pass Statuses
   statusUnindicated: "Nog niet aangegeven",

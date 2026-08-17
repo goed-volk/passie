@@ -28,19 +28,33 @@ function applyThemeClass(newTheme: Theme) {
   }
 }
 
+function getSystemTheme(): Theme {
+  if (typeof window === "undefined") return "red-black";
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "black-red" : "red-black";
+}
+
 function subscribe(callback: () => void) {
   if (typeof window === "undefined") return () => {};
   window.addEventListener(THEME_CHANGE_EVENT, callback);
   window.addEventListener("storage", callback);
+  const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+  const handleMediaChange = () => {
+    // Only notify if user hasn't explicitly set a preference in localStorage
+    if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+      callback();
+    }
+  };
+  mediaQuery?.addEventListener?.("change", handleMediaChange);
   return () => {
     window.removeEventListener(THEME_CHANGE_EVENT, callback);
     window.removeEventListener("storage", callback);
+    mediaQuery?.removeEventListener?.("change", handleMediaChange);
   };
 }
 
 export function ThemeProvider({
   children,
-  initialTheme = "red-black",
+  initialTheme,
 }: {
   children: React.ReactNode;
   initialTheme?: Theme;
@@ -54,11 +68,14 @@ export function ThemeProvider({
     } catch {
       // Ignore storage errors
     }
-    return initialTheme;
+    if (initialTheme) {
+      return initialTheme;
+    }
+    return getSystemTheme();
   }, [initialTheme]);
 
   const getServerSnapshot = useCallback((): Theme => {
-    return initialTheme;
+    return initialTheme ?? "red-black";
   }, [initialTheme]);
 
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -77,6 +94,10 @@ export function ThemeProvider({
   const toggleTheme = useCallback(() => {
     setTheme(theme === "red-black" ? "black-red" : "red-black");
   }, [theme, setTheme]);
+
+  React.useEffect(() => {
+    applyThemeClass(theme);
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
