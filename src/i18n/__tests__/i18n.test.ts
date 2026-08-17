@@ -12,6 +12,9 @@ describe("i18n discipline", () => {
     expect(nlFile).toContain("step2Title");
     expect(nlFile).toContain("step3Title");
     expect(nlFile).toContain("statusUnindicated");
+    expect(nlFile).toContain("themeTitle");
+    expect(nlFile).toContain("themeRedBlack");
+    expect(nlFile).toContain("themeBlackRed");
   });
 
   it("translates parameterized strings with t()", () => {

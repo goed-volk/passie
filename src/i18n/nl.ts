@@ -72,6 +72,11 @@ export const nl = {
   version: "Versie",
   privacyTitle: "Privacy & Gegevens",
   privacyText: "Passie slaat alleen groeps- en pasactiviteiten op binnen Cloudflare D1. Geen wachtwoorden, geen trackingcookies.",
+  themeTitle: "Clubkleuren thema",
+  themeRedBlack: "Rood-Zwart",
+  themeRedBlackDesc: "Klassiek rood op lichte achtergrond",
+  themeBlackRed: "Zwart-Rood",
+  themeBlackRedDesc: "Klassiek zwart op donkere achtergrond",
 
   // Fixtures page
   upcomingFixtures: "Aankomende wedstrijden",
