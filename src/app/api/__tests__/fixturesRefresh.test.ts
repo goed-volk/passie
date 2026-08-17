@@ -1,0 +1,71 @@
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { GET, handleRefreshPost } from "@/app/api/fixtures/refresh/route";
+import { setLastIngestCompletedAt } from "@/server/ingest";
+import { createTestDb } from "@/server/__tests__/helpers/testDb";
+import type { DbClient } from "@/server/db";
+import * as schema from "@/server/schema";
+import { eq } from "drizzle-orm";
+import type { PlatformProxy } from "wrangler";
+
+describe("/api/fixtures/refresh route tests", () => {
+  let proxy: PlatformProxy<{ DB: D1Database }>;
+  let db: DbClient;
+
+  const sampleIcs = fs.readFileSync(
+    path.resolve(__dirname, "../../../server/__tests__/fixtures/excelsior-home.ics"),
+    "utf-8"
+  );
+
+  beforeAll(async () => {
+    const res = await createTestDb();
+    proxy = res.proxy;
+    db = res.db;
+  });
+
+  afterAll(async () => {
+    if (proxy) {
+      await proxy.dispose();
+    }
+  });
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    setLastIngestCompletedAt(null);
+    await db.delete(schema.fixtures).where(eq(schema.fixtures.source, "ics"));
+  });
+
+  it("GET returns current cooldown status", async () => {
+    const response = await GET();
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as { ok: boolean; allowed: boolean; remainingSeconds: number };
+    expect(data.ok).toBe(true);
+    expect(data.allowed).toBe(true);
+    expect(data.remainingSeconds).toBe(0);
+  });
+
+  it("POST triggers manual fetch and returns 200 on first call, 429 on immediate second call", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => sampleIcs,
+    } as Response);
+
+    // First call with test DB proxy
+    const res1 = await handleRefreshPost(proxy.env.DB);
+    expect(res1.status).toBe(200);
+    const data1 = (await res1.json()) as { ok: boolean; result: { inserted: number } };
+    expect(data1.ok).toBe(true);
+    expect(data1.result.inserted).toBeGreaterThanOrEqual(1);
+
+    // Second immediate call -> 429 Cooldown Active
+    const res2 = await handleRefreshPost(proxy.env.DB);
+    expect(res2.status).toBe(429);
+    const data2 = (await res2.json()) as { ok: boolean; error: string; remainingSeconds: number };
+    expect(data2.ok).toBe(false);
+    expect(data2.error).toBe("COOLDOWN_ACTIVE");
+    expect(data2.remainingSeconds).toBeGreaterThan(0);
+  });
+});
