@@ -1,0 +1,33 @@
+// @ts-ignore OpenNext generates this bundle during build
+import openNextHandler from "../.open-next/worker.js";
+// @ts-ignore OpenNext named exports
+export * from "../.open-next/worker.js";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "./server/schema";
+import { ingestClubFixtures } from "./server/ingest";
+
+const workerHandler = {
+  fetch: openNextHandler.fetch,
+  async scheduled(
+    event: ScheduledEvent,
+    env: CloudflareEnv,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const db = drizzle(env.DB, { schema });
+          console.log(
+            `[cron:ingest] Scheduled trigger fired at ${event.scheduledTime} (cron: ${event.cron})`
+          );
+          const result = await ingestClubFixtures(db, "excelsior");
+          console.log("[cron:ingest] Ingestion completed:", result);
+        } catch (error) {
+          console.error("[cron:ingest] Scheduled ingestion failed:", error);
+        }
+      })()
+    );
+  },
+};
+
+export default workerHandler;
