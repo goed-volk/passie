@@ -74,6 +74,8 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 ## 4. UI & Theming
 
 - Responsive layout built with Tailwind CSS and Radix UI primitives.
-- Club branding injected as CSS variables on `<html>` (`--club-primary`, `--club-secondary`, `--club-accent`, `--club-on-primary`).
+- Club branding injected as CSS variables on `<html>` (`--club-primary`, `--club-secondary`, `--club-accent`, `--club-on-primary`, `--page-bg`, `--page-fg`).
+- **Club-Aware Light/Dark Modes:** Supports primary/secondary color pairing (e.g. Excelsior *Rood-Zwart* light and *Zwart-Rood* dark). Dark mode uses custom deep-slate surfaces (`#0B0F19` background, `#131B2E` cards, `#232F46` borders) and tuned primary accents to guarantee WCAG AA (≥4.5:1) text contrast across all states.
 - User copy strictly resolved via `src/i18n/` dictionary.
 - Cookie-based session identity (`passie_member`) with `/wie-ben-jij` picker.
+- Persistent user theme selection (`passie_theme` cookie + localStorage).

@@ -25,8 +25,13 @@ This document outlines features, architectural enhancements, and refinements def
 
 - **Realtime via Durable Objects + SSE:** Server-Sent Events pushed from a per-game Durable Object, replacing 5s client polling while preserving identical snapshot API shapes.
   - *Why not in MVP:* TanStack Query polling is simple, battery-friendly when tab is active, and requires no stateful WebSocket/DO infrastructure.
-- **Multi-Group & Multi-Club Onboarding:** Support multiple groups and clubs (Eredivisie & Eerste Divisie) with dynamic club theme selector and logos.
+- **Multi-Group & Multi-Club Onboarding & Dynamic Theming:** Support multiple groups and clubs (Eredivisie & Eerste Divisie) with dynamic club theme selector, club logos, and automatic accessible color palette generation.
   - *Why not in MVP:* Schema is multi-tenant ready, but MVP focuses on single-club (`Excelsior`) validation.
+  - *Scalability & Contrast Learnings (Eredivisie):*
+    - **Dual-Mode Color Roles:** Eredivisie clubs fall into distinct color archetypes (Red/Black like Excelsior/NEC, Red/White like Ajax/Feyenoord/PSV/Sparta/Twente/Utrecht, Yellow/Black or Yellow/Green like NAC/Fortuna/Go Ahead, Blue/White like Heerenveen/PEC Zwolle, and Green/White like FC Groningen).
+    - **WCAG Contrast on Yellow/Light Primaries:** Yellow primary clubs (e.g. NAC Breda, Go Ahead Eagles, Fortuna) cannot use white text on primary buttons (contrast ratio ~1.15:1). The theming model requires `colorOnPrimary` (e.g. `#000000` for yellow, `#FFFFFF` for red/blue/dark) and dark-mode adjusted luminance tokens so all CTAs and badges achieve ≥4.5:1 WCAG AA contrast.
+    - **Dark Mode Hue Tuning:** Dark backgrounds require slightly higher-luminance primary tones (e.g., Excelsior red `#FF2E44` vs `#E2001A` on dark) to prevent muddy saturated text on dark cards (`#131B2E`).
+    - **Dynamic Inversion Labels:** The theme toggle adapts to the club's colors (e.g. Excelsior: *Rood-Zwart* / *Zwart-Rood*; NAC Breda: *Geel-Zwart* / *Zwart-Geel*; Heerenveen: *Blauw-Wit* / *Nacht-Blauw*).
 - **Per-Member Notification Preferences:** Granular email/push settings per fixture or event type.
   - *Why not in MVP:* Requires user settings storage and authentication layer.
 - **Opt-in Auto-Free at Deadline:** Automatically release unindicated passes to the queue at `kickoff - 24h`.
