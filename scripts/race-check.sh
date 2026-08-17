@@ -4,6 +4,7 @@ set -euo pipefail
 PORT="${PASSIE_PORT:-3111}"
 BASE_URL="http://127.0.0.1:$PORT"
 POOL_ID="pool_group_goedvolk_fix_test_1"
+ITERATIONS="${RACE_CHECK_ITERATIONS:-${1:-5}}"
 
 cleanup() {
   pnpm tsx scripts/cleanup-test-pool.ts > /dev/null 2>&1 || true
@@ -22,11 +23,11 @@ if ! curl -s -f "$BASE_URL/api/me" > /dev/null 2>&1; then
 fi
 echo "==> Dev server is healthy."
 
-echo "==> Running Passie multi-scenario deterministic race-check on $BASE_URL for pool $POOL_ID"
+echo "==> Running Passie multi-scenario deterministic race-check on $BASE_URL for pool $POOL_ID ($ITERATIONS iterations)"
 
-for iteration in {1..5}; do
+for ((iteration=1; iteration<=ITERATIONS; iteration++)); do
   echo "========================================="
-  echo ">>> Iteration $iteration / 5"
+  echo ">>> Iteration $iteration / $ITERATIONS"
   echo "========================================="
 
   # --------------------------------------------------------------------------
@@ -368,4 +369,4 @@ for iteration in {1..5}; do
 done
 
 echo ""
-echo "🎉 All 5 iterations across all 4 contention scenarios passed deterministically with zero flakes!"
+echo "🎉 All $ITERATIONS iteration(s) across all 4 contention scenarios passed deterministically with zero flakes!"
