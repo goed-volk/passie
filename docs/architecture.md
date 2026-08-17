@@ -79,3 +79,13 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - User copy strictly resolved via `src/i18n/` dictionary.
 - Cookie-based session identity (`passie_member`) with `/wie-ben-jij` picker.
 - Persistent user theme selection (`passie_theme` cookie + localStorage).
+
+---
+
+## 5. Deployment & Cloudflare Infrastructure
+
+- **Worker Entry (`src/worker.ts`):** Wraps `@opennextjs/cloudflare` server bundle with top-level `fetch` and `scheduled` handlers.
+- **Cron Triggers:** Automatic background fixture ingestion (`0 */6 * * *`) invokes `ingestClubFixtures(db, "excelsior")` directly via the worker `scheduled` handler.
+- **Custom Domain Routing:** Production traffic routes through `passie.goedvolk.org` configured as a Cloudflare Worker custom domain.
+- **D1 Production Database:** Production database `passie` provisioned via `wrangler d1 create passie`, migrated via `pnpm db:migrate:prod`, and seeded via `pnpm seed:local --remote --confirm`.
+
