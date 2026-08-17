@@ -48,6 +48,7 @@ screenshots/
 .kilo/cache/
 .kilo/plans/*
 !.kilo/plans/1786885513481-passie-mvp-code-review-findings.md
+!.kilo/plans/1787002200000-ux-audit-findings.md
 .kilo/node_modules/
 .kilo/package-lock.json
 .kilo/package.json
