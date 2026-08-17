@@ -54,20 +54,25 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 
 ---
 
-## 3. Database Schema
+## 3. Database Schema & Pass Configuration
 
 - `clubs`: Club profile, colors (`colorPrimary`, `colorSecondary`), ICS feed URL.
 - `seasons`: Competition season bounds.
 - `fixtures`: Match calendar ingested from RFC 5545 feed.
 - `groups`: Sharing group metadata (`Europe/Amsterdam` timezone).
 - `members`: People in the group (slug, display_name, initials, avatar_color).
-- `passes`: Physical season ticket records with current holder pointer.
-- `pass_owners`: M:N pass ownership.
+- `passes`: Physical season ticket records with primary name (`label`), optional `seat_info`, and current holder pointer (`holder_member_id`).
+- `pass_owners`: M:N pass ownership mapping (supporting multi-owner shared cards).
 - `game_pools`: Matchday aggregate root with `version` and `indication_deadline_at`.
 - `pass_game_states`: Matchday pass lifecycle (`unindicated` -> `kept` / `released` -> `assigned`).
 - `queue_entries`: Strictly monotonic seat requests ordered by `id AUTOINCREMENT ASC`.
 - `possession_events`: Append-only physical card movement log.
 - `activity_events`: Append-only activity timeline with `idempotency_key UNIQUE`.
+
+### Pass Configuration & Naming
+- Every season ticket is defined in `seed/group.local.json` (or `seed/group.example.json` for fictional testing) with a primary name `label` (e.g. `"Pas 1"`, `"Pas Sam"`, `"Vak K Noord"`), optional `seatInfo` (e.g. `"Vak K, Rij 12"`), list of `owners` (`["ilse", "noor"]`), initial physical `holder` (`"ilse"`), and `sortOrder`.
+- The `label` column is the primary display name on cards and detail pages. The co-owners are displayed separately as avatars in the *"Pas van:"* row.
+- In MVP, pass names can be amended by updating `seed/group.local.json` and running `pnpm seed:local` (or direct D1 `UPDATE passes SET label = ?`). Future admin UI will expose web-based pass editing.
 
 ---
 

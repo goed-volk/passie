@@ -65,9 +65,9 @@ export function QueueJoinSheet({
               variant="outline"
               disabled={loading}
               onClick={handleRelease}
-              className="flex-1 flex items-center justify-center space-x-2 border-amber-300 dark:border-amber-700/80 text-amber-900 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/60 font-semibold"
+              className="flex-1 flex items-center justify-center space-x-2 border-2 border-amber-600 dark:border-amber-500 text-amber-950 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 font-bold"
             >
-              <ArrowUpRight className="h-4 w-4" />
+              <ArrowUpRight className="h-4 w-4 text-amber-700 dark:text-amber-300" />
               <span>{t("actionRelease")}</span>
             </Button>
           </>

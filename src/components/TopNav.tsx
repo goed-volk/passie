@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Settings } from "lucide-react";
+import { Calendar, Settings, TicketCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { MemberRef } from "@/server/snapshot";
 
 export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
   return (
     <nav className="flex items-center justify-between py-2">
-      <Link href="/" className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-slate-100 flex items-center space-x-1.5">
-        <span className="h-3 w-3 rounded-full bg-[var(--club-primary)] inline-block shadow-xs" />
+      <Link href="/" className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-slate-100 flex items-center space-x-2">
+        <TicketCheck className="h-6 w-6 text-[var(--club-primary)] shrink-0" />
         <span>Passie</span>
       </Link>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, Check, ArrowUpRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -213,21 +213,33 @@ export function PassCard({
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button
               size="sm"
-              variant={pass.status === "kept" ? "default" : "outline"}
               disabled={loading}
               onClick={() => onIndicate(pass.id, "keep")}
-              className="w-full"
+              className={`w-full transition-all ${
+                pass.status === "kept"
+                  ? "bg-[var(--club-primary)] hover:bg-[var(--club-primary)] text-white shadow-sm ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
+                  : "border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold"
+              }`}
             >
-              {t("actionKeep")}
+              {pass.status === "kept" && <Check className="h-3.5 w-3.5 mr-1 shrink-0" />}
+              <span>{t("actionKeep")}</span>
             </Button>
             <Button
               size="sm"
-              variant={pass.status === "released" ? "default" : "outline"}
               disabled={loading}
               onClick={() => onIndicate(pass.id, "release")}
-              className="w-full text-amber-900 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              className={`w-full transition-all ${
+                pass.status === "released"
+                  ? "bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm ring-2 ring-amber-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
+                  : "border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold"
+              }`}
             >
-              {t("actionRelease")}
+              {pass.status === "released" ? (
+                <Check className="h-3.5 w-3.5 mr-1 shrink-0" />
+              ) : (
+                <ArrowUpRight className="h-3.5 w-3.5 mr-1 shrink-0 text-slate-500 dark:text-slate-400" />
+              )}
+              <span>{t("actionRelease")}</span>
             </Button>
           </div>
         )}
