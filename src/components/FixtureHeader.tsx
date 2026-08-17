@@ -48,13 +48,11 @@ export function FixtureHeader({ pool }: { pool: PoolSnapshot }) {
           ) : pool.deadline.passed ? (
             <Badge variant="warning">{t("deadlinePassed")}</Badge>
           ) : (
-            <Badge variant="secondary" className="bg-slate-800/90 text-slate-100 border-slate-700/80 backdrop-blur-xs">
-              {t("deadlineLabel")}{" "}
-              {new Date(pool.deadline.at * 1000).toLocaleTimeString("nl-NL", {
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Europe/Amsterdam",
-              })}
+            <Badge
+              variant="secondary"
+              className="bg-slate-800/90 text-slate-100 border-slate-700/80 backdrop-blur-xs font-semibold"
+            >
+              {pool.club.shortName}
             </Badge>
           )}
         </div>

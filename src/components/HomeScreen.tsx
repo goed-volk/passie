@@ -9,6 +9,8 @@ import { TransferTasks } from "@/components/TransferTasks";
 import { ActivityTimeline } from "@/components/ActivityTimeline";
 import { TopNav } from "@/components/TopNav";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Clock, AlertCircle } from "lucide-react";
+import { t, formatDeadlineDateTime } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
 export function HomeScreen({
@@ -50,6 +52,36 @@ export function HomeScreen({
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
         <TopNav actingMember={pool.actingMember} />
         <FixtureHeader pool={pool} />
+
+        {unindicatedOwnedPass && !pool.deadline.passed && pool.status === "open" && (
+          <div className="bg-gradient-to-r from-amber-500/15 to-amber-500/5 dark:from-amber-950/40 dark:to-amber-950/20 border border-amber-500/30 dark:border-amber-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
+            <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                {t("deadlineReminderTitle")}
+              </h3>
+              <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {t("deadlineReminderDesc", {
+                  deadline: formatDeadlineDateTime(pool.deadline.at),
+                })}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {unindicatedOwnedPass && pool.deadline.passed && pool.status === "open" && (
+          <div className="bg-red-500/10 dark:bg-red-950/30 border border-red-500/30 dark:border-red-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                {t("deadlinePassed")}
+              </h3>
+              <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {t("deadlinePassedBanner")}
+              </p>
+            </div>
+          </div>
+        )}
 
         <PassList
           passes={pool.passes}

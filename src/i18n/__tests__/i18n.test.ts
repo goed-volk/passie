@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { formatEventText, formatKickoffDateTime, t } from "../t";
+import { formatEventText, formatKickoffDateTime, formatDeadlineDateTime, t } from "../t";
 import { nl } from "../nl";
 
 describe("i18n discipline", () => {
@@ -28,6 +28,15 @@ describe("i18n discipline", () => {
     const utcTimestamp = Math.floor(Date.UTC(2026, 8, 13, 14, 30, 0) / 1000);
     const formatted = formatKickoffDateTime(utcTimestamp, "Europe/Amsterdam");
     expect(formatted).toContain("13");
+    expect(formatted).toContain("16:30");
+  });
+
+  it("formats deadline date-time in Dutch with weekday, day, month and time", () => {
+    const utcTimestamp = Math.floor(Date.UTC(2026, 8, 13, 14, 30, 0) / 1000);
+    const formatted = formatDeadlineDateTime(utcTimestamp, "Europe/Amsterdam");
+    expect(formatted).toContain("zondag");
+    expect(formatted).toContain("13");
+    expect(formatted).toContain("september");
     expect(formatted).toContain("16:30");
   });
 

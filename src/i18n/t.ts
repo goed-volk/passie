@@ -32,6 +32,19 @@ export function formatKickoffDateTime(
   return dtf.format(date);
 }
 
+export function formatDeadlineDateTime(
+  timestampSec: number,
+  timeZone: string = "Europe/Amsterdam",
+  locale: string = "nl-NL"
+): string {
+  const date = new Date(timestampSec * 1000);
+  const weekday = new Intl.DateTimeFormat(locale, { timeZone, weekday: "long" }).format(date);
+  const day = new Intl.DateTimeFormat(locale, { timeZone, day: "numeric" }).format(date);
+  const month = new Intl.DateTimeFormat(locale, { timeZone, month: "long" }).format(date);
+  const time = new Intl.DateTimeFormat(locale, { timeZone, hour: "2-digit", minute: "2-digit" }).format(date);
+  return `${weekday} ${day} ${month} om ${time} uur`;
+}
+
 export function formatEventText(
   type: string,
   payload: Record<string, unknown>,

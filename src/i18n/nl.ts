@@ -3,12 +3,15 @@ export const nl = {
   appName: "Passie",
   appTagline: "Seizoenkaarten delen met vrienden",
 
-  // Fixture Header
+  // Fixture Header & Deadlines
   vs: "–",
   home: "Thuis",
   away: "Uit",
   deadlineLabel: "Aangeven vóór",
   deadlinePassed: "Aangeefdeadline verstreken",
+  deadlinePassedBanner: "De deadline om je pas aan te geven is verstreken. Geef je pas zo snel mogelijk aan.",
+  deadlineReminderTitle: "Laat weten of je gaat",
+  deadlineReminderDesc: "Geef vóór {deadline} aan of je je seizoenkaart zelf gebruikt of vrijgeeft aan de groep.",
   deadlineRemaining: "nog",
   poolCancelled: "Wedstrijd afgelast of verplaatst",
 
