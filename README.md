@@ -41,7 +41,7 @@ Passie uses environment variables for build-time analytics and Cloudflare secret
 
 | Variable | Target | Required? | Description |
 | :--- | :--- | :---: | :--- |
-| `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Optional | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint. |
+| `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for HTTP cron route | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint (returns 503 if unconfigured). |
 | `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (local) / Cloudflare dashboard (prod) | Optional | PostHog project API key. If left blank or unset, all analytics tracking is completely disabled. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | `.env.local` (local) / Cloudflare dashboard (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
 
@@ -59,7 +59,7 @@ cp .dev.vars.example .dev.vars
 
 - Node.js `^22.22.0`
 - pnpm `^10.0.0`
-- Cloudflare Wrangler CLI (`pnpm add -g wrangler`)
+- Cloudflare Wrangler CLI (run locally via `pnpm wrangler` or `pnpm exec wrangler`)
 
 ### Step-by-Step Initialization Flow
 
@@ -129,24 +129,35 @@ cp .dev.vars.example .dev.vars
 
 ## Deployment Runbook
 
-Deployments target Cloudflare Workers using OpenNext.
+Deployments target Cloudflare Workers using OpenNext and Cloudflare D1.
 
-1. Ensure your Cloudflare account is authenticated:
+1. **Authenticate with Cloudflare:**
    ```bash
-   pnpm wrangler login
+   pnpm exec wrangler login
    ```
 
-2. Apply D1 migrations to production database:
+2. **Provision the production D1 database (initial setup):**
+   ```bash
+   pnpm exec wrangler d1 create passie
+   ```
+   Copy the returned `database_id` into `wrangler.jsonc` under `d1_databases[0].database_id` (replacing the placeholder).
+
+3. **Apply D1 migrations to the production database:**
    ```bash
    pnpm db:migrate:prod
    ```
 
-3. Seed production data (if initial setup):
+4. **Seed production group data (initial setup):**
    ```bash
-   pnpm seed:local --confirm
+   pnpm seed:local --remote --confirm
    ```
 
-4. Deploy Worker:
+5. **Configure production secrets:**
+   ```bash
+   pnpm exec wrangler secret put PASSIE_CRON_SECRET
+   ```
+
+6. **Build and deploy Worker & static assets:**
    ```bash
    pnpm deploy
    ```

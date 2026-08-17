@@ -5,10 +5,16 @@ import { ingestClubFixtures } from "@/server/ingest";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get("Authorization");
   const cronSecret = process.env.PASSIE_CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json(
+      { error: "Cron secret is not configured on server" },
+      { status: 503 }
+    );
+  }
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
