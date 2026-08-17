@@ -286,5 +286,24 @@ describe("buildPoolSnapshot tests", () => {
     expect(releaseEvent).toBeDefined();
     expect(releaseEvent?.actor?.displayName).toBe("Sam");
     expect(releaseEvent?.text).toContain("Pas 1");
+
+    // Test fixture.rescheduled in timeline
+    const reschedKickoff = Math.floor(Date.UTC(2026, 8, 20, 14, 30, 0) / 1000);
+    await db.insert(schema.activityEvents).values({
+      id: "evt_test_resched",
+      gamePoolId: poolId,
+      passId: null,
+      actorMemberId: null,
+      type: "fixture.rescheduled",
+      payloadJson: JSON.stringify({ newKickoffAt: reschedKickoff }),
+      createdAt: now + 10,
+    });
+
+    const reschedSnapshot = await buildPoolSnapshot(db, poolId, "member_goedvolk_sam");
+    const reschedEvt = reschedSnapshot?.timeline.find((e) => e.type === "fixture.rescheduled");
+    expect(reschedEvt).toBeDefined();
+    expect(reschedEvt?.text).toContain("Aftrap gewijzigd naar");
+    expect(reschedEvt?.text).not.toContain(String(reschedKickoff));
+    expect(reschedEvt?.text).toContain("16:30");
   });
 });

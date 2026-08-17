@@ -15,12 +15,30 @@ export function t(key: keyof typeof nl, params?: Record<string, string | number>
   return result;
 }
 
+export function formatKickoffDateTime(
+  timestampSec: number,
+  timeZone: string = "Europe/Amsterdam",
+  locale: string = "nl-NL"
+): string {
+  const date = new Date(timestampSec * 1000);
+  const dtf = new Intl.DateTimeFormat(locale, {
+    timeZone,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return dtf.format(date);
+}
+
 export function formatEventText(
   type: string,
   payload: Record<string, unknown>,
   memberNames: Map<string, string>,
   passLabels: Map<string, string>,
-  actorName?: string
+  actorName?: string,
+  timeZone: string = "Europe/Amsterdam"
 ): string {
   const actor = actorName ?? "Iemand";
   const passId = payload.passId as string | undefined;
@@ -62,8 +80,14 @@ export function formatEventText(
       const to = (payload.toMemberId && memberNames.get(payload.toMemberId as string)) ?? "onbekend";
       return `Locatie van ${pass} gecorrigeerd: nu bij ${to}`;
     }
-    case "fixture.rescheduled":
-      return nl.events.fixtureRescheduled.replace("{kickoff}", String(payload.newKickoffAt));
+    case "fixture.rescheduled": {
+      const newKickoff = payload.newKickoffAt;
+      const formattedKickoff =
+        typeof newKickoff === "number"
+          ? formatKickoffDateTime(newKickoff, timeZone)
+          : String(newKickoff ?? "");
+      return nl.events.fixtureRescheduled.replace("{kickoff}", formattedKickoff);
+    }
     case "fixture.cancelled":
       return nl.events.fixtureCancelled;
     default:

@@ -325,7 +325,8 @@ export async function buildPoolSnapshot(
       payload,
       memberNamesMap,
       passLabelsMap,
-      actorRef?.displayName
+      actorRef?.displayName,
+      group?.timezone ?? "Europe/Amsterdam"
     );
     return {
       id: evt.id,
