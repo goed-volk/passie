@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { getPlatformProxy } from "./proxy";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and } from "drizzle-orm";
 import * as schema from "../src/server/schema";
 
-interface SeedClub {
+export interface SeedClub {
   slug: string;
   name: string;
   shortName: string;
@@ -18,19 +19,19 @@ interface SeedClub {
   icsHomeFeedUrl: string;
 }
 
-interface SeedSeason {
+export interface SeedSeason {
   label: string;
   startsOn: string;
   endsOn: string;
 }
 
-interface SeedGroup {
+export interface SeedGroup {
   slug: string;
   name: string;
   timezone?: string;
 }
 
-interface SeedMember {
+export interface SeedMember {
   slug: string;
   displayName: string;
   initials?: string;
@@ -38,7 +39,7 @@ interface SeedMember {
   sortOrder?: number;
 }
 
-interface SeedPass {
+export interface SeedPass {
   label: string;
   seatInfo?: string | null;
   owners: string[];
@@ -46,7 +47,7 @@ interface SeedPass {
   sortOrder?: number;
 }
 
-interface SeedData {
+export interface SeedData {
   club: SeedClub;
   season: SeedSeason;
   group: SeedGroup;
@@ -54,29 +55,207 @@ interface SeedData {
   passes: SeedPass[];
 }
 
-async function main() {
-  const args = process.argv.slice(2);
+export function generateSeedSql(seed: SeedData): string {
+  const sqlEscape = (val: string | null | undefined): string => {
+    if (val === null || val === undefined) return "NULL";
+    return `'${val.replace(/'/g, "''")}'`;
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const statements: string[] = [];
+
+  const clubId = `club_${seed.club.slug}`;
+  statements.push(`
+INSERT INTO clubs (id, slug, name, short_name, city, color_primary, color_secondary, color_accent, color_on_primary, logo_url, ics_home_feed_url, created_at)
+VALUES (
+  ${sqlEscape(clubId)},
+  ${sqlEscape(seed.club.slug)},
+  ${sqlEscape(seed.club.name)},
+  ${sqlEscape(seed.club.shortName)},
+  ${sqlEscape(seed.club.city)},
+  ${sqlEscape(seed.club.colorPrimary)},
+  ${sqlEscape(seed.club.colorSecondary)},
+  ${sqlEscape(seed.club.colorAccent)},
+  ${sqlEscape(seed.club.colorOnPrimary)},
+  ${sqlEscape(seed.club.logoUrl ?? null)},
+  ${sqlEscape(seed.club.icsHomeFeedUrl)},
+  ${now}
+)
+ON CONFLICT(slug) DO UPDATE SET
+  name = excluded.name,
+  short_name = excluded.short_name,
+  city = excluded.city,
+  color_primary = excluded.color_primary,
+  color_secondary = excluded.color_secondary,
+  color_accent = excluded.color_accent,
+  color_on_primary = excluded.color_on_primary,
+  logo_url = excluded.logo_url,
+  ics_home_feed_url = excluded.ics_home_feed_url;
+  `.trim());
+
+  const seasonId = `season_${seed.club.slug}_${seed.season.label.replace("/", "_")}`;
+  statements.push(`
+INSERT INTO seasons (id, club_id, label, starts_on, ends_on)
+VALUES (
+  ${sqlEscape(seasonId)},
+  ${sqlEscape(clubId)},
+  ${sqlEscape(seed.season.label)},
+  ${sqlEscape(seed.season.startsOn)},
+  ${sqlEscape(seed.season.endsOn)}
+)
+ON CONFLICT(id) DO NOTHING;
+  `.trim());
+
+  const groupId = `group_${seed.group.slug}`;
+  statements.push(`
+INSERT INTO groups (id, slug, name, club_id, timezone, created_at)
+VALUES (
+  ${sqlEscape(groupId)},
+  ${sqlEscape(seed.group.slug)},
+  ${sqlEscape(seed.group.name)},
+  ${sqlEscape(clubId)},
+  ${sqlEscape(seed.group.timezone ?? "Europe/Amsterdam")},
+  ${now}
+)
+ON CONFLICT(slug) DO UPDATE SET
+  name = excluded.name,
+  club_id = excluded.club_id,
+  timezone = excluded.timezone;
+  `.trim());
+
+  const memberMap = new Map<string, string>();
+  for (let index = 0; index < seed.members.length; index++) {
+    const m = seed.members[index]!;
+    const memberId = `member_${seed.group.slug}_${m.slug}`;
+    const initials = m.initials ?? m.displayName.slice(0, 2).toUpperCase();
+    const sortOrder = m.sortOrder ?? index + 1;
+    memberMap.set(m.slug, memberId);
+
+    statements.push(`
+INSERT INTO members (id, group_id, slug, display_name, initials, avatar_color, is_active, sort_order, created_at)
+VALUES (
+  ${sqlEscape(memberId)},
+  ${sqlEscape(groupId)},
+  ${sqlEscape(m.slug)},
+  ${sqlEscape(m.displayName)},
+  ${sqlEscape(initials)},
+  ${sqlEscape(m.avatarColor)},
+  1,
+  ${sortOrder},
+  ${now}
+)
+ON CONFLICT(group_id, slug) DO UPDATE SET
+  display_name = excluded.display_name,
+  initials = excluded.initials,
+  avatar_color = excluded.avatar_color,
+  sort_order = excluded.sort_order;
+    `.trim());
+  }
+
+  for (let index = 0; index < seed.passes.length; index++) {
+    const p = seed.passes[index]!;
+    const passId = `pass_${seed.group.slug}_${index + 1}`;
+    const holderMemberId = memberMap.get(p.holder) ?? null;
+    const sortOrder = p.sortOrder ?? index + 1;
+
+    statements.push(`
+INSERT INTO passes (id, group_id, label, seat_info, holder_member_id, is_active, sort_order, created_at)
+VALUES (
+  ${sqlEscape(passId)},
+  ${sqlEscape(groupId)},
+  ${sqlEscape(p.label)},
+  ${sqlEscape(p.seatInfo ?? null)},
+  ${sqlEscape(holderMemberId)},
+  1,
+  ${sortOrder},
+  ${now}
+)
+ON CONFLICT(group_id, label) DO UPDATE SET
+  seat_info = excluded.seat_info,
+  holder_member_id = excluded.holder_member_id,
+  sort_order = excluded.sort_order;
+    `.trim());
+
+    for (const ownerSlug of p.owners) {
+      const ownerMemberId = memberMap.get(ownerSlug);
+      if (ownerMemberId) {
+        statements.push(`
+INSERT INTO pass_owners (pass_id, member_id, share_note)
+VALUES (${sqlEscape(passId)}, ${sqlEscape(ownerMemberId)}, NULL)
+ON CONFLICT(pass_id, member_id) DO NOTHING;
+        `.trim());
+      }
+    }
+  }
+
+  return statements.join("\n\n");
+}
+
+export async function runSeed(args = process.argv.slice(2)) {
   const isRemote = args.includes("--remote");
   const isConfirmed = args.includes("--confirm");
+
+  let customFile: string | null = null;
+  for (const arg of args) {
+    if (arg.startsWith("--file=")) {
+      customFile = arg.slice(7);
+    }
+  }
 
   if (isRemote && !isConfirmed) {
     console.error("Refusing to seed remote/production database without --confirm");
     process.exit(1);
   }
 
-  const localSeedPath = path.resolve(process.cwd(), "seed/group.local.json");
-  const exampleSeedPath = path.resolve(process.cwd(), "seed/group.example.json");
-
-  let seedFilePath = exampleSeedPath;
-  if (fs.existsSync(localSeedPath)) {
+  let seedFilePath: string;
+  if (customFile) {
+    seedFilePath = path.resolve(process.cwd(), customFile);
+    if (!fs.existsSync(seedFilePath)) {
+      console.error(`Error: Seed file not found at ${seedFilePath}`);
+      process.exit(1);
+    }
+  } else if (isRemote) {
+    const localSeedPath = path.resolve(process.cwd(), "seed/group.local.json");
+    if (!fs.existsSync(localSeedPath)) {
+      console.error(
+        "Error: Cannot seed remote database: seed/group.local.json not found (or specify --file=<path>)"
+      );
+      process.exit(1);
+    }
     seedFilePath = localSeedPath;
-    console.log(`Loading seed data from ${seedFilePath}`);
   } else {
-    console.log(`Loading seed data from ${seedFilePath}`);
+    const localSeedPath = path.resolve(process.cwd(), "seed/group.local.json");
+    const exampleSeedPath = path.resolve(process.cwd(), "seed/group.example.json");
+    seedFilePath = fs.existsSync(localSeedPath) ? localSeedPath : exampleSeedPath;
   }
 
+  console.log(`Loading seed data from ${seedFilePath}`);
   const rawJson = fs.readFileSync(seedFilePath, "utf-8");
   const seed: SeedData = JSON.parse(rawJson);
+
+  if (isRemote) {
+    console.log("Generating idempotent SQL for remote D1 execution...");
+    const seedSql = generateSeedSql(seed);
+    const wranglerDir = path.resolve(process.cwd(), ".wrangler");
+    if (!fs.existsSync(wranglerDir)) {
+      fs.mkdirSync(wranglerDir, { recursive: true });
+    }
+    const tempSqlPath = path.join(wranglerDir, "seed-remote.sql");
+    fs.writeFileSync(tempSqlPath, seedSql, "utf-8");
+
+    try {
+      console.log("Executing seed script against remote Cloudflare D1 database 'passie'...");
+      execSync(`pnpm exec wrangler d1 execute passie --remote --file="${tempSqlPath}" -y`, {
+        stdio: "inherit",
+      });
+      console.log("Remote seeding complete!");
+    } finally {
+      if (fs.existsSync(tempSqlPath)) {
+        fs.unlinkSync(tempSqlPath);
+      }
+    }
+    return;
+  }
 
   const proxy = await getPlatformProxy<{ DB: D1Database }>({
     configPath: "wrangler.jsonc",
@@ -239,7 +418,10 @@ async function main() {
   await proxy.dispose();
 }
 
-main().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith("seed.ts")) {
+  runSeed().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}
+
