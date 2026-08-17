@@ -45,6 +45,9 @@ export const nl = {
   actionRelease: "Pas vrijgeven",
   actionReclaim: "Pas terugclaimen",
   actionGiveBack: "Pas teruggeven",
+  reclaimConfirmTitle: "Pas terugclaimen van {name}?",
+  reclaimConfirmDesc: "Weet je zeker dat je je seizoenkaart wilt terugclaimen van {name}? Diegene raakt de toegewezen plek kwijt en wordt teruggeplaatst in de wachtrij.",
+  reclaimConfirmSubmit: "Ja, pas terugclaimen",
 
   // Queue Actions
   joinForSelf: "Ik wil een pas",

@@ -20,6 +20,7 @@ describe("i18n discipline", () => {
   it("translates parameterized strings with t()", () => {
     expect(t("appName")).toBe("Passie");
     expect(t("passLabel")).toBe("Pas");
+    expect(t("reclaimConfirmTitle", { name: "Daan" })).toBe("Pas terugclaimen van Daan?");
   });
 
   it("formats kickoff date-time in Dutch with Europe/Amsterdam timezone", () => {

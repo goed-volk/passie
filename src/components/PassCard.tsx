@@ -34,7 +34,15 @@ export function PassCard({
   loading,
 }: PassCardProps) {
   const [openHolderDialog, setOpenHolderDialog] = useState(false);
+  const [openReclaimDialog, setOpenReclaimDialog] = useState(false);
   const [isTransferringLocal, setIsTransferringLocal] = useState(false);
+  const [isReclaimingLocal, setIsReclaimingLocal] = useState(false);
+
+  const claimantDisplayName = pass.claimant
+    ? pass.claimant.kind === "guest"
+      ? `${pass.claimant.member.displayName}'s gast${pass.claimant.guestName ? ` (${pass.claimant.guestName})` : ""}`
+      : pass.claimant.member.displayName
+    : "de huidige toewijzing";
 
   const getStatusBadge = () => {
     switch (pass.status) {
@@ -64,6 +72,16 @@ export function PassCard({
       setOpenHolderDialog(false);
     } finally {
       setIsTransferringLocal(false);
+    }
+  };
+
+  const handleConfirmReclaim = async () => {
+    setIsReclaimingLocal(true);
+    try {
+      await onIndicate(pass.id, "keep");
+      setOpenReclaimDialog(false);
+    } finally {
+      setIsReclaimingLocal(false);
     }
   };
 
@@ -246,16 +264,48 @@ export function PassCard({
 
         {pass.canReclaim && (
           <div className="pt-1">
-            <Button
-              size="sm"
-              variant="club"
-              disabled={loading}
-              onClick={() => onIndicate(pass.id, "keep")}
-              className="w-full flex items-center justify-center space-x-1.5 shadow-sm font-semibold"
-            >
-              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
-              <span>{t("actionReclaim")}</span>
-            </Button>
+            <Dialog open={openReclaimDialog} onOpenChange={setOpenReclaimDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="club"
+                  disabled={loading || isReclaimingLocal}
+                  className="w-full flex items-center justify-center space-x-1.5 shadow-sm font-semibold"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                  <span>{t("actionReclaim")}</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">
+                <DialogHeader>
+                  <DialogTitle className="dark:text-slate-100">
+                    {t("reclaimConfirmTitle", { name: claimantDisplayName })}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
+                    {t("reclaimConfirmDesc", { name: claimantDisplayName })}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end space-x-2 pt-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={loading || isReclaimingLocal}
+                    onClick={() => setOpenReclaimDialog(false)}
+                    className="dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {t("cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="club"
+                    disabled={loading || isReclaimingLocal}
+                    onClick={handleConfirmReclaim}
+                  >
+                    {t("reclaimConfirmSubmit")}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 
