@@ -41,70 +41,70 @@
   "passes": [
     {
       "label": "Pas 1",
-      "seatInfo": "Vak K, rij 12, stoel 1",
+      "seatInfo": "Vak K",
       "owners": ["sam"],
       "holder": "sam",
       "sortOrder": 1
     },
     {
       "label": "Pas 2",
-      "seatInfo": "Vak K, rij 12, stoel 2",
+      "seatInfo": "Vak K",
       "owners": ["ilse", "noor"],
       "holder": "ilse",
       "sortOrder": 2
     },
     {
       "label": "Pas 3",
-      "seatInfo": "Vak K, rij 12, stoel 3",
+      "seatInfo": "Vak K",
       "owners": ["bram"],
       "holder": "daan",
       "sortOrder": 3
     },
     {
       "label": "Pas 4",
-      "seatInfo": "Vak K, rij 12, stoel 4",
+      "seatInfo": "Vak K",
       "owners": ["daan"],
       "holder": "daan",
       "sortOrder": 4
     },
     {
       "label": "Pas 5",
-      "seatInfo": "Vak K, rij 12, stoel 5",
+      "seatInfo": "Vak K",
       "owners": ["eva", "finn"],
       "holder": "eva",
       "sortOrder": 5
     },
     {
       "label": "Pas 6",
-      "seatInfo": "Vak K, rij 12, stoel 6",
+      "seatInfo": "Vak K",
       "owners": ["finn"],
       "holder": "finn",
       "sortOrder": 6
     },
     {
       "label": "Pas 7",
-      "seatInfo": "Vak K, rij 12, stoel 7",
+      "seatInfo": "Vak K",
       "owners": ["gijs"],
       "holder": "gijs",
       "sortOrder": 7
     },
     {
       "label": "Pas 8",
-      "seatInfo": "Vak K, rij 12, stoel 8",
+      "seatInfo": "Vak K",
       "owners": ["hannah", "jasper"],
       "holder": "jasper",
       "sortOrder": 8
     },
     {
       "label": "Pas 9",
-      "seatInfo": "Vak K, rij 12, stoel 9",
+      "seatInfo": "Vak K",
       "owners": ["koen"],
       "holder": "koen",
       "sortOrder": 9
     },
     {
       "label": "Pas 10",
-      "seatInfo": "Vak K, rij 12, stoel 10",
+      "seatInfo": "Vak K",
       "owners": ["lars"],
       "holder": "lars",
       "sortOrder": 10
