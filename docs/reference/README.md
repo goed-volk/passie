@@ -8,7 +8,7 @@ This document tracks verified external documentation, checked dates, and known p
 
 - **OpenNext Cloudflare**
   - URL: `https://opennext.js.org/cloudflare/get-started` | `/bindings` | `/caching` | `/known-issues`
-  - Verified: Requires `nodejs_compat` + compatibility date ≥ `2024-09-23`, wrangler ≥ `3.99`.
+  - Verified: Requires `nodejs_compat` + compatibility date ≥ `2024-09-23` (configured to current `2026-08-17`), wrangler ≥ `3.99`.
   - Config: `main: .open-next/worker.js`, `assets.directory: .open-next/assets`, `WORKER_SELF_REFERENCE` service binding.
   - Development: Requires `initOpenNextCloudflareForDev()` in `next.config.ts` for local bindings. `.open-next` is gitignored.
   - **Critical Gotcha:** `export const runtime = 'edge'` is unsupported in `@opennextjs/cloudflare`.
