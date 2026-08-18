@@ -4,6 +4,7 @@ import type { PoolSnapshot, MemberRef } from "@/server/snapshot";
 
 interface PassListProps {
   passes: PoolSnapshot["passes"];
+  fixtureOpponent?: string;
   allMembers?: MemberRef[];
   onIndicate: (passId: string, action: "keep" | "release" | "giveBack") => Promise<void>;
   onTransfer?: (passId: string, toMemberId: string) => Promise<void>;
@@ -12,6 +13,7 @@ interface PassListProps {
 
 export function PassList({
   passes,
+  fixtureOpponent,
   allMembers,
   onIndicate,
   onTransfer,
@@ -38,6 +40,7 @@ export function PassList({
           <PassCard
             key={pass.id}
             pass={pass}
+            fixtureOpponent={fixtureOpponent}
             allMembers={allMembers}
             onIndicate={onIndicate}
             onTransfer={onTransfer}
