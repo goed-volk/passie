@@ -74,12 +74,12 @@ describe("/ingest proxy route security & filtering", () => {
   });
 
   it("POST: forwards valid events to upstream without cookies", async () => {
-    let capturedBody = "";
+    let capturedBody: ArrayBuffer | null = null;
     let capturedHeaders: Headers | null = null;
 
     vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
       capturedHeaders = new Headers(init?.headers);
-      capturedBody = String(init?.body);
+      capturedBody = (init?.body as ArrayBuffer) ?? null;
       return new Response(JSON.stringify({ status: 1 }), {
         status: 200,
         headers: {
@@ -103,6 +103,8 @@ describe("/ingest proxy route security & filtering", () => {
     const sentHeaders = capturedHeaders as Headers | null;
     expect(sentHeaders).not.toBeNull();
     expect(sentHeaders?.get("cookie")).toBeNull();
-    expect(capturedBody).toBe(bodyText);
+    expect(capturedBody).not.toBeNull();
+    const decodedBody = new TextDecoder().decode(capturedBody!);
+    expect(decodedBody).toBe(bodyText);
   });
 });

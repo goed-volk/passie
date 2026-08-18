@@ -10,10 +10,12 @@ const ALLOWED_PATH_PREFIXES = [
   "flags",
   "s",
   "batch",
+  "static",
 ];
 
 const ALLOWED_REQUEST_HEADERS = [
   "content-type",
+  "content-encoding",
   "user-agent",
   "accept",
   "accept-encoding",
@@ -75,7 +77,7 @@ export async function GET(
       headers: buildUpstreamHeaders(request),
     });
 
-    const responseBody = await upstreamRes.text();
+    const responseBody = await upstreamRes.arrayBuffer();
 
     return new NextResponse(responseBody, {
       status: upstreamRes.status,
@@ -108,14 +110,14 @@ export async function POST(
     );
   }
 
-  let body: string;
+  let body: ArrayBuffer;
   try {
-    body = await request.text();
+    body = await request.arrayBuffer();
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  if (new TextEncoder().encode(body).length > MAX_BODY_BYTES) {
+  if (body.byteLength > MAX_BODY_BYTES) {
     return NextResponse.json(
       { error: "Payload Too Large" },
       { status: 413 }
@@ -132,7 +134,7 @@ export async function POST(
       body,
     });
 
-    const responseBody = await upstreamRes.text();
+    const responseBody = await upstreamRes.arrayBuffer();
 
     return new NextResponse(responseBody, {
       status: upstreamRes.status,

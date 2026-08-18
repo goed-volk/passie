@@ -43,6 +43,7 @@ function sanitizePathname(rawPath: string): string {
 
 export function initPostHog() {
   if (typeof window === "undefined") return;
+  if (posthog.__loaded) return;
 
   const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!posthogKey) {
