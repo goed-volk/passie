@@ -126,6 +126,7 @@ cp .dev.vars.example .dev.vars
 | `pnpm seed:example` | No | No | Populates local D1 database with fictional seed data. |
 | `pnpm seed:local` | No | No | Seeds D1 with local group data (`--confirm` required for production). |
 | `pnpm ingest:local` | No | No | Ingests upcoming fixtures from the iCal feed into local D1. |
+| `pnpm dev-reset` | No | No | Resets local D1 database, re-migrates, re-seeds local group data, and re-ingests fixtures. |
 | `pnpm cf-typegen` | No | No | Generates Cloudflare Worker runtime environment types (`worker-configuration.d.ts`). |
 
 ---
