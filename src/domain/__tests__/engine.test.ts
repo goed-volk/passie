@@ -487,6 +487,184 @@ describe("Domain Engine Edge Cases", () => {
         expect(tryCancel.error.code).toBe("NOT_QUEUE_ENTRY_OWNER");
       }
     });
+
+    it("returns PASS_NOT_FOUND when action targets a non-existent pass", () => {
+      const state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+
+      const tryKeep = reduce(state, { type: "IndicateKeep", passId: "pass_nonexistent" }, ctx);
+      expect("error" in tryKeep).toBe(true);
+      if ("error" in tryKeep) {
+        expect(tryKeep.error.code).toBe("PASS_NOT_FOUND");
+      }
+
+      const tryRel = reduce(state, { type: "IndicateRelease", passId: "pass_nonexistent" }, ctx);
+      expect("error" in tryRel).toBe(true);
+      if ("error" in tryRel) {
+        expect(tryRel.error.code).toBe("PASS_NOT_FOUND");
+      }
+
+      const tryGiveBack = reduce(state, { type: "GiveBackAssignedPass", passId: "pass_nonexistent" }, ctx);
+      expect("error" in tryGiveBack).toBe(true);
+      if ("error" in tryGiveBack) {
+        expect(tryGiveBack.error.code).toBe("PASS_NOT_FOUND");
+      }
+
+      const tryHandover = reduce(
+        state,
+        { type: "RecordHandover", passId: "pass_nonexistent", toMemberId: "member_eva" },
+        ctx
+      );
+      expect("error" in tryHandover).toBe(true);
+      if ("error" in tryHandover) {
+        expect(tryHandover.error.code).toBe("PASS_NOT_FOUND");
+      }
+    });
+
+    it("returns PASS_NOT_ASSIGNED when give back is attempted on unassigned pass", () => {
+      const state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+
+      const tryGiveBack = reduce(state, { type: "GiveBackAssignedPass", passId: "pass_1" }, ctx);
+      expect("error" in tryGiveBack).toBe(true);
+      if ("error" in tryGiveBack) {
+        expect(tryGiveBack.error.code).toBe("PASS_NOT_ASSIGNED");
+      }
+    });
+
+    it("returns QUEUE_ENTRY_NOT_FOUND when cancelling non-existent entry", () => {
+      const state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+
+      const tryCancel = reduce(state, { type: "CancelQueueEntry", entryId: 999 }, ctx);
+      expect("error" in tryCancel).toBe(true);
+      if ("error" in tryCancel) {
+        expect(tryCancel.error.code).toBe("QUEUE_ENTRY_NOT_FOUND");
+      }
+    });
+
+    it("returns QUEUE_ENTRY_NOT_WAITING when cancelling non-waiting entry", () => {
+      let state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+
+      state = applyAction(state, { type: "JoinQueue", nextEntryId: 1, kind: "self" }, ctx);
+      state = applyAction(state, { type: "CancelQueueEntry", entryId: 1 }, ctx);
+
+      // Now entry 1 is cancelled
+      const tryCancelAgain = reduce(state, { type: "CancelQueueEntry", entryId: 1 }, ctx);
+      expect("error" in tryCancelAgain).toBe(true);
+      if ("error" in tryCancelAgain) {
+        expect(tryCancelAgain.error.code).toBe("QUEUE_ENTRY_NOT_WAITING");
+      }
+    });
+
+    it("returns NOT_PASS_OWNER when actor is null on IndicateKeep or IndicateRelease", () => {
+      const state = createInitialState();
+      const ctxNoActor = createMockContext({ actor: null });
+
+      const tryKeep = reduce(state, { type: "IndicateKeep", passId: "pass_1" }, ctxNoActor);
+      expect("error" in tryKeep).toBe(true);
+      if ("error" in tryKeep) {
+        expect(tryKeep.error.code).toBe("NOT_PASS_OWNER");
+      }
+
+      const tryRel = reduce(state, { type: "IndicateRelease", passId: "pass_1" }, ctxNoActor);
+      expect("error" in tryRel).toBe(true);
+      if ("error" in tryRel) {
+        expect(tryRel.error.code).toBe("NOT_PASS_OWNER");
+      }
+    });
+
+    it("handles IndicateRelease on already assigned pass idempotently", () => {
+      let state = createInitialState();
+      const ctxJoin = createMockContext({ actor: "member_eva" });
+      const ctxRel = createMockContext({ actor: "member_sam" });
+
+      state = applyAction(state, { type: "JoinQueue", nextEntryId: 1, kind: "self" }, ctxJoin);
+      state = applyAction(state, { type: "IndicateRelease", passId: "pass_1" }, ctxRel);
+
+      // Now pass_1 is assigned. Repeating IndicateRelease on assigned pass should return state with no events.
+      const repeatRel = reduce(state, { type: "IndicateRelease", passId: "pass_1" }, ctxRel);
+      expect("state" in repeatRel).toBe(true);
+      if ("state" in repeatRel) {
+        expect(repeatRel.events).toHaveLength(0);
+      }
+    });
+
+    it("triggers default branch on unexpected action", () => {
+      const state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+      const res = reduce(state, { type: "InvalidType" } as unknown as Action, ctx);
+      expect("error" in res).toBe(true);
+      if ("error" in res) {
+        expect(res.error.code).toBe("INVALID_ACTION");
+      }
+    });
+
+    it("returns QUEUE_ENTRY_NOT_FOUND when giveback pass points to missing queue entry", () => {
+      let state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+      // Force pass to assigned with a claimantEntryId that is not in queue
+      state = {
+        ...state,
+        passes: state.passes.map((p) =>
+          p.id === "pass_1"
+            ? { ...p, status: "assigned" as const, claimantEntryId: 888 }
+            : p
+        ),
+      };
+
+      const tryGiveBack = reduce(state, { type: "GiveBackAssignedPass", passId: "pass_1" }, ctx);
+      expect("error" in tryGiveBack).toBe(true);
+      if ("error" in tryGiveBack) {
+        expect(tryGiveBack.error.code).toBe("QUEUE_ENTRY_NOT_FOUND");
+      }
+    });
+
+    it("reconcileAllocation calls runAllocation directly", async () => {
+      const { reconcileAllocation } = await import("../allocation");
+      const state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+      const res = reconcileAllocation(state.passes, state.queue, ctx, state.id);
+      expect(res.passes).toHaveLength(state.passes.length);
+    });
+
+    it("handles RecordHandover with correction kind and note", () => {
+      let state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+
+      const correction = reduce(
+        state,
+        {
+          type: "RecordHandover",
+          passId: "pass_1",
+          toMemberId: "member_eva",
+          kind: "correction",
+          note: "Gecorrigeerd na wedstrijd",
+        },
+        ctx
+      );
+
+      expect("state" in correction).toBe(true);
+      if ("state" in correction) {
+        expect(correction.events[0]?.type).toBe("possession.corrected");
+        expect(correction.events[0]?.payload.kind).toBe("correction");
+        expect(correction.events[0]?.payload.note).toBe("Gecorrigeerd na wedstrijd");
+      }
+    });
+
+    it("handles IndicateKeep when already kept by same owner idempotently", () => {
+      let state = createInitialState();
+      const ctx = createMockContext({ actor: "member_sam" });
+
+      state = applyAction(state, { type: "IndicateKeep", passId: "pass_1" }, ctx);
+
+      const repeatKeep = reduce(state, { type: "IndicateKeep", passId: "pass_1" }, ctx);
+      expect("state" in repeatKeep).toBe(true);
+      if ("state" in repeatKeep) {
+        expect(repeatKeep.events).toHaveLength(0);
+      }
+    });
   });
 
   // Property-based invariant test over 200 random action sequences

@@ -570,5 +570,14 @@ export function reduce(
         events: [cancelEvent],
       };
     }
+
+    default: {
+      return {
+        error: {
+          code: "INVALID_ACTION",
+          message: `Unknown action type: ${(action as Action).type}`,
+        },
+      };
+    }
   }
 }

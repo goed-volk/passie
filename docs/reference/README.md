@@ -35,9 +35,17 @@ This document tracks verified external documentation, checked dates, and known p
 - **shadcn/ui & Lucide Icons**
   - URL: `https://ui.shadcn.com/docs/installation/next` | `https://lucide.dev/icons/`
 
+- **Cloudflare Access for Workers (Verified 2026-08-14)**
+  - URL: `https://blog.cloudflare.com/workers-protected-by-access/` | `https://developers.cloudflare.com/workers/configuration/cloudflare-access/`
+  - Scope: Access policies attach to the **Worker** directly (destination types `worker`, `preview_worker`, `all_workers`, `all_preview_workers`). One policy covers custom domains, routes, `workers.dev`, and preview URLs without route-level gaps.
+  - Identity Contract: `ctx.access.getIdentity()` returns user email, name, and groups without manual JWT assertion parsing or cert rotation. `ctx.access` is `undefined` when bypassed or unauthenticated.
+  - Local Simulation: Configured in `wrangler.jsonc` via `"access": { "dev": { "aud": "...", "identity": { "email": "..." } } }`. Note: `aud` is required whenever the `access.dev` block is present.
+  - Hierarchy: Hostname/path > Worker > Account.
+  - **Critical Gotcha (WebSockets):** Worker-level Access policies do not currently support WebSocket connection upgrades (returns `403`). Server-Sent Events (SSE) uses plain HTTP streaming and is fully supported under Worker-level Access.
+
 - **TanStack Query**
-  - URL: `https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates`
-  - Pattern: 5-second polling interval while document is visible, instant optimistic rollbacks on `409 Conflict`.
+  - URL: `https://tanstack.com/query/latest`
+  - Pattern: 5-second polling interval while document is visible (`document.hidden === false`), refetch on focus, and server-confirmed mutations with disabled controls during inflight requests. Cache is updated upon receiving server-confirmed snapshot.
 
 - **PostHog**
   - URL: `https://posthog.com/docs/libraries/next-js` | `/docs/advanced/proxy`

@@ -22,16 +22,18 @@ Built for groups sharing season tickets at Dutch football clubs (Excelsior Rotte
 - **Framework:** [Next.js 16 App Router](https://nextjs.org/) via [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare)
 - **Runtime & Hosting:** [Cloudflare Workers](https://workers.cloudflare.com/)
 - **Database:** [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) with [Drizzle ORM](https://orm.drizzle.team/)
-- **State & Data Fetching:** [TanStack Query](https://tanstack.com/query) with optimistic mutations and smart polling
+- **State & Data Fetching:** [TanStack Query](https://tanstack.com/query) with server-confirmed mutations and smart polling (5s interval, refetch on window focus)
 - **Styling & UI:** Tailwind CSS, Radix UI primitives, [Lucide Icons](https://lucide.dev/), Sonner toasts
-- **Analytics:** [PostHog](https://posthog.com/) via self-hosted reverse proxy route (fully disabled when unconfigured)
+- **Analytics:** [PostHog](https://posthog.com/) via same-origin reverse proxy route (client-side product analytics only, sanitized URLs, fully disabled when unconfigured)
 
 ---
 
 ## Authentication & Privacy Disclosure
 
-⚠️ **The MVP has NO authentication.**
-Access is controlled by obscurity (`noindex`, unguessable URL). Identity is selected by users via a simple *"Wie ben jij?"* profile picker stored in a local HTTP-only session cookie. Actions are socially accountable via an append-only timeline. Never place confidential or sensitive personal data into the application.
+⚠️ **The MVP has NO passwords or cryptographic authentication.**
+Access is protected by Cloudflare Access at Worker scope (with a regional Bypass policy for the Netherlands during soft launch). Identity within the group is selected by members via a simple *"Wie ben jij?"* profile picker stored in a local HTTP-only session cookie (`passie_member`). Actions and physical pass transfers are socially accountable via an append-only activity timeline.
+
+Client-side product analytics and Web Vitals are sent via a first-party same-origin `/ingest` proxy with autocapture, heatmaps, and session recording strictly disabled. URLs are sanitized to route templates before leaving the client. Never place confidential or sensitive personal data into the application.
 
 ---
 
@@ -42,8 +44,9 @@ Passie uses environment variables for build-time analytics and Cloudflare secret
 | Variable | Target | Required? | Description |
 | :--- | :--- | :---: | :--- |
 | `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for HTTP cron route | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint (returns 503 if unconfigured). |
-| `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (local) / Cloudflare dashboard (prod) | Optional | PostHog project API key. If left blank or unset, all analytics tracking is completely disabled. |
-| `NEXT_PUBLIC_POSTHOG_HOST` | `.env.local` (local) / Cloudflare dashboard (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
+| `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (dev) / deploy shell env (prod) | Optional | PostHog project API key. Separate project keys for `passie-dev` and `passie-prod`. If left blank or unset, all analytics tracking is completely disabled. |
+| `NEXT_PUBLIC_POSTHOG_HOST` | `.env.local` (local) / deploy shell env (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
+| `NEXT_PUBLIC_PASSIE_ENV` | `.env.local` (local) / deploy shell env (prod) | Optional | Environment tag: `development` or `production`. |
 
 For local development, copy the templates:
 ```bash
@@ -129,7 +132,7 @@ cp .dev.vars.example .dev.vars
 
 ## Deployment Runbook
 
-Deployments target Cloudflare Workers using OpenNext and Cloudflare D1.
+Deployments target Cloudflare Workers using OpenNext, Cloudflare D1, and Cloudflare Access.
 
 1. **Authenticate with Cloudflare:**
    ```bash
@@ -140,27 +143,49 @@ Deployments target Cloudflare Workers using OpenNext and Cloudflare D1.
    ```bash
    pnpm exec wrangler d1 create passie
    ```
-   Copy the returned `database_id` into `wrangler.jsonc` under `d1_databases[0].database_id` (replacing the placeholder).
+   Record the returned `database_id` and commit it into `wrangler.jsonc` under `d1_databases[0].database_id` (see ADR 0011). Run `pnpm cf-typegen`.
 
-3. **Apply D1 migrations to the production database:**
+3. **Configure Cloudflare Access for Workers (Zero Trust dashboard):**
+   - Create a **Worker-level** Access application (destination type `worker`, covering production and previews).
+   - Add a policy with decision `Bypass` and include rule *Country = Netherlands*.
+   - Disable the `workers.dev` route for the `passie` Worker in the Cloudflare dashboard as hygiene.
+   - Enable Workers Logs / Observability for the `passie` Worker.
+
+4. **Configure production secrets & build environment:**
+   ```bash
+   pnpm exec wrangler secret put PASSIE_CRON_SECRET
+   ```
+   Ensure `NEXT_PUBLIC_POSTHOG_KEY` (production project key) and `NEXT_PUBLIC_PASSIE_ENV=production` are set in the deployment shell before building.
+
+5. **Apply D1 migrations to the production database:**
    ```bash
    pnpm db:migrate:prod
    ```
 
-4. **Seed production group data (initial setup):**
+6. **Seed production group data from `seed/group.local.json`:**
    ```bash
    pnpm seed:local --remote --confirm
    ```
 
-5. **Configure production secrets:**
-   ```bash
-   pnpm exec wrangler secret put PASSIE_CRON_SECRET
-   ```
-
-6. **Build and deploy Worker & static assets:**
+7. **Build and deploy Worker & static assets:**
    ```bash
    pnpm deploy
    ```
+
+8. **Trigger initial fixture ingestion:**
+   ```bash
+   curl -i -H "Authorization: Bearer $PASSIE_CRON_SECRET" https://passie.goedvolk.org/api/cron/ingest
+   ```
+
+9. **Verify production data:**
+   ```bash
+   pnpm exec wrangler d1 execute passie --remote --command "SELECT count(*) FROM fixtures; SELECT count(*) FROM members;"
+   ```
+
+10. **Rollback & recovery:**
+    - Worker rollback: `pnpm exec wrangler deployments list` -> `pnpm exec wrangler rollback [id]`.
+    - D1 recovery: record bookmark via `pnpm exec wrangler d1 time-travel info passie --remote`.
+    - Kill switch: switch Access policy decision from `Bypass` to `Block` in Zero Trust dashboard.
 
 ---
 

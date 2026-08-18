@@ -11,6 +11,7 @@ const eslintConfig = [
       "dist/**",
       "build/**",
       "out/**",
+      "coverage/**",
       "worker-configuration.d.ts"
     ],
   },

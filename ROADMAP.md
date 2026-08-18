@@ -18,8 +18,15 @@ This document outlines features, architectural enhancements, and refinements def
     - If the delegated recipient cancels, the pass reverts to `unindicated` for the owner to decide anew.
   - *Why deferred beyond MVP:* Requires extending domain action types (`DelegatePass`), updating queue allocation logic to handle bypassed assignment, adding schema fields, and testing precedence rules.
 
-- **Cloudflare Zero Trust / Access:** Secure the app with Cloudflare Access JWT validation and email-to-member mapping.
-  - *Why not in MVP:* Kept frictionless for friend-group testing via cookie picker.
+- **Verified Identity via Cloudflare Access for Workers (v0.2):** Switch Worker-level Access policy from `bypass` to `allow` with email one-time-PIN / IdP allowlist. Read verified identity server-side via `ctx.access.getIdentity()` (zero JWT signature parsing or manual cert verification required), map verified email to `members.access_email`, retain `passie_member` cookie as dev fallback, bind email to `posthog.identify()`, and simulate locally using `wrangler.jsonc` `access.dev` block with required `aud`.
+  - *Why not in MVP:* Frictionless initial rollout for soft launch using country-level bypass + cookie picker.
+
+- **Matchday Deadline Reminders:** Automated notification (WhatsApp bot / webhook / webpush) at deadline − 24h to nudge unindicated pass owners.
+  - *Why not in MVP:* High-trust friend group uses manual group WhatsApp chat reminders for MVP launch.
+
+- **Server-Side PostHog & Error Capture:** Server-side event capture and exception tracking via direct `fetch` to PostHog EU ingestion (`/i/v0/e/` or `/otlp/v1/logs` inside request context wrapped in `waitUntil()`, never via OpenTelemetry Node SDK) and Next.js `onRequestError`.
+  - *Why not in MVP:* Client-side product analytics + Cloudflare Workers Logs / `wrangler tail` provide complete visibility without OpenTelemetry worker bundling hazards.
+
 - **Member & Pass Admin UI:** Web interface to manage members, avatars, pass ownership shares, and active status without editing JSON/DB directly.
   - *Why not in MVP:* Seed scripts cover initial group setup with zero UI overhead.
 - **Web Push Notifications:** Real-time push alerts for *pass assigned to you* and *handover expected of you*.
@@ -36,7 +43,8 @@ This document outlines features, architectural enhancements, and refinements def
 ## Later
 
 - **Realtime via Durable Objects + SSE:** Server-Sent Events pushed from a per-game Durable Object, replacing 5s client polling while preserving identical snapshot API shapes.
-  - *Why not in MVP:* TanStack Query polling is simple, battery-friendly when tab is active, and requires no stateful WebSocket/DO infrastructure.
+  - *Why not in MVP:* TanStack Query polling is simple, battery-friendly when tab is active, and requires no stateful infrastructure.
+  - *Architecture Note:* Worker-level Cloudflare Access policies support SSE (plain HTTP streaming) natively, but do not currently support WebSocket connection upgrades (which return 403 under Worker-level policies). SSE is fully compatible with Worker-level Access; if WebSocket transport is ever adopted in the future, Access must be migrated to hostname-based first.
 - **Multi-Group & Multi-Club Onboarding & Dynamic Theming:** Support multiple groups and clubs (Eredivisie & Eerste Divisie) with dynamic club theme selector, club logos, and automatic accessible color palette generation.
   - *Why not in MVP:* Schema is multi-tenant ready, but MVP focuses on single-club (`Excelsior`) validation.
   - *Scalability & Contrast Learnings (Eredivisie):*

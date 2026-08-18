@@ -34,7 +34,7 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
    - Real seed data lives in `seed/group.local.json` (gitignored). Only `seed/group.example.json` with fictional data is committed.
 9. **Authentication status:**
    - The MVP has **no authentication**. Identity is set via the `/wie-ben-jij` picker stored in the `passie_member` HTTP-only cookie.
-   - Never add a code path that assumes a cryptographically trusted or verified identity.
+   - Never add a code path that assumes a cryptographically trusted or verified identity (note: this rule will be updated in v0.2 when Cloudflare Access verified identity is introduced per `ROADMAP.md`).
 
 ---
 

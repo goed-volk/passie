@@ -110,5 +110,6 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - **Worker Entry (`src/worker.ts`):** Wraps `@opennextjs/cloudflare` server bundle with top-level `fetch` and `scheduled` handlers.
 - **Cron Triggers:** Automatic background fixture ingestion (`0 */6 * * *`) invokes `ingestClubFixtures(db, "excelsior")` directly via the worker `scheduled` handler.
 - **Custom Domain Routing:** Production traffic routes through `passie.goedvolk.org` configured as a Cloudflare Worker custom domain.
+- **Cloudflare Access for Workers:** Access policy attaches at Worker scope (destination type `worker`), protecting the custom domain, all routes, `workers.dev`, and preview URLs under a single policy. For MVP soft launch, a single Bypass policy conditioned on *Country = Netherlands* is used (admitting Dutch visitors frictionlessly while blocking international scrapers without asserting cryptographically verified identity).
 - **D1 Production Database:** Production database `passie` provisioned via `wrangler d1 create passie`, migrated via `pnpm db:migrate:prod`, and seeded via `pnpm seed:local --remote --confirm`.
 
