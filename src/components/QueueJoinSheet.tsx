@@ -95,7 +95,7 @@ export function QueueJoinSheet({
                 variant="club"
                 disabled={loading}
                 onClick={handleKeep}
-                className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 shadow-sm"
+                className="flex-1 min-w-0 text-sm font-bold flex items-center justify-center space-x-2 shadow-sm"
               >
                 <Check className="h-4 w-4 shrink-0" />
                 <span className="truncate">{t("actionKeep")}</span>

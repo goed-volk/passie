@@ -230,9 +230,9 @@ export function PassCard({
                   // Handled in mutation
                 }
               }}
-              className={`w-full min-w-0 transition-all ${
+              className={`w-full min-w-0 transition-all font-bold ${
                 pass.status === "kept"
-                  ? "ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
+                  ? "ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
                   : ""
               }`}
             >
@@ -249,10 +249,10 @@ export function PassCard({
                   // Handled in mutation
                 }
               }}
-              className={`w-full min-w-0 transition-all border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 ${
+              className={`w-full min-w-0 transition-all border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold ${
                 pass.status === "released"
-                  ? "shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
-                  : "font-semibold"
+                  ? "shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
+                  : ""
               }`}
             >
               {pass.status === "released" ? (
