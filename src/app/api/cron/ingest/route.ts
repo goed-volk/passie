@@ -4,6 +4,8 @@ import { ingestClubFixtures } from "@/server/ingest";
 
 export const dynamic = "force-dynamic";
 
+export const GET = POST;
+
 export async function POST(request: Request) {
   const cronSecret = process.env.PASSIE_CRON_SECRET;
   if (!cronSecret) {
