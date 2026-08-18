@@ -45,6 +45,23 @@ export function formatDeadlineDateTime(
   return `${weekday} ${day} ${month} om ${time} uur`;
 }
 
+export function formatPassLabel(label: string, options?: { capitalize?: boolean }): string {
+  const trimmed = label.trim();
+  const lower = trimmed.toLowerCase();
+
+  let formatted: string;
+  if (lower.startsWith("pas van ") || lower.startsWith("pas ")) {
+    formatted = trimmed;
+  } else {
+    formatted = `pas van ${trimmed}`;
+  }
+
+  if (options?.capitalize) {
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+  return formatted;
+}
+
 export function formatEventText(
   type: string,
   payload: Record<string, unknown>,
@@ -55,7 +72,9 @@ export function formatEventText(
 ): string {
   const actor = actorName ?? "Iemand";
   const passId = payload.passId as string | undefined;
-  const pass = (passId && passLabels.get(passId)) || "Pas";
+  const rawPass = (passId && passLabels.get(passId)) || "Pas";
+  const pass = formatPassLabel(rawPass);
+  const passCap = formatPassLabel(rawPass, { capitalize: true });
 
   switch (type) {
     case "pool.opened":
@@ -71,7 +90,7 @@ export function formatEventText(
       const target = forGuest
         ? `${claimantName}'s gast${payload.guestName ? ` (${payload.guestName})` : ""}`
         : claimantName;
-      return `${pass} toegewezen aan ${target}`;
+      return `${passCap} toegewezen aan ${target}`;
     }
     case "pass.unassigned":
       return `${actor} geeft ${pass} terug`;
@@ -97,7 +116,7 @@ export function formatEventText(
     case "possession.handover": {
       const from = (payload.fromMemberId && memberNames.get(payload.fromMemberId as string)) ?? "onbekend";
       const to = (payload.toMemberId && memberNames.get(payload.toMemberId as string)) ?? "onbekend";
-      return `${pass} overgedragen van ${from} naar ${to}`;
+      return `${passCap} overgedragen van ${from} naar ${to}`;
     }
     case "possession.corrected": {
       const to = (payload.toMemberId && memberNames.get(payload.toMemberId as string)) ?? "onbekend";

@@ -46,7 +46,10 @@ describe("i18n discipline", () => {
       ["member_2", "Daan"],
       ["member_3", "Eva"],
     ]);
-    const passLabelsMap = new Map([["pass_1", "Pas 1"]]);
+    const passLabelsMap = new Map([
+      ["pass_1", "Pas 1"],
+      ["pass_2", "Bram de Vries"],
+    ]);
 
     const textMember = formatEventText(
       "pass.reclaimed",
@@ -56,6 +59,32 @@ describe("i18n discipline", () => {
       "Sam"
     );
     expect(textMember).toBe("Sam claimt Pas 1 terug van Daan");
+
+    const textNamedPass = formatEventText(
+      "pass.kept",
+      { passId: "pass_2" },
+      membersMap,
+      passLabelsMap,
+      "Ilse"
+    );
+    expect(textNamedPass).toBe("Ilse gebruikt pas van Bram de Vries");
+
+    const textReleasedNamedPass = formatEventText(
+      "pass.released",
+      { passId: "pass_2" },
+      membersMap,
+      passLabelsMap,
+      "Ilse"
+    );
+    expect(textReleasedNamedPass).toBe("Ilse geeft pas van Bram de Vries vrij");
+
+    const textAssignedNamedPass = formatEventText(
+      "pass.assigned",
+      { passId: "pass_2", memberId: "member_2", kind: "self" },
+      membersMap,
+      passLabelsMap
+    );
+    expect(textAssignedNamedPass).toBe("Pas van Bram de Vries toegewezen aan Daan");
 
     const textGuest = formatEventText(
       "pass.reclaimed",
