@@ -36,9 +36,11 @@ export function PassCard({
   loading,
 }: PassCardProps) {
   const [openHolderDialog, setOpenHolderDialog] = useState(false);
+  const [openReleaseDialog, setOpenReleaseDialog] = useState(false);
   const [openReclaimDialog, setOpenReclaimDialog] = useState(false);
   const [openGiveBackDialog, setOpenGiveBackDialog] = useState(false);
   const [isTransferringLocal, setIsTransferringLocal] = useState(false);
+  const [isReleasingLocal, setIsReleasingLocal] = useState(false);
   const [isReclaimingLocal, setIsReclaimingLocal] = useState(false);
   const [isGivingBackLocal, setIsGivingBackLocal] = useState(false);
 
@@ -78,6 +80,16 @@ export function PassCard({
       setOpenHolderDialog(false);
     } finally {
       setIsTransferringLocal(false);
+    }
+  };
+
+  const handleConfirmRelease = async () => {
+    setIsReleasingLocal(true);
+    try {
+      await onIndicate(pass.id, "release");
+      setOpenReleaseDialog(false);
+    } finally {
+      setIsReleasingLocal(false);
     }
   };
 
@@ -239,29 +251,59 @@ export function PassCard({
               <Check className="h-3.5 w-3.5 mr-1 shrink-0" />
               <span className="truncate">{t("actionKeep")}</span>
             </Button>
-            <Button
-              size="sm"
-              disabled={loading}
-              onClick={async () => {
-                try {
-                  await onIndicate(pass.id, "release");
-                } catch {
-                  // Handled in mutation
-                }
-              }}
-              className={`w-full min-w-0 transition-all border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold ${
-                pass.status === "released"
-                  ? "shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
-                  : ""
-              }`}
-            >
-              {pass.status === "released" ? (
-                <Check className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
-              ) : (
-                <ArrowUpRight className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
-              )}
-              <span className="truncate">{t("actionRelease")}</span>
-            </Button>
+            <Dialog open={openReleaseDialog} onOpenChange={setOpenReleaseDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  disabled={loading || isReleasingLocal}
+                  className={`w-full min-w-0 transition-all border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold ${
+                    pass.status === "released"
+                      ? "shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
+                      : ""
+                  }`}
+                >
+                  {pass.status === "released" ? (
+                    <Check className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                  ) : (
+                    <ArrowUpRight className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                  )}
+                  <span className="truncate">{t("actionRelease")}</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">
+                <DialogHeader>
+                  <DialogTitle className="dark:text-slate-100">
+                    {pass.owners.length > 1
+                      ? t("releaseCoOwnedConfirmTitle", { owners: ownersDisplayName })
+                      : t("releaseConfirmTitle", { label: pass.label })}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
+                    {pass.owners.length > 1
+                      ? t("releaseCoOwnedConfirmDesc", { owners: ownersDisplayName })
+                      : t("releaseConfirmDesc", { label: pass.label })}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end space-x-2 pt-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={loading || isReleasingLocal}
+                    onClick={() => setOpenReleaseDialog(false)}
+                    className="dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    {t("cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={loading || isReleasingLocal}
+                    onClick={handleConfirmRelease}
+                    className="border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold"
+                  >
+                    {t("releaseConfirmSubmit")}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
 

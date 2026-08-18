@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { UserPlus, User, Check, ArrowUpRight, ListFilter } from "lucide-react";
 import { t } from "@/i18n/t";
@@ -15,17 +15,24 @@ interface QueueJoinSheetProps {
 }
 
 export function QueueJoinSheet({
-  unindicatedPasses,
-  onIndicate,
   onJoin,
+  onIndicate,
+  unindicatedPasses,
   loading,
 }: QueueJoinSheetProps) {
   const [openGuestDialog, setOpenGuestDialog] = useState(false);
+  const [openReleaseDialog, setOpenReleaseDialog] = useState(false);
+  const [isReleasingLocal, setIsReleasingLocal] = useState(false);
   const [guestName, setGuestName] = useState("");
 
   const activeUnindicated = unindicatedPasses ?? [];
   const singleUnindicated = activeUnindicated.length === 1 ? activeUnindicated[0] : null;
   const multipleUnindicated = activeUnindicated.length > 1;
+
+  const isSingleCoOwned = singleUnindicated ? singleUnindicated.owners.length > 1 : false;
+  const singleOwnersDisplayName = singleUnindicated
+    ? singleUnindicated.owners.map((o) => o.displayName).join(" & ")
+    : "";
 
   const handleJoinSelf = async () => {
     try {
@@ -56,12 +63,14 @@ export function QueueJoinSheet({
     }
   };
 
-  const handleRelease = async () => {
+  const handleConfirmRelease = async () => {
     if (singleUnindicated && onIndicate) {
+      setIsReleasingLocal(true);
       try {
         await onIndicate(singleUnindicated.id, "release");
-      } catch {
-        // Handled in mutation
+        setOpenReleaseDialog(false);
+      } finally {
+        setIsReleasingLocal(false);
       }
     }
   };
@@ -101,15 +110,51 @@ export function QueueJoinSheet({
                 <span className="truncate">{t("actionKeep")}</span>
               </Button>
 
-              <Button
-                variant="outline"
-                disabled={loading}
-                onClick={handleRelease}
-                className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold"
-              >
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
-                <span className="truncate">{t("actionRelease")}</span>
-              </Button>
+              <Dialog open={openReleaseDialog} onOpenChange={setOpenReleaseDialog}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={loading || isReleasingLocal}
+                    className="flex-1 min-w-0 text-sm font-bold flex items-center justify-center space-x-2 border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
+                  >
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                    <span className="truncate">{t("actionRelease")}</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">
+                  <DialogHeader>
+                    <DialogTitle className="dark:text-slate-100">
+                      {isSingleCoOwned
+                        ? t("releaseCoOwnedConfirmTitle", { owners: singleOwnersDisplayName })
+                        : t("releaseConfirmTitle", { label: singleUnindicated.label })}
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
+                      {isSingleCoOwned
+                        ? t("releaseCoOwnedConfirmDesc", { owners: singleOwnersDisplayName })
+                        : t("releaseConfirmDesc", { label: singleUnindicated.label })}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex justify-end space-x-2 pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={loading || isReleasingLocal}
+                      onClick={() => setOpenReleaseDialog(false)}
+                      className="dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      {t("cancel")}
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={loading || isReleasingLocal}
+                      onClick={handleConfirmRelease}
+                      className="border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold"
+                    >
+                      {t("releaseConfirmSubmit")}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         ) : (

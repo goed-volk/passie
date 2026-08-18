@@ -37,7 +37,7 @@ Passie is a mobile-first web app for groups sharing season tickets (*seizoenkaar
 ### Pass Indication, Reclaim & Give-Back Lifecycle
 - **Owner Indication (`IndicateKeep` / `IndicateRelease`):**
   - Pass owners indicate attendance for each matchday (*"Ik ga"* or *"Pas vrijgeven"*).
-  - Unindicated passes prioritize owner choice with a dynamic bottom action bar and contextual deadline reminder banner.
+  - Unindicated passes prioritize owner choice with a dynamic bottom action bar and contextual deadline reminder banner. Releasing a pass (*"Pas vrijgeven"*) presents an explicit confirmation modal explaining immediate queue allocation, with specialized co-owner warning copy when a pass is shared between multiple people.
 - **Owner Reclaim (*Pas Terugclaimen* & `pass.reclaimed`):**
   - Season ticket owners retain ultimate right of use: an owner can reclaim their own pass even after it has been released and assigned to a queue claimant.
   - Reclaiming marks the pass as `kept` by the owner and returns the bumped claimant's queue entry back to `status = 'waiting'` with its original monotonic `id` preserved (or reallocates them immediately if another released pass is available).
