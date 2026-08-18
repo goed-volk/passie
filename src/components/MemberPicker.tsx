@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { t } from "@/i18n/t";
+import { trackMemberIdentity } from "@/lib/posthog";
 
 interface Member {
   id: string;
@@ -30,6 +31,10 @@ export function MemberPicker({ members }: { members: Member[] }) {
       });
 
       if (res.ok) {
+        const data = (await res.json().catch(() => null)) as { member?: Member } | null;
+        if (data?.member) {
+          trackMemberIdentity(data.member);
+        }
         router.push("/");
         router.refresh();
       }

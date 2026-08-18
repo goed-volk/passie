@@ -9,6 +9,14 @@ import * as schema from "@/server/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PlatformProxy } from "wrangler";
 import { cleanupTestPoolData } from "@/server/__tests__/helpers/testDb";
+import { COOKIE_NAME } from "@/server/actingMember";
+
+const mockGetCookie = vi.fn();
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: mockGetCookie,
+  }),
+}));
 
 describe("/api/fixtures/refresh route tests", () => {
   let proxy: PlatformProxy<{ DB: D1Database }>;
@@ -33,6 +41,7 @@ describe("/api/fixtures/refresh route tests", () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    mockGetCookie.mockReset();
     setLastIngestCompletedAt(null);
     const icsFixtures = await db.query.fixtures.findMany({
       where: eq(schema.fixtures.source, "ics"),
@@ -59,7 +68,24 @@ describe("/api/fixtures/refresh route tests", () => {
     expect(data.remainingSeconds).toBe(0);
   });
 
-  it("POST triggers manual fetch and returns 200 on first call, 429 on immediate second call", async () => {
+  it("POST returns 401 when unauthenticated", async () => {
+    mockGetCookie.mockReturnValue(undefined);
+
+    const res = await handleRefreshPost(proxy.env.DB);
+    expect(res.status).toBe(401);
+    const data = (await res.json()) as { ok: boolean; error: string };
+    expect(data.ok).toBe(false);
+    expect(data.error).toBe("UNAUTHORIZED");
+  });
+
+  it("POST triggers manual fetch and returns 200 on first call, 429 on immediate second call when authenticated", async () => {
+    mockGetCookie.mockImplementation((name: string) => {
+      if (name === COOKIE_NAME) {
+        return { name: COOKIE_NAME, value: "member_goedvolk_sam" };
+      }
+      return undefined;
+    });
+
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       status: 200,

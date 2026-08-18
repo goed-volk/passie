@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/server/db";
+import { getActingMember } from "@/server/actingMember";
 import {
   ingestClubFixtures,
   checkIngestCooldown,
@@ -17,6 +18,20 @@ export async function GET() {
 }
 
 export async function handleRefreshPost(d1Override?: D1Database) {
+  const db = await getDb(d1Override);
+  const actor = await getActingMember(db);
+
+  if (!actor) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "UNAUTHORIZED",
+        message: "Authenticatie vereist om wedstrijden te verversen.",
+      },
+      { status: 401 }
+    );
+  }
+
   const cooldownCheck = checkIngestCooldown();
   if (!cooldownCheck.allowed) {
     return NextResponse.json(
@@ -31,7 +46,6 @@ export async function handleRefreshPost(d1Override?: D1Database) {
     );
   }
 
-  const db = await getDb(d1Override);
   try {
     const result = await ingestClubFixtures(db, "excelsior");
     return NextResponse.json({
