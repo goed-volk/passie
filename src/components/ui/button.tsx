@@ -14,7 +14,7 @@ const buttonVariants = cva(
         secondary: "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700",
         ghost: "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100",
         link: "text-slate-900 dark:text-slate-100 underline-offset-4 hover:underline",
-        club: "bg-[var(--club-primary)] text-white hover:opacity-95 shadow-sm font-semibold",
+        club: "bg-[var(--club-primary)] text-black hover:opacity-95 shadow-sm font-bold",
         clubOutline: "border-2 border-[var(--club-primary)] text-[var(--club-primary)] bg-white dark:bg-slate-900 hover:bg-red-50 dark:hover:bg-red-950/30",
       },
       size: {

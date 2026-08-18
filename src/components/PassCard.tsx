@@ -105,19 +105,19 @@ export function PassCard({
     <Card className="overflow-hidden">
       <CardContent className="p-4 sm:p-5 space-y-3.5">
         <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5">
+          <div className="space-y-1 min-w-0 flex-1">
             <Link
               href={`/pas/${pass.id}`}
-              className="text-base font-bold text-slate-900 dark:text-slate-100 hover:underline inline-flex items-center gap-2"
+              className="text-base font-bold text-slate-900 dark:text-slate-100 hover:underline block leading-snug"
             >
               <span>{pass.label}</span>
               {pass.seatInfo && (
-                <span className="text-sm font-normal text-slate-500 dark:text-slate-400">
-                  · {pass.seatInfo}
+                <span className="text-sm font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  {" "}· {pass.seatInfo}
                 </span>
               )}
             </Link>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
               {t("coOwners")}: {ownersDisplayName}
             </p>
           </div>

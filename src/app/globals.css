@@ -29,7 +29,7 @@
     --club-primary: #E2001A;
     --club-secondary: #000000;
     --club-accent: #FFFFFF;
-    --club-on-primary: #FFFFFF;
+    --club-on-primary: #000000;
     --page-bg: #F8FAFC;
     --page-fg: #0F172A;
   }
@@ -57,9 +57,9 @@
 
     /* Black-Red Theme (Dark Mode with Excelsior Black / Red inversion) */
     --club-primary: #FF2E44;
-    --club-secondary: #131B2E;
+    --club-secondary: #000000;
     --club-accent: #FFFFFF;
-    --club-on-primary: #FFFFFF;
+    --club-on-primary: #000000;
     --page-bg: #0B0F19;
     --page-fg: #F8FAFC;
   }
