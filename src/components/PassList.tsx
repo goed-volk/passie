@@ -27,7 +27,7 @@ export function PassList({
   });
 
   return (
-    <section className="space-y-3">
+    <section id="pass-list" className="space-y-3 scroll-mt-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t("step1Title")}</h2>

@@ -222,7 +222,13 @@ export function PassCard({
             <Button
               size="sm"
               disabled={loading}
-              onClick={() => onIndicate(pass.id, "keep")}
+              onClick={async () => {
+                try {
+                  await onIndicate(pass.id, "keep");
+                } catch {
+                  // Handled in mutation
+                }
+              }}
               className={`w-full transition-all ${
                 pass.status === "kept"
                   ? "bg-[var(--club-primary)] hover:bg-[var(--club-primary)] text-white shadow-sm ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
@@ -235,7 +241,13 @@ export function PassCard({
             <Button
               size="sm"
               disabled={loading}
-              onClick={() => onIndicate(pass.id, "release")}
+              onClick={async () => {
+                try {
+                  await onIndicate(pass.id, "release");
+                } catch {
+                  // Handled in mutation
+                }
+              }}
               className={`w-full transition-all ${
                 pass.status === "released"
                   ? "border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"

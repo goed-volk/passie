@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus, User, Check, ArrowUpRight } from "lucide-react";
+import { UserPlus, User, Check, ArrowUpRight, ListFilter } from "lucide-react";
 import { t } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
 interface QueueJoinSheetProps {
-  unindicatedPass?: PoolSnapshot["passes"][number] | null;
+  unindicatedPasses?: PoolSnapshot["passes"];
   onIndicate?: (passId: string, action: "keep" | "release") => Promise<void>;
   onJoin: (kind: "self" | "guest", guestName?: string | null) => Promise<void>;
   loading: boolean;
 }
 
 export function QueueJoinSheet({
-  unindicatedPass,
+  unindicatedPasses,
   onIndicate,
   onJoin,
   loading,
@@ -23,33 +23,67 @@ export function QueueJoinSheet({
   const [openGuestDialog, setOpenGuestDialog] = useState(false);
   const [guestName, setGuestName] = useState("");
 
+  const activeUnindicated = unindicatedPasses ?? [];
+  const singleUnindicated = activeUnindicated.length === 1 ? activeUnindicated[0] : null;
+  const multipleUnindicated = activeUnindicated.length > 1;
+
   const handleJoinSelf = async () => {
-    await onJoin("self");
+    try {
+      await onJoin("self");
+    } catch {
+      // Handled in mutation
+    }
   };
 
   const handleJoinGuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onJoin("guest", guestName.trim() || null);
-    setGuestName("");
-    setOpenGuestDialog(false);
+    try {
+      await onJoin("guest", guestName.trim() || null);
+      setGuestName("");
+      setOpenGuestDialog(false);
+    } catch {
+      // Handled in mutation
+    }
   };
 
   const handleKeep = async () => {
-    if (unindicatedPass && onIndicate) {
-      await onIndicate(unindicatedPass.id, "keep");
+    if (singleUnindicated && onIndicate) {
+      try {
+        await onIndicate(singleUnindicated.id, "keep");
+      } catch {
+        // Handled in mutation
+      }
     }
   };
 
   const handleRelease = async () => {
-    if (unindicatedPass && onIndicate) {
-      await onIndicate(unindicatedPass.id, "release");
+    if (singleUnindicated && onIndicate) {
+      try {
+        await onIndicate(singleUnindicated.id, "release");
+      } catch {
+        // Handled in mutation
+      }
     }
+  };
+
+  const handleScrollToPassList = () => {
+    document.getElementById("pass-list")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 pt-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-40">
       <div className="max-w-xl mx-auto flex gap-3">
-        {unindicatedPass && onIndicate ? (
+        {multipleUnindicated ? (
+          <Button
+            variant="club"
+            disabled={loading}
+            onClick={handleScrollToPassList}
+            className="w-full flex items-center justify-center space-x-2 shadow-sm font-semibold py-2.5"
+          >
+            <ListFilter className="h-4 w-4" />
+            <span>{t("choosePassToIndicate", { count: activeUnindicated.length })}</span>
+          </Button>
+        ) : singleUnindicated && onIndicate ? (
           <>
             <Button
               variant="club"
@@ -58,7 +92,7 @@ export function QueueJoinSheet({
               className="flex-1 min-w-0 text-sm font-semibold truncate flex items-center justify-center space-x-2 shadow-sm"
             >
               <Check className="h-4 w-4" />
-              <span>{t("actionKeep")}</span>
+              <span>{t("actionKeep")} ({singleUnindicated.label})</span>
             </Button>
 
             <Button

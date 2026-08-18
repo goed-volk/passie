@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePool } from "@/hooks/usePool";
 import { FixtureHeader } from "@/components/FixtureHeader";
 import { PassList } from "@/components/PassList";
@@ -11,6 +12,7 @@ import { TopNav } from "@/components/TopNav";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, AlertCircle } from "lucide-react";
 import { t, formatDeadlineDateTime } from "@/i18n/t";
+import { trackMemberIdentity } from "@/lib/posthog";
 import type { PoolSnapshot } from "@/server/snapshot";
 
 export function HomeScreen({
@@ -32,6 +34,12 @@ export function HomeScreen({
     isTransferring,
   } = usePool(gamePoolId, initialSnapshot);
 
+  useEffect(() => {
+    if (pool?.actingMember) {
+      trackMemberIdentity(pool.actingMember);
+    }
+  }, [pool?.actingMember]);
+
   if (!pool) {
     return (
       <div className="max-w-xl mx-auto p-4 space-y-6">
@@ -42,18 +50,52 @@ export function HomeScreen({
   }
 
   const isMutating = isIndicating || isJoining || isCancelling || isTransferring;
+  const isPoolOpen = pool.status === "open";
 
-  const unindicatedOwnedPass = pool.passes.find(
+  const unindicatedOwnedPasses = pool.passes.filter(
     (p) => p.canIndicate && p.status === "unindicated"
   );
+  const hasUnindicatedOwnedPasses = unindicatedOwnedPasses.length > 0;
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <div
+      className={`min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 ${
+        isPoolOpen ? "pb-[calc(7rem+env(safe-area-inset-bottom))]" : "pb-16"
+      }`}
+    >
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
         <TopNav actingMember={pool.actingMember} />
         <FixtureHeader pool={pool} />
 
-        {unindicatedOwnedPass && !pool.deadline.passed && pool.status === "open" && (
+        {pool.status === "cancelled" && (
+          <div className="bg-red-500/10 dark:bg-red-950/30 border border-red-500/30 dark:border-red-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                {t("poolCancelled")}
+              </h3>
+              <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                Deze wedstrijd is afgelast of verplaatst. Aanmelden is niet meer mogelijk.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {pool.status === "closed" && (
+          <div className="bg-slate-500/10 dark:bg-slate-950/30 border border-slate-500/30 dark:border-slate-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
+            <AlertCircle className="h-5 w-5 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                Aanmelding gesloten
+              </h3>
+              <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                De aanmelding voor deze wedstrijd is gesloten.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {hasUnindicatedOwnedPasses && !pool.deadline.passed && isPoolOpen && (
           <div className="bg-gradient-to-r from-amber-500/15 to-amber-500/5 dark:from-amber-950/40 dark:to-amber-950/20 border border-amber-500/30 dark:border-amber-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
             <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
@@ -69,7 +111,7 @@ export function HomeScreen({
           </div>
         )}
 
-        {unindicatedOwnedPass && pool.deadline.passed && pool.status === "open" && (
+        {hasUnindicatedOwnedPasses && pool.deadline.passed && isPoolOpen && (
           <div className="bg-red-500/10 dark:bg-red-950/30 border border-red-500/30 dark:border-red-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
             <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
@@ -88,10 +130,18 @@ export function HomeScreen({
           fixtureOpponent={pool.fixture.opponent}
           allMembers={pool.members}
           onIndicate={async (passId, action) => {
-            await indicatePass({ passId, action });
+            try {
+              await indicatePass({ passId, action });
+            } catch {
+              // Error handled by mutation toast
+            }
           }}
           onTransfer={async (passId, toMemberId) => {
-            await transferPass({ passId, toMemberId, fixtureId: pool.fixture.id });
+            try {
+              await transferPass({ passId, toMemberId, fixtureId: pool.fixture.id });
+            } catch {
+              // Error handled by mutation toast
+            }
           }}
           loading={isMutating}
         />
@@ -99,7 +149,11 @@ export function HomeScreen({
         <QueueList
           queue={pool.queue}
           onCancelEntry={async (entryId) => {
-            await cancelQueueEntry(entryId);
+            try {
+              await cancelQueueEntry(entryId);
+            } catch {
+              // Error handled by mutation toast
+            }
           }}
           loading={isMutating}
         />
@@ -108,7 +162,11 @@ export function HomeScreen({
           transfers={pool.transfers}
           fixtureId={pool.fixture.id}
           onTransfer={async (passId, toMemberId, fixtureId) => {
-            await transferPass({ passId, toMemberId, fixtureId });
+            try {
+              await transferPass({ passId, toMemberId, fixtureId });
+            } catch {
+              // Error handled by mutation toast
+            }
           }}
           loading={isMutating}
         />
@@ -116,16 +174,26 @@ export function HomeScreen({
         <ActivityTimeline timeline={pool.timeline} />
       </div>
 
-      <QueueJoinSheet
-        unindicatedPass={unindicatedOwnedPass}
-        onIndicate={async (passId, action) => {
-          await indicatePass({ passId, action });
-        }}
-        onJoin={async (kind, guestName) => {
-          await joinQueue({ kind, guestName });
-        }}
-        loading={isMutating}
-      />
+      {isPoolOpen && (
+        <QueueJoinSheet
+          unindicatedPasses={unindicatedOwnedPasses}
+          onIndicate={async (passId, action) => {
+            try {
+              await indicatePass({ passId, action });
+            } catch {
+              // Error handled by mutation toast
+            }
+          }}
+          onJoin={async (kind, guestName) => {
+            try {
+              await joinQueue({ kind, guestName });
+            } catch {
+              // Error handled by mutation toast
+            }
+          }}
+          loading={isMutating}
+        />
+      )}
     </div>
   );
 }
