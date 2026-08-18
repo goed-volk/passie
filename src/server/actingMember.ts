@@ -29,6 +29,7 @@ export async function getActingMember(db: DbClient): Promise<MemberRef | null> {
 
   return {
     id: member.id,
+    groupId: member.groupId,
     displayName: member.displayName,
     initials: member.initials,
     avatarColor: member.avatarColor,

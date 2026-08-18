@@ -56,6 +56,7 @@ export default async function PassPage(props: {
 
   const memberRefs = membersList.map((m) => ({
     id: m.id,
+    groupId: m.groupId,
     displayName: m.displayName,
     initials: m.initials,
     avatarColor: m.avatarColor,

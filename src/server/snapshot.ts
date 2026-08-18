@@ -6,6 +6,7 @@ import type { MemberId } from "../domain/types";
 
 export interface MemberRef {
   id: string;
+  groupId: string;
   displayName: string;
   initials: string;
   avatarColor: string;
@@ -136,6 +137,7 @@ export async function buildPoolSnapshot(
   for (const m of membersList) {
     const ref: MemberRef = {
       id: m.id,
+      groupId: m.groupId,
       displayName: m.displayName,
       initials: m.initials,
       avatarColor: m.avatarColor,

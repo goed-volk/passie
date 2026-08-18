@@ -24,7 +24,7 @@ export default async function Page() {
     );
   }
 
-  const pool = await ensurePool(db, "group_goedvolk", fixture.id);
+  const pool = await ensurePool(db, actingMember.groupId, fixture.id);
   const snapshot = await buildPoolSnapshot(db, pool.id, actingMember.id);
 
   if (!snapshot) {
