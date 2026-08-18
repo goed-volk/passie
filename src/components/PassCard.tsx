@@ -221,6 +221,7 @@ export function PassCard({
           <div className="grid grid-cols-2 gap-2 pt-1">
             <Button
               size="sm"
+              variant="club"
               disabled={loading}
               onClick={async () => {
                 try {
@@ -231,11 +232,11 @@ export function PassCard({
               }}
               className={`w-full min-w-0 transition-all ${
                 pass.status === "kept"
-                  ? "bg-[var(--club-primary)] hover:bg-[var(--club-primary)] text-white shadow-sm ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
-                  : "border-2 border-red-600 dark:border-red-500 text-red-950 dark:text-red-100 bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 font-semibold"
+                  ? "ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
+                  : ""
               }`}
             >
-              {pass.status === "kept" && <Check className="h-3.5 w-3.5 mr-1 shrink-0" />}
+              <Check className="h-3.5 w-3.5 mr-1 shrink-0" />
               <span className="truncate">{t("actionKeep")}</span>
             </Button>
             <Button
@@ -248,10 +249,10 @@ export function PassCard({
                   // Handled in mutation
                 }
               }}
-              className={`w-full min-w-0 transition-all ${
+              className={`w-full min-w-0 transition-all border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 ${
                 pass.status === "released"
-                  ? "border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
-                  : "border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-semibold"
+                  ? "shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
+                  : "font-semibold"
               }`}
             >
               {pass.status === "released" ? (
