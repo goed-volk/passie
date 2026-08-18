@@ -21,6 +21,7 @@ if (!gitCommitSha) {
 }
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   env: {
     NEXT_PUBLIC_GIT_COMMIT_SHA: gitCommitSha,
   },

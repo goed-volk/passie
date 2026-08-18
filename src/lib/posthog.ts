@@ -44,17 +44,23 @@ function sanitizePathname(rawPath: string): string {
 export function initPostHog() {
   if (typeof window === "undefined") return;
 
-  const hostname = window.location.hostname;
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".local")
-  ) {
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!posthogKey) {
     return;
   }
 
-  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!posthogKey) {
+  const hostname = window.location.hostname;
+  const env =
+    process.env.NEXT_PUBLIC_PASSIE_ENV ||
+    (process.env.NODE_ENV === "production" ? "production" : "development");
+
+  // Prevent production key pollution if running on localhost with a production environment tag
+  if (
+    env === "production" &&
+    (hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.endsWith(".local"))
+  ) {
     return;
   }
 
