@@ -88,7 +88,7 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 
 ### Pass Configuration & Naming
 - Every season ticket is defined in `seed/group.local.json` (or `seed/group.example.json` for fictional testing) with a primary name `label` (e.g. `"Pas 1"`, `"Pas Sam"`, `"Vak K Noord"`), optional `seatInfo` (e.g. `"Vak K, Rij 12"`), list of `owners` (`["ilse", "noor"]`), initial physical `holder` (`"ilse"`), and `sortOrder`.
-- The `label` column is the primary display name on cards and detail pages. The co-owners are displayed separately as avatars in the *"Pas van:"* row.
+- The `label` column is the primary display name on cards and detail pages. The co-owners are displayed in clear plain text directly below the card title (*"Pas van: [Namen]"*), while the physical card custody is managed separately via the interactive holder control row.
 - In MVP, pass names can be amended by updating `seed/group.local.json` and running `pnpm seed:local` (or direct D1 `UPDATE passes SET label = ?`). Future admin UI will expose web-based pass editing.
 
 ---
