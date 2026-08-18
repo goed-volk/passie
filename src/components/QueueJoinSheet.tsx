@@ -72,49 +72,56 @@ export function QueueJoinSheet({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 pt-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-40">
-      <div className="max-w-xl mx-auto flex gap-3">
+      <div className="max-w-xl mx-auto">
         {multipleUnindicated ? (
           <Button
             variant="club"
             disabled={loading}
             onClick={handleScrollToPassList}
-            className="w-full flex items-center justify-center space-x-2 shadow-sm font-semibold py-2.5"
+            className="w-full flex items-center justify-center space-x-2 shadow-sm font-semibold py-2.5 min-w-0"
           >
-            <ListFilter className="h-4 w-4" />
-            <span>{t("choosePassToIndicate", { count: activeUnindicated.length })}</span>
+            <ListFilter className="h-4 w-4 shrink-0" />
+            <span className="truncate">{t("choosePassToIndicate", { count: activeUnindicated.length })}</span>
           </Button>
         ) : singleUnindicated && onIndicate ? (
-          <>
-            <Button
-              variant="club"
-              disabled={loading}
-              onClick={handleKeep}
-              className="flex-1 min-w-0 text-sm font-semibold truncate flex items-center justify-center space-x-2 shadow-sm"
-            >
-              <Check className="h-4 w-4" />
-              <span>{t("actionKeep")} ({singleUnindicated.label})</span>
-            </Button>
+          <div className="space-y-1.5">
+            <div className="text-center px-2">
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
+                {t("passIndicateFor", { label: singleUnindicated.label })}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="club"
+                disabled={loading}
+                onClick={handleKeep}
+                className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 shadow-sm"
+              >
+                <Check className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t("actionKeep")}</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              disabled={loading}
-              onClick={handleRelease}
-              className="flex-1 min-w-0 text-sm font-semibold truncate flex items-center justify-center space-x-2 border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold"
-            >
-              <ArrowUpRight className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />
-              <span>{t("actionRelease")}</span>
-            </Button>
-          </>
+              <Button
+                variant="outline"
+                disabled={loading}
+                onClick={handleRelease}
+                className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-bold"
+              >
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                <span className="truncate">{t("actionRelease")}</span>
+              </Button>
+            </div>
+          </div>
         ) : (
-          <>
+          <div className="flex gap-3">
             <Button
               variant="club"
               disabled={loading}
               onClick={handleJoinSelf}
-              className="flex-1 min-w-0 text-sm font-semibold truncate flex items-center justify-center space-x-2 shadow-sm"
+              className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 shadow-sm"
             >
-              <User className="h-4 w-4" />
-              <span>{t("joinForSelf")}</span>
+              <User className="h-4 w-4 shrink-0" />
+              <span className="truncate">{t("joinForSelf")}</span>
             </Button>
 
             <Dialog open={openGuestDialog} onOpenChange={setOpenGuestDialog}>
@@ -122,10 +129,10 @@ export function QueueJoinSheet({
                 <Button
                   variant="outline"
                   disabled={loading}
-                  className="flex-1 min-w-0 text-sm font-semibold truncate flex items-center justify-center space-x-2 border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
-                  <UserPlus className="h-4 w-4" />
-                  <span>{t("joinForGuest")}</span>
+                  <UserPlus className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t("joinForGuest")}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="dark:bg-[#131B2E] dark:border-slate-800">
@@ -162,7 +169,7 @@ export function QueueJoinSheet({
                 </form>
               </DialogContent>
             </Dialog>
-          </>
+          </div>
         )}
       </div>
     </div>

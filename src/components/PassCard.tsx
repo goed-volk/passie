@@ -229,14 +229,14 @@ export function PassCard({
                   // Handled in mutation
                 }
               }}
-              className={`w-full transition-all ${
+              className={`w-full min-w-0 transition-all ${
                 pass.status === "kept"
                   ? "bg-[var(--club-primary)] hover:bg-[var(--club-primary)] text-white shadow-sm ring-2 ring-[var(--club-primary)] ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
-                  : "border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold"
+                  : "border-2 border-red-600 dark:border-red-500 text-red-950 dark:text-red-100 bg-red-50/70 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 font-semibold"
               }`}
             >
               {pass.status === "kept" && <Check className="h-3.5 w-3.5 mr-1 shrink-0" />}
-              <span>{t("actionKeep")}</span>
+              <span className="truncate">{t("actionKeep")}</span>
             </Button>
             <Button
               size="sm"
@@ -248,7 +248,7 @@ export function PassCard({
                   // Handled in mutation
                 }
               }}
-              className={`w-full transition-all ${
+              className={`w-full min-w-0 transition-all ${
                 pass.status === "released"
                   ? "border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 shadow-sm ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 font-bold"
                   : "border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 font-semibold"
@@ -259,7 +259,7 @@ export function PassCard({
               ) : (
                 <ArrowUpRight className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
               )}
-              <span>{t("actionRelease")}</span>
+              <span className="truncate">{t("actionRelease")}</span>
             </Button>
           </div>
         )}
@@ -272,10 +272,10 @@ export function PassCard({
                   size="sm"
                   variant="club"
                   disabled={loading || isReclaimingLocal}
-                  className="w-full flex items-center justify-center space-x-1.5 shadow-sm font-semibold"
+                  className="w-full min-w-0 flex items-center justify-center space-x-1.5 shadow-sm font-semibold"
                 >
                   <RotateCcw className="h-3.5 w-3.5 shrink-0" />
-                  <span>{t("actionReclaim")}</span>
+                  <span className="truncate">{t("actionReclaim")}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">
@@ -319,9 +319,9 @@ export function PassCard({
                   size="sm"
                   variant="destructive"
                   disabled={loading || isGivingBackLocal}
-                  className="w-full flex items-center justify-center space-x-1.5"
+                  className="w-full min-w-0 flex items-center justify-center space-x-1.5"
                 >
-                  <span>{t("actionGiveBack")}</span>
+                  <span className="truncate">{t("actionGiveBack")}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md dark:bg-[#131B2E] dark:border-slate-800">

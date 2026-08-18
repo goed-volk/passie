@@ -61,9 +61,10 @@ export function TransferTasks({
                     size="sm"
                     variant="club"
                     disabled={loading}
+                    className="min-w-0"
                     onClick={() => onTransfer(task.passId, task.to.id, fixtureId)}
                   >
-                    {t("markTransferred")}
+                    <span className="truncate">{t("markTransferred")}</span>
                   </Button>
                 )}
               </CardContent>

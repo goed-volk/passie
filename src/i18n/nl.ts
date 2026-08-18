@@ -54,6 +54,7 @@ export const nl = {
   actionReclaim: "Pas terugclaimen",
   actionGiveBack: "Plek afstaan",
   choosePassToIndicate: "Kies een pas om aan te geven ({count})",
+  passIndicateFor: "Aangeven voor pas van {label}",
   giveBackConfirmTitle: "Plek afstaan voor {fixture}?",
   giveBackConfirmDesc: "Weet je zeker dat je je toegewezen plek wilt afstaan? De pas wordt direct doorgeschoven naar de eerstvolgende in de wachtrij.",
   giveBackConfirmButton: "Ja, plek afstaan",

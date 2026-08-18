@@ -75,9 +75,9 @@ export function QueueList({ queue, onCancelEntry, loading }: QueueListProps) {
                     variant="ghost"
                     disabled={loading}
                     onClick={() => onCancelEntry(entry.entryId)}
-                    className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    className="text-xs min-w-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
                   >
-                    {t("leaveQueue")}
+                    <span className="truncate">{t("leaveQueue")}</span>
                   </Button>
                 )}
               </CardContent>
