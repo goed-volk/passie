@@ -48,7 +48,7 @@ export function HomeScreen({
   );
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-28">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
         <TopNav actingMember={pool.actingMember} />
         <FixtureHeader pool={pool} />
@@ -85,6 +85,7 @@ export function HomeScreen({
 
         <PassList
           passes={pool.passes}
+          fixtureOpponent={pool.fixture.opponent}
           allMembers={pool.members}
           onIndicate={async (passId, action) => {
             await indicatePass({ passId, action });
