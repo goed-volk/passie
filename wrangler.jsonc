@@ -20,7 +20,7 @@
     {
       "binding": "DB",
       "database_name": "passie",
-      "database_id": "xxxx-local-placeholder",
+      "database_id": "176bd801-9d6f-4d7e-8306-83ea0a0be157",
       "migrations_dir": "drizzle"
     }
   ],
