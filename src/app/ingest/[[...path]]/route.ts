@@ -14,7 +14,6 @@ const ALLOWED_PATH_PREFIXES = [
 
 const ALLOWED_REQUEST_HEADERS = [
   "content-type",
-  "content-length",
   "user-agent",
   "accept",
   "accept-encoding",
@@ -40,7 +39,6 @@ function buildUpstreamHeaders(request: NextRequest): Headers {
       headers.set(name, value);
     }
   }
-  headers.set("host", "eu.i.posthog.com");
   return headers;
 }
 
@@ -77,7 +75,9 @@ export async function GET(
       headers: buildUpstreamHeaders(request),
     });
 
-    return new NextResponse(upstreamRes.body, {
+    const responseBody = await upstreamRes.text();
+
+    return new NextResponse(responseBody, {
       status: upstreamRes.status,
       headers: buildDownstreamHeaders(upstreamRes),
     });
@@ -132,7 +132,9 @@ export async function POST(
       body,
     });
 
-    return new NextResponse(upstreamRes.body, {
+    const responseBody = await upstreamRes.text();
+
+    return new NextResponse(responseBody, {
       status: upstreamRes.status,
       headers: buildDownstreamHeaders(upstreamRes),
     });

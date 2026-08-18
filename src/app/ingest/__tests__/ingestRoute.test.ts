@@ -50,7 +50,6 @@ describe("/ingest proxy route security & filtering", () => {
     expect(sentHeaders?.get("x-forwarded-for")).toBeNull();
     expect(sentHeaders?.get("cf-ray")).toBeNull();
     expect(sentHeaders?.get("user-agent")).toBe("test-agent");
-    expect(sentHeaders?.get("host")).toBe("eu.i.posthog.com");
 
     // Verify response headers stripping
     expect(res.headers.get("content-type")).toBe("application/json");
