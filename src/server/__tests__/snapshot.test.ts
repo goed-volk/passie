@@ -310,4 +310,71 @@ describe("buildPoolSnapshot tests", () => {
     expect(reschedEvt?.text).not.toContain(String(reschedKickoff));
     expect(reschedEvt?.text).toContain("16:30");
   });
+
+  it("gates all permission flags (canIndicate, canReclaim, canGiveBack, canCancel) to false when pool is cancelled or closed", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    await db.insert(schema.queueEntries).values({
+      gamePoolId: poolId,
+      memberId: "member_goedvolk_sam",
+      kind: "self",
+      status: "waiting",
+      createdAt: now,
+    });
+
+    // Update pool status to 'cancelled'
+    await db
+      .update(schema.gamePools)
+      .set({ status: "cancelled" })
+      .where(eq(schema.gamePools.id, poolId));
+
+    const cancelledSnapshot = await buildPoolSnapshot(db, poolId, "member_goedvolk_sam");
+    expect(cancelledSnapshot).not.toBeNull();
+    if (!cancelledSnapshot) return;
+
+    expect(cancelledSnapshot.status).toBe("cancelled");
+    for (const pass of cancelledSnapshot.passes) {
+      expect(pass.canIndicate).toBe(false);
+      expect(pass.canReclaim).toBe(false);
+      expect(pass.canGiveBack).toBe(false);
+    }
+    for (const q of cancelledSnapshot.queue) {
+      expect(q.canCancel).toBe(false);
+    }
+  });
+
+  it("resolves timeline claimant names for pass.assigned via queue entry lookup when memberId is omitted in payload", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    const insertedQueue = await db
+      .insert(schema.queueEntries)
+      .values({
+        gamePoolId: poolId,
+        memberId: "member_goedvolk_daan",
+        kind: "guest",
+        guestName: "Opa",
+        status: "assigned",
+        assignedPassId: "pass_goedvolk_1",
+        assignedAt: now,
+        createdAt: now,
+      })
+      .returning();
+
+    const queueId = insertedQueue[0]!.id;
+
+    await db.insert(schema.activityEvents).values({
+      id: "evt_test_assigned_claimant",
+      gamePoolId: poolId,
+      passId: "pass_goedvolk_1",
+      actorMemberId: "member_goedvolk_sam",
+      type: "pass.assigned",
+      payloadJson: JSON.stringify({ passId: "pass_goedvolk_1", claimantEntryId: queueId }),
+      createdAt: now + 5,
+    });
+
+    const snapshot = await buildPoolSnapshot(db, poolId, "member_goedvolk_sam");
+    const assignedEvt = snapshot?.timeline.find((e) => e.id === "evt_test_assigned_claimant");
+    expect(assignedEvt).toBeDefined();
+    expect(assignedEvt?.text).toBe("Pas 1 toegewezen aan Daan's gast (Opa)");
+  });
 });

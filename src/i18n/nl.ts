@@ -53,6 +53,7 @@ export const nl = {
   actionRelease: "Pas vrijgeven",
   actionReclaim: "Pas terugclaimen",
   actionGiveBack: "Plek afstaan",
+  choosePassToIndicate: "Kies een pas om aan te geven ({count})",
   giveBackConfirmTitle: "Plek afstaan voor {fixture}?",
   giveBackConfirmDesc: "Weet je zeker dat je je toegewezen plek wilt afstaan? De pas wordt direct doorgeschoven naar de eerstvolgende in de wachtrij.",
   giveBackConfirmButton: "Ja, plek afstaan",
@@ -90,7 +91,7 @@ export const nl = {
   navSettings: "Instellingen",
   version: "Versie",
   privacyTitle: "Privacy & Gegevens",
-  privacyText: "Passie slaat alleen groeps- en pasactiviteiten op binnen Cloudflare D1. Geen wachtwoorden, geen trackingcookies.",
+  privacyText: "Passie slaat groeps- en pasactiviteiten op binnen Cloudflare D1. Geen wachtwoorden vereist. Geanonimiseerde product- en prestatie-statistieken lopen via een eigen proxy zonder trackingcookies van derden.",
   themeTitle: "Clubkleuren thema",
   themeRedBlack: "Rood-Zwart",
   themeRedBlackDesc: "Klassiek rood op lichte achtergrond",
@@ -107,6 +108,22 @@ export const nl = {
   refreshCooldown: "Wacht nog {seconds}s",
   refreshError: "Kon wedstrijdkalender niet ophalen",
   cancelledBadge: "Afgelast",
+
+  // Error Messages
+  error_POOL_NOT_OPEN: "Aanmelding is niet geopend voor deze wedstrijd.",
+  error_NOT_PASS_OWNER: "Je bent geen eigenaar van deze pas.",
+  error_PASS_ALREADY_ASSIGNED: "Deze pas is al toegewezen aan iemand anders.",
+  error_PASS_NOT_ASSIGNED: "Deze pas is niet toegewezen.",
+  error_NOT_CLAIMANT: "Je bent niet de begunstigde van deze pas.",
+  error_QUEUE_ENTRY_NOT_FOUND: "Wachtrijverzoek niet gevonden.",
+  error_QUEUE_ENTRY_NOT_WAITING: "Je verzoek staat niet meer op de wachtlijst.",
+  error_NOT_QUEUE_ENTRY_OWNER: "Dit wachtrijverzoek is niet van jou.",
+  error_PASS_NOT_FOUND: "Seizoenkaart niet gevonden.",
+  error_INVALID_ACTION: "Ongeldige actie.",
+  error_CONFLICT_RETRY_EXHAUSTED: "Iemand was je net voor! Probeer het opnieuw.",
+  error_INTERNAL_ERROR: "Er is een interne fout opgetreden.",
+  error_UNAUTHORIZED: "Authenticatie vereist.",
+  error_GENERIC: "Er is iets misgegaan. Probeer het opnieuw.",
 
   // Activity Event Descriptions
   events: {

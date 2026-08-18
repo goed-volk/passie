@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDb } from "@/server/db";
-import { getActingMember } from "@/server/actingMember";
+import { requireActingMember } from "@/server/actingMember";
 import { TopNav } from "@/components/TopNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InstellingenPage() {
   const db = await getDb();
-  const actingMember = await getActingMember(db);
+  const actingMember = await requireActingMember(db);
 
   return (
     <main className="min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 pb-20">
@@ -113,9 +113,9 @@ export default async function InstellingenPage() {
         {/* Version info */}
         <Card className="dark:bg-[#131B2E] dark:border-slate-800">
           <CardContent className="p-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>Passie MVP v0.1.0</span>
+            <span>Passie MVP v0.1.0 ({process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "dev"})</span>
             <a
-              href="https://github.com"
+              href="https://github.com/jvanu/passie"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 hover:text-slate-900 dark:hover:text-white"

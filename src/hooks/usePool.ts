@@ -3,6 +3,35 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { PoolSnapshot } from "@/server/snapshot";
+import { nl } from "@/i18n/nl";
+import { t } from "@/i18n/t";
+import {
+  getHoursToKickoffBucket,
+  trackIndicateKeep,
+  trackIndicateRelease,
+  trackReclaim,
+  trackQueueJoinSelf,
+  trackQueueJoinGuest,
+  trackQueueCancel,
+  trackGiveBack,
+  trackHandover,
+} from "@/lib/posthog";
+
+function parseAndTranslateError(
+  resStatus: number,
+  errorData?: { error?: string; code?: string }
+): string {
+  if (resStatus === 409 || errorData?.code === "CONFLICT_RETRY_EXHAUSTED") {
+    return t("error_CONFLICT_RETRY_EXHAUSTED");
+  }
+  if (errorData?.code) {
+    const errorKey = `error_${errorData.code}` as keyof typeof nl;
+    if (errorKey in nl) {
+      return t(errorKey);
+    }
+  }
+  return t("error_GENERIC");
+}
 
 export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
   const queryClient = useQueryClient();
@@ -32,6 +61,10 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
       passId: string;
       action: "keep" | "release" | "giveBack";
     }) => {
+      const currentPool = queryClient.getQueryData<PoolSnapshot>(queryKey);
+      const targetPass = currentPool?.passes.find((p) => p.id === passId);
+      const isReclaimAction = action === "keep" && targetPass?.status === "assigned";
+
       const idempotencyKey = `ind_${passId}_${action}_${Date.now()}`;
       const res = await fetch(`/api/pool/${gamePoolId}/pass/${passId}/indicate`, {
         method: "POST",
@@ -42,17 +75,29 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
         body: JSON.stringify({ action }),
       });
 
-      if (res.status === 409) {
-        toast.error("Iemand was je net voor!");
-        throw new Error("CONFLICT");
-      }
       if (!res.ok) {
-        const errorData = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(errorData.error || "Er ging iets mis");
-        throw new Error(errorData.error || "ERROR");
+        const errorData = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          code?: string;
+        };
+        const message = parseAndTranslateError(res.status, errorData);
+        toast.error(message);
+        throw new Error(errorData.code || "ERROR");
       }
 
       const data = (await res.json()) as { pool: PoolSnapshot };
+      const hoursBucket = getHoursToKickoffBucket(data.pool.fixture.kickoffAt);
+
+      if (isReclaimAction) {
+        trackReclaim({ hoursToKickoffBucket: hoursBucket });
+      } else if (action === "keep") {
+        trackIndicateKeep({ hoursToKickoffBucket: hoursBucket });
+      } else if (action === "release") {
+        trackIndicateRelease({ hoursToKickoffBucket: hoursBucket });
+      } else if (action === "giveBack") {
+        trackGiveBack({ hoursToKickoffBucket: hoursBucket });
+      }
+
       return data.pool;
     },
     onSuccess: (newPool) => {
@@ -71,6 +116,10 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
       kind: "self" | "guest";
       guestName?: string | null;
     }) => {
+      const currentPool = queryClient.getQueryData<PoolSnapshot>(queryKey);
+      const queueLengthBefore =
+        currentPool?.queue.filter((q) => q.status === "waiting").length ?? 0;
+
       const idempotencyKey = `join_${kind}_${Date.now()}`;
       const res = await fetch(`/api/pool/${gamePoolId}/queue`, {
         method: "POST",
@@ -81,17 +130,31 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
         body: JSON.stringify({ kind, guestName }),
       });
 
-      if (res.status === 409) {
-        toast.error("Iemand was je net voor!");
-        throw new Error("CONFLICT");
-      }
       if (!res.ok) {
-        const errorData = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(errorData.error || "Er ging iets mis");
-        throw new Error(errorData.error || "ERROR");
+        const errorData = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          code?: string;
+        };
+        const message = parseAndTranslateError(res.status, errorData);
+        toast.error(message);
+        throw new Error(errorData.code || "ERROR");
       }
 
       const data = (await res.json()) as { pool: PoolSnapshot };
+      const hoursBucket = getHoursToKickoffBucket(data.pool.fixture.kickoffAt);
+
+      if (kind === "self") {
+        trackQueueJoinSelf({
+          queueLengthBefore,
+          hoursToKickoffBucket: hoursBucket,
+        });
+      } else {
+        trackQueueJoinGuest({
+          queueLengthBefore,
+          hoursToKickoffBucket: hoursBucket,
+        });
+      }
+
       return data.pool;
     },
     onSuccess: (newPool) => {
@@ -104,6 +167,12 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
 
   const cancelQueueMutation = useMutation({
     mutationFn: async (entryId: number) => {
+      const currentPool = queryClient.getQueryData<PoolSnapshot>(queryKey);
+      const waitingEntries =
+        currentPool?.queue.filter((q) => q.status === "waiting") ?? [];
+      const entryPos =
+        waitingEntries.findIndex((q) => q.entryId === entryId) + 1;
+
       const idempotencyKey = `cancel_q_${entryId}_${Date.now()}`;
       const res = await fetch(`/api/pool/${gamePoolId}/queue/${entryId}/cancel`, {
         method: "POST",
@@ -113,17 +182,23 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
         },
       });
 
-      if (res.status === 409) {
-        toast.error("Iemand was je net voor!");
-        throw new Error("CONFLICT");
-      }
       if (!res.ok) {
-        const errorData = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(errorData.error || "Er ging iets mis");
-        throw new Error(errorData.error || "ERROR");
+        const errorData = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          code?: string;
+        };
+        const message = parseAndTranslateError(res.status, errorData);
+        toast.error(message);
+        throw new Error(errorData.code || "ERROR");
       }
 
       const data = (await res.json()) as { pool: PoolSnapshot };
+      const hoursBucket = getHoursToKickoffBucket(data.pool.fixture.kickoffAt);
+      trackQueueCancel({
+        queuePosition: entryPos > 0 ? entryPos : undefined,
+        hoursToKickoffBucket: hoursBucket,
+      });
+
       return data.pool;
     },
     onSuccess: (newPool) => {
@@ -155,12 +230,21 @@ export function usePool(gamePoolId: string, initialData?: PoolSnapshot) {
       });
 
       if (!res.ok) {
-        toast.error("Overdracht mislukt");
+        toast.error(t("error_GENERIC"));
         throw new Error("FAILED");
       }
 
-      toast.success("Pas overgedragen!");
+      toast.success(t("holderUpdated"));
       const data = (await res.json()) as { pool?: PoolSnapshot };
+
+      const hoursBucket = data.pool
+        ? getHoursToKickoffBucket(data.pool.fixture.kickoffAt)
+        : undefined;
+      trackHandover({
+        isHolderNow: true,
+        hoursToKickoffBucket: hoursBucket,
+      });
+
       return data.pool;
     },
     onSuccess: (newPool) => {

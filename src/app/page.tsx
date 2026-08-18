@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { getDb } from "@/server/db";
-import { getActingMemberId } from "@/server/actingMember";
+import { requireActingMember } from "@/server/actingMember";
 import { findNextHomeFixture, ensurePool } from "@/server/ensurePool";
 import { buildPoolSnapshot } from "@/server/snapshot";
 import { HomeScreen } from "@/components/HomeScreen";
@@ -10,11 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const db = await getDb();
-  const actingMemberId = await getActingMemberId();
-
-  if (!actingMemberId) {
-    redirect("/wie-ben-jij");
-  }
+  const actingMember = await requireActingMember(db);
 
   // Find next home fixture
   const fixture = await findNextHomeFixture(db);
@@ -30,7 +25,7 @@ export default async function Page() {
   }
 
   const pool = await ensurePool(db, "group_goedvolk", fixture.id);
-  const snapshot = await buildPoolSnapshot(db, pool.id, actingMemberId);
+  const snapshot = await buildPoolSnapshot(db, pool.id, actingMember.id);
 
   if (!snapshot) {
     return (

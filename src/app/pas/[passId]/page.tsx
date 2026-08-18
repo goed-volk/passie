@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { getActingMember } from "@/server/actingMember";
+import { requireActingMember } from "@/server/actingMember";
 import * as schema from "@/server/schema";
 import { TopNav } from "@/components/TopNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ export default async function PassPage(props: {
 }) {
   const { passId } = await props.params;
   const db = await getDb();
-  const actingMember = await getActingMember(db);
+  const actingMember = await requireActingMember(db);
 
   // 1. Fetch pass
   const pass = await db.query.passes.findFirst({

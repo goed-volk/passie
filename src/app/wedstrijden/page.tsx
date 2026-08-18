@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { asc, desc, gte, lt } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { getActingMember } from "@/server/actingMember";
+import { requireActingMember } from "@/server/actingMember";
 import { checkIngestCooldown } from "@/server/ingest";
 import * as schema from "@/server/schema";
 import { TopNav } from "@/components/TopNav";
@@ -19,7 +19,7 @@ function getCurrentUnixTimestamp(): number {
 
 export default async function WedstrijdenPage() {
   const db = await getDb();
-  const actingMember = await getActingMember(db);
+  const actingMember = await requireActingMember(db);
   const now = getCurrentUnixTimestamp();
   const cooldownStatus = checkIngestCooldown(now);
 

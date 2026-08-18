@@ -245,6 +245,7 @@ export async function buildPoolSnapshot(
       expectedHolder = indicatedBy;
     }
 
+    const isPoolOpen = pool.status === "open";
     const isOwner = actingMemberId ? owners.some((o) => o.id === actingMemberId) : false;
     const isClaimant = actingMemberId && claimant ? claimant.member.id === actingMemberId : false;
 
@@ -259,13 +260,14 @@ export async function buildPoolSnapshot(
       indicatedBy,
       claimant,
       expectedHolder,
-      canIndicate: Boolean(isOwner && status !== "assigned"),
-      canReclaim: Boolean(isOwner && status === "assigned"),
-      canGiveBack: Boolean(isClaimant && !isOwner && status === "assigned"),
+      canIndicate: Boolean(isPoolOpen && isOwner && status !== "assigned"),
+      canReclaim: Boolean(isPoolOpen && isOwner && status === "assigned"),
+      canGiveBack: Boolean(isPoolOpen && isClaimant && !isOwner && status === "assigned"),
     };
   });
 
   // 9. Build queue view
+  const isPoolOpen = pool.status === "open";
   let waitingPosition = 1;
   const queueView = queueList.map((q) => {
     if (q.status === "waiting") {
@@ -285,7 +287,7 @@ export async function buildPoolSnapshot(
       status: q.status as "waiting" | "assigned" | "cancelled",
       assignedPassLabel,
       isMine,
-      canCancel: isMine && q.status === "waiting",
+      canCancel: Boolean(isPoolOpen && isMine && q.status === "waiting"),
     };
   });
 
@@ -321,6 +323,14 @@ export async function buildPoolSnapshot(
       payload = JSON.parse(evt.payloadJson);
     } catch {
       payload = {};
+    }
+    if (!payload.memberId && payload.claimantEntryId) {
+      const q = queueMap.get(Number(payload.claimantEntryId));
+      if (q) {
+        payload.memberId = q.memberId;
+        payload.kind = q.kind;
+        payload.guestName = q.guestName;
+      }
     }
     const actorRef = evt.actorMemberId ? membersMap.get(evt.actorMemberId) ?? null : null;
     const text = formatEventText(

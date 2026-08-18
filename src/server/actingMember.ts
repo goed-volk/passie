@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import type { DbClient } from "./db";
 import * as schema from "./schema";
@@ -33,4 +34,18 @@ export async function getActingMember(db: DbClient): Promise<MemberRef | null> {
     avatarColor: member.avatarColor,
     slug: member.slug,
   };
+}
+
+export async function requireActingMember(db: DbClient): Promise<MemberRef> {
+  const member = await getActingMember(db);
+  if (!member) {
+    try {
+      const cookieStore = await cookies();
+      cookieStore.delete(COOKIE_NAME);
+    } catch {
+      // Ignore if cookie modification is not permitted in current context
+    }
+    redirect("/wie-ben-jij");
+  }
+  return member;
 }
