@@ -8,7 +8,7 @@ import { ThemeProvider, type Theme } from "@/components/ThemeProvider";
 
 export function Providers({
   children,
-  initialTheme = "red-black",
+  initialTheme,
 }: {
   children: React.ReactNode;
   initialTheme?: Theme;
