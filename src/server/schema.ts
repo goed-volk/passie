@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, uniqueIndex, index, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const clubs = sqliteTable("clubs", {
@@ -43,6 +43,7 @@ export const fixtures = sqliteTable("fixtures", {
   updatedAt: integer("updated_at").notNull(),
 }, (table) => [
   uniqueIndex("fixtures_club_source_uid_idx").on(table.clubId, table.source, table.sourceUid),
+  index("fixtures_kickoff_at_idx").on(table.kickoffAt),
 ]);
 
 export const groups = sqliteTable("groups", {
@@ -116,6 +117,7 @@ export const queueEntries = sqliteTable("queue_entries", {
   createdAt: integer("created_at").notNull(),
 }, (table) => [
   uniqueIndex("queue_entries_assigned_pass_unique").on(table.assignedPassId).where(sql`status = 'assigned'`),
+  index("queue_entries_pool_status_id_idx").on(table.gamePoolId, table.status, table.id),
 ]);
 
 export const passGameStates = sqliteTable("pass_game_states", {
@@ -144,7 +146,9 @@ export const possessionEvents = sqliteTable("possession_events", {
   kind: text("kind", { enum: ["handover", "correction"] }).notNull().default("handover"),
   note: text("note"),
   createdAt: integer("created_at").notNull(),
-});
+}, (table) => [
+  index("possession_events_pass_created_idx").on(table.passId, table.createdAt),
+]);
 
 export const activityEvents = sqliteTable("activity_events", {
   id: text("id").primaryKey(),
@@ -157,6 +161,7 @@ export const activityEvents = sqliteTable("activity_events", {
   createdAt: integer("created_at").notNull(),
 }, (table) => [
   uniqueIndex("activity_events_idempotency_idx").on(table.idempotencyKey),
+  index("activity_events_pool_created_idx").on(table.gamePoolId, table.createdAt),
 ]);
 
 export const poolVersionGuards = sqliteTable("pool_version_guards", {
