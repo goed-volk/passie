@@ -4,9 +4,35 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Passie",
-  description: "Seizoenkaarten delen met je vrienden",
+  metadataBase: new URL("https://passie.goedvolk.org"),
+  title: {
+    default: "Passie — Seizoenkaarten delen met je vriendengroep",
+    template: "%s · Passie",
+  },
+  description: "Eerlijk, snel en overzichtelijk seizoenkaarten verdelen en fysieke pasjes bijhouden binnen je vriendengroep.",
+  applicationName: "Passie",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+  },
+  openGraph: {
+    type: "website",
+    locale: "nl_NL",
+    url: "https://passie.goedvolk.org",
+    siteName: "Passie",
+    title: "Passie — Seizoenkaarten delen met je vriendengroep",
+    description: "Eerlijk, snel en overzichtelijk seizoenkaarten verdelen en fysieke pasjes bijhouden binnen je vriendengroep.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Passie — Seizoenkaarten delen met je vriendengroep",
+    description: "Eerlijk, snel en overzichtelijk seizoenkaarten verdelen en fysieke pasjes bijhouden binnen je vriendengroep.",
+  },
   robots: {
     index: false,
     follow: false,
