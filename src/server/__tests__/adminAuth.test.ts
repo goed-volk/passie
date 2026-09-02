@@ -45,13 +45,13 @@ describe("adminAuth", () => {
     if (originalEnv !== undefined) {
       process.env.PASSIE_ADMIN_PASSWORD = originalEnv;
     } else {
-      delete process.env.PASSIE_ADMIN_PASSWORD;
+      Reflect.deleteProperty(process.env, "PASSIE_ADMIN_PASSWORD");
     }
   });
 
   describe("getAdminPassword & constantTimeEquals", () => {
     it("returns null when password is unset or empty", async () => {
-      delete process.env.PASSIE_ADMIN_PASSWORD;
+      Reflect.deleteProperty(process.env, "PASSIE_ADMIN_PASSWORD");
       expect(await getAdminPassword()).toBeNull();
 
       process.env.PASSIE_ADMIN_PASSWORD = "   ";
@@ -151,7 +151,7 @@ describe("adminAuth", () => {
 
   describe("requireAdminApi", () => {
     it("returns 503 response when PASSIE_ADMIN_PASSWORD is unset", async () => {
-      delete process.env.PASSIE_ADMIN_PASSWORD;
+      Reflect.deleteProperty(process.env, "PASSIE_ADMIN_PASSWORD");
       const res = await requireAdminApi();
       expect(res instanceof Response).toBe(true);
       if (res instanceof Response) {
