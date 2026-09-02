@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Palette, ShieldAlert, User } from "lucide-react";
+import { ArrowLeft, ExternalLink, Lock, Palette, ShieldAlert, User } from "lucide-react";
 import { t } from "@/i18n/t";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function InstellingenPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center space-x-2 text-slate-600 dark:text-slate-300">
               <User className="h-4 w-4" />
-              <span>Huidig profiel</span>
+              <span>{t("currentProfile")}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -68,7 +68,7 @@ export default async function InstellingenPage() {
                       {actingMember.displayName}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Geselecteerde deelnemer
+                      {t("selectedParticipant")}
                     </div>
                   </div>
                 </div>
@@ -81,10 +81,10 @@ export default async function InstellingenPage() {
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Geen profiel gekozen</span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">{t("noProfileChosen")}</span>
                 <Link href="/wie-ben-jij">
                   <Button size="sm" variant="default" className="text-xs">
-                    Kies profiel
+                    {t("chooseProfile")}
                   </Button>
                 </Link>
               </div>
@@ -102,11 +102,27 @@ export default async function InstellingenPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
             <p>{t("privacyText")}</p>
-            <p>
-              Omdat de app draait binnen een besloten vriendengroep, zijn er
-              geen wachtwoorden vereist. Veranderingen en pasoverdrachten worden
-              duidelijk gelogd in de tijdlijn.
+            <p>{t("privacyCommunityNote")}</p>
+          </CardContent>
+        </Card>
+
+        {/* Beheer / Admin */}
+        <Card className="dark:bg-[#131B2E] dark:border-slate-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center space-x-2 text-slate-600 dark:text-slate-300">
+              <Lock className="h-4 w-4" />
+              <span>{t("beheerCardTitle")}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              {t("beheerCardDesc")}
             </p>
+            <Link href="/beheer">
+              <Button size="sm" variant="outline" className="text-xs dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+                {t("toBeheer")}
+              </Button>
+            </Link>
           </CardContent>
         </Card>
 
@@ -120,7 +136,7 @@ export default async function InstellingenPage() {
               rel="noopener noreferrer"
               className="flex items-center space-x-1 hover:text-slate-900 dark:hover:text-white"
             >
-              <span>Broncode</span>
+              <span>{t("sourceCode")}</span>
               <ExternalLink className="h-3 w-3" />
             </a>
           </CardContent>

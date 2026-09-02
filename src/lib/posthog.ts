@@ -239,4 +239,25 @@ export function trackHandover(props?: {
   posthog.capture("pass.handover", props);
 }
 
+// Admin Events
+export function trackAdminLogin() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("admin.login");
+}
+
+export function trackAdminMemberCreated() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("admin.member_created");
+}
+
+export function trackAdminMemberUpdated(props?: { changed?: string[] }) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("admin.member_updated", props);
+}
+
+export function trackAdminMembersReordered(props?: { memberCount?: number }) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("admin.members_reordered", props);
+}
+
 export { posthog };
