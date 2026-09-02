@@ -175,10 +175,11 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
    ```bash
    pnpm exec wrangler secret put <NEW_SECRET_NAME>
    ```
-   Then regenerate the typed Worker environment and commit the result:
+   Then regenerate the typed Worker environment so the new binding is type-visible locally:
    ```bash
    pnpm cf-typegen
    ```
+   `worker-configuration.d.ts` is generated per environment and gitignored — it is not committed. Each contributor and each worktree regenerates it after adding a secret to `.dev.vars` (`.kilo/setup-script.sh` does this automatically for new worktrees).
    Ensure `NEXT_PUBLIC_POSTHOG_KEY` (production project key) and `NEXT_PUBLIC_PASSIE_ENV=production` are set in the deployment shell before building.
 
 2. **Apply any pending D1 migrations:**
