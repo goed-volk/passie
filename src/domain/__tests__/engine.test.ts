@@ -776,4 +776,75 @@ describe("Domain Engine Edge Cases", () => {
       }
     });
   });
+
+  describe("Passless Member lifecycle", () => {
+    it("allows a member with zero pass ownership to join queue, receive assignment, yield pass, and receive handover", () => {
+      let state = createInitialState();
+      const guestActor = "member_passless_guest";
+
+      // 1. Passless member attempts to indicate release on pass_1 -> should fail with NOT_PASS_OWNER
+      const failIndicate = reduce(state, { type: "IndicateRelease", passId: "pass_1" }, createMockContext({ actor: guestActor }));
+      expect("error" in failIndicate).toBe(true);
+      if ("error" in failIndicate) {
+        expect(failIndicate.error.code).toBe("NOT_PASS_OWNER");
+      }
+
+      // 2. Passless member joins the queue for self
+      const joinRes = reduce(
+        state,
+        { type: "JoinQueue", nextEntryId: 1, kind: "self" },
+        createMockContext({ actor: guestActor })
+      );
+      expect("state" in joinRes).toBe(true);
+      if (!("state" in joinRes)) return;
+      state = joinRes.state;
+      expect(state.queue.length).toBe(1);
+      expect(state.queue[0]?.memberId).toBe(guestActor);
+      expect(state.queue[0]?.status).toBe("waiting");
+
+      // 3. Owner releases pass_1 -> auto-assigns to guestActor
+      const releaseRes = reduce(
+        state,
+        { type: "IndicateRelease", passId: "pass_1" },
+        createMockContext({ actor: "member_sam" })
+      );
+      expect("state" in releaseRes).toBe(true);
+      if (!("state" in releaseRes)) return;
+      state = releaseRes.state;
+
+      const pass1 = state.passes.find((p) => p.id === "pass_1");
+      expect(pass1?.status).toBe("assigned");
+      expect(pass1?.claimantEntryId).toBe(1);
+      expect(state.queue[0]?.status).toBe("assigned");
+      expect(state.queue[0]?.assignedPassId).toBe("pass_1");
+
+      // 4. Passless member gives back the assigned pass
+      const giveBackRes = reduce(
+        state,
+        { type: "GiveBackAssignedPass", passId: "pass_1" },
+        createMockContext({ actor: guestActor })
+      );
+      expect("state" in giveBackRes).toBe(true);
+      if (!("state" in giveBackRes)) return;
+      state = giveBackRes.state;
+
+      const pass1After = state.passes.find((p) => p.id === "pass_1");
+      expect(pass1After?.status).toBe("released");
+      expect(pass1After?.claimantEntryId).toBeNull();
+      expect(state.queue[0]?.status).toBe("cancelled");
+
+      // 5. Physical handover to passless member
+      const handoverRes = reduce(
+        state,
+        { type: "RecordHandover", passId: "pass_1", toMemberId: guestActor },
+        createMockContext({ actor: "member_sam" })
+      );
+      expect("state" in handoverRes).toBe(true);
+      if (!("state" in handoverRes)) return;
+      state = handoverRes.state;
+
+      const pass1Handover = state.passes.find((p) => p.id === "pass_1");
+      expect(pass1Handover?.holderMemberId).toBe(guestActor);
+    });
+  });
 });

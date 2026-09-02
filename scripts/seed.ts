@@ -144,11 +144,7 @@ VALUES (
   ${sortOrder},
   ${now}
 )
-ON CONFLICT(group_id, slug) DO UPDATE SET
-  display_name = excluded.display_name,
-  initials = excluded.initials,
-  avatar_color = excluded.avatar_color,
-  sort_order = excluded.sort_order;
+ON CONFLICT(group_id, slug) DO NOTHING;
     `.trim());
   }
 
@@ -357,15 +353,7 @@ export async function runSeed(args = process.argv.slice(2)) {
         sortOrder,
         createdAt: now,
       })
-      .onConflictDoUpdate({
-        target: [schema.members.groupId, schema.members.slug],
-        set: {
-          displayName: m.displayName,
-          initials,
-          avatarColor: m.avatarColor,
-          sortOrder,
-        },
-      });
+      .onConflictDoNothing();
 
     memberMap.set(m.slug, memberId);
   }

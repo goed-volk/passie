@@ -128,13 +128,15 @@ export async function buildPoolSnapshot(
     return null;
   }
 
-  // 3. Fetch all members in this group
-  const membersList = await db.query.members.findMany({
+  // 3. Fetch all members in this group (both active for pickers and all for historical lookups)
+  const allMembersList = await db.query.members.findMany({
     where: eq(schema.members.groupId, pool.groupId),
   });
-  const membersMap = new Map<string, MemberRef>();
+  const allMembersMap = new Map<string, MemberRef>();
   const memberNamesMap = new Map<string, string>();
-  for (const m of membersList) {
+  const activeMembersList: MemberRef[] = [];
+
+  for (const m of allMembersList) {
     const ref: MemberRef = {
       id: m.id,
       groupId: m.groupId,
@@ -143,11 +145,14 @@ export async function buildPoolSnapshot(
       avatarColor: m.avatarColor,
       slug: m.slug,
     };
-    membersMap.set(m.id, ref);
+    allMembersMap.set(m.id, ref);
     memberNamesMap.set(m.id, m.displayName);
+    if (m.isActive === 1) {
+      activeMembersList.push(ref);
+    }
   }
 
-  const actingMember = actingMemberId ? membersMap.get(actingMemberId) ?? null : null;
+  const actingMember = actingMemberId ? allMembersMap.get(actingMemberId) ?? null : null;
 
   // 4. Fetch passes & pass owners
   const passesList = await db.query.passes.findMany({
@@ -165,7 +170,7 @@ export async function buildPoolSnapshot(
 
   const passOwnersMap = new Map<string, MemberRef[]>();
   for (const o of passOwnersList) {
-    const member = membersMap.get(o.memberId);
+    const member = allMembersMap.get(o.memberId);
     if (member) {
       const list = passOwnersMap.get(o.passId) ?? [];
       list.push(member);
@@ -220,14 +225,14 @@ export async function buildPoolSnapshot(
     counts[status]++;
 
     const owners = passOwnersMap.get(p.id) ?? [];
-    const holder = p.holderMemberId ? membersMap.get(p.holderMemberId) ?? null : null;
-    const indicatedBy = s?.indicatedByMemberId ? membersMap.get(s.indicatedByMemberId) ?? null : null;
+    const holder = p.holderMemberId ? allMembersMap.get(p.holderMemberId) ?? null : null;
+    const indicatedBy = s?.indicatedByMemberId ? allMembersMap.get(s.indicatedByMemberId) ?? null : null;
 
     let claimant: PoolSnapshot["passes"][number]["claimant"] = null;
     if (status === "assigned" && s?.claimantEntryId) {
       const q = queueMap.get(s.claimantEntryId);
       if (q) {
-        const claimantMember = membersMap.get(q.memberId);
+        const claimantMember = allMembersMap.get(q.memberId);
         if (claimantMember) {
           claimant = {
             entryId: q.id,
@@ -275,7 +280,7 @@ export async function buildPoolSnapshot(
     if (q.status === "waiting") {
       counts.waiting++;
     }
-    const member = membersMap.get(q.memberId)!;
+    const member = allMembersMap.get(q.memberId)!;
     const isMine = actingMemberId === q.memberId;
     const pos = q.status === "waiting" ? waitingPosition++ : 0;
     const assignedPassLabel = q.assignedPassId ? passLabelsMap.get(q.assignedPassId) ?? null : null;
@@ -334,7 +339,7 @@ export async function buildPoolSnapshot(
         payload.guestName = q.guestName;
       }
     }
-    const actorRef = evt.actorMemberId ? membersMap.get(evt.actorMemberId) ?? null : null;
+    const actorRef = evt.actorMemberId ? allMembersMap.get(evt.actorMemberId) ?? null : null;
     const text = formatEventText(
       evt.type,
       payload,
@@ -376,7 +381,7 @@ export async function buildPoolSnapshot(
     },
     deadline,
     actingMember,
-    members: Array.from(membersMap.values()),
+    members: activeMembersList,
     passes: passesView,
     queue: queueView,
     transfers,
