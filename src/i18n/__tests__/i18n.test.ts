@@ -94,5 +94,13 @@ describe("i18n discipline", () => {
       "Sam"
     );
     expect(textGuest).toBe("Sam claimt Pas 1 terug van Eva's gast (Kees)");
+
+    const textHandover = formatEventText(
+      "possession.handover",
+      { passId: "pass_1", fromMemberId: "member_1", toMemberId: "member_2" },
+      membersMap,
+      passLabelsMap
+    );
+    expect(textHandover).toBe("Pas 1 gewisseld van Sam naar Daan");
   });
 });

@@ -116,7 +116,7 @@ export function formatEventText(
     case "possession.handover": {
       const from = (payload.fromMemberId && memberNames.get(payload.fromMemberId as string)) ?? "onbekend";
       const to = (payload.toMemberId && memberNames.get(payload.toMemberId as string)) ?? "onbekend";
-      return `${passCap} overgedragen van ${from} naar ${to}`;
+      return `${passCap} gewisseld van ${from} naar ${to}`;
     }
     case "possession.corrected": {
       const to = (payload.toMemberId && memberNames.get(payload.toMemberId as string)) ?? "onbekend";

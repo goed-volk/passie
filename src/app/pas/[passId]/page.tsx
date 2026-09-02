@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { requireActingMember } from "@/server/actingMember";
 import * as schema from "@/server/schema";
@@ -29,11 +29,15 @@ export default async function PassPage(props: {
     notFound();
   }
 
-  // 2. Fetch all members in group
-  const membersList = await db.query.members.findMany({
+  // 2. Fetch all active members in group for holder picker
+  const activeMembersList = await db.query.members.findMany({
+    where: and(eq(schema.members.groupId, pass.groupId), eq(schema.members.isActive, 1)),
+  });
+  // Also fetch all members for resolving names of past events / inactive owners
+  const allMembersList = await db.query.members.findMany({
     where: eq(schema.members.groupId, pass.groupId),
   });
-  const membersMap = new Map(membersList.map((m) => [m.id, m]));
+  const membersMap = new Map(allMembersList.map((m) => [m.id, m]));
 
   // 3. Fetch pass owners
   const ownersList = await db.query.passOwners.findMany({
@@ -54,7 +58,7 @@ export default async function PassPage(props: {
     orderBy: [desc(schema.possessionEvents.createdAt)],
   });
 
-  const memberRefs = membersList.map((m) => ({
+  const memberRefs = activeMembersList.map((m) => ({
     id: m.id,
     groupId: m.groupId,
     displayName: m.displayName,
@@ -131,7 +135,7 @@ export default async function PassPage(props: {
           <div className="flex items-center space-x-2">
             <History className="h-4 w-4 text-slate-500 dark:text-slate-400" />
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Geschiedenis overdrachten
+              {t("historyTitle")}
             </h2>
           </div>
 
@@ -139,7 +143,7 @@ export default async function PassPage(props: {
             <CardContent className="p-4 space-y-3 divide-y divide-slate-100 dark:divide-slate-800">
               {possessionEvents.length === 0 ? (
                 <div className="text-center text-xs text-slate-400 dark:text-slate-500 py-3">
-                  Nog geen overdrachten geregistreerd voor deze pas.
+                  {t("noHistoryRecorded")}
                 </div>
               ) : (
                 possessionEvents.map((evt) => {
@@ -165,11 +169,11 @@ export default async function PassPage(props: {
                     >
                       <div className="flex items-center space-x-2">
                         <span className="text-slate-600 dark:text-slate-400">
-                          {fromMember ? fromMember.displayName : "Niemand"}
+                          {fromMember ? fromMember.displayName : t("nobody")}
                         </span>
                         <ArrowRight className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                         <span className="font-semibold text-slate-900 dark:text-slate-100">
-                          {toMember ? toMember.displayName : "Onbekend"}
+                          {toMember ? toMember.displayName : t("unknownHolder")}
                         </span>
                       </div>
                       <span className="text-slate-400 dark:text-slate-500 tabular-nums">{date}</span>
