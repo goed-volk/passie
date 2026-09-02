@@ -44,6 +44,7 @@ Passie uses environment variables for build-time analytics and Cloudflare secret
 | Variable | Target | Required? | Description |
 | :--- | :--- | :---: | :--- |
 | `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for HTTP cron route | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint (returns 503 if unconfigured). |
+| `PASSIE_ADMIN_PASSWORD` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for `/beheer` | Shared password protecting the member administration area (`/beheer`, returns 503 if unconfigured). |
 | `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (dev) / deploy shell env (prod) | Optional | PostHog project API key. Separate project keys for `passie-dev` and `passie-prod`. If left blank or unset, all analytics tracking is completely disabled. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | `.env.local` (local) / deploy shell env (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
 | `NEXT_PUBLIC_PASSIE_ENV` | `.env.local` (local) / deploy shell env (prod) | Optional | Environment tag: `development` or `production`. |
@@ -124,7 +125,7 @@ cp .dev.vars.example .dev.vars
 | `pnpm db:migrate:local` | No | No | Applies pending migrations to local D1 SQLite database. |
 | `pnpm db:migrate:prod` | No | Yes | Applies pending migrations to production Cloudflare D1 database. |
 | `pnpm seed:example` | No | No | Populates local D1 database with fictional seed data. |
-| `pnpm seed:local` | No | No | Seeds D1 with local group data (`--confirm` required for production). |
+| `pnpm seed:local` | No | No | Seeds D1 with local group data (`--confirm` required for production). Members are insert-only to preserve admin renames. |
 | `pnpm ingest:local` | No | No | Ingests upcoming fixtures from the iCal feed into local D1. |
 | `pnpm dev-reset` | No | No | Resets local D1 database, re-migrates, re-seeds local group data, and re-ingests fixtures. |
 | `pnpm cf-typegen` | No | No | Generates Cloudflare Worker runtime environment types (`worker-configuration.d.ts`). |
@@ -155,6 +156,7 @@ Deployments target Cloudflare Workers using OpenNext, Cloudflare D1, and Cloudfl
 4. **Configure production secrets & build environment:**
    ```bash
    pnpm exec wrangler secret put PASSIE_CRON_SECRET
+   pnpm exec wrangler secret put PASSIE_ADMIN_PASSWORD
    ```
    Ensure `NEXT_PUBLIC_POSTHOG_KEY` (production project key) and `NEXT_PUBLIC_PASSIE_ENV=production` are set in the deployment shell before building.
 

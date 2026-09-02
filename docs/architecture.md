@@ -91,6 +91,12 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - The `label` column is the primary display name on cards and detail pages. The co-owners are displayed in clear plain text directly below the card title (*"Pas van: [Namen]"*), while the physical card custody is managed separately via the interactive holder control row.
 - In MVP, pass names can be amended by updating `seed/group.local.json` and running `pnpm seed:local` (or direct D1 `UPDATE passes SET label = ?`). Future admin UI will expose web-based pass editing.
 
+### Member Administration & Passless Members
+- Group members are managed via the password-protected admin interface (`/beheer`, gated by `PASSIE_ADMIN_PASSWORD`).
+- **Passless Members / Guest Members:** A member does not need to own a pass (`pass_owners`). Passless members can select their identity in `/wie-ben-jij`, request seats on matchdays via the queue (`JoinQueue`), receive allocated passes, and partake in physical card handovers.
+- **Direct Member Writes:** Member additions and edits (`src/server/adminMembers.ts`) bypass `mutate()` and execute direct guarded D1 batch writes. `members` sits outside the `GamePoolState` aggregate, carries no `version` column, and has no FCFS queue ordering semantics.
+- **Insert-Only Seed Durability:** To protect admin renames and profile updates against `pnpm seed:local` or worktree initialization, member seeding uses `ON CONFLICT(group_id, slug) DO NOTHING`. The database is authoritative for member attributes post-bootstrap.
+
 ---
 
 ## 4. UI & Theming

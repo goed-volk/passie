@@ -1,86 +1,92 @@
-# ROADMAP — Passie Backlog
+# ROADMAP — Passie Product Backlog
 
-This document outlines features, architectural enhancements, and refinements deferred beyond the MVP.
+This document outlines planned features and enhancements for Passie. Technical architecture findings and implementation notes are documented in [`docs/future-architecture.md`](docs/future-architecture.md).
 
 ---
 
 ## Next up
 
-- **Direct Pass Transfer / Delegation (*Pas Overdragen*):** Allow pass owners to directly delegate their seat for a match to a specific friend, relative, or member, bypassing the general FIFO queue.
-  - *Context & Motivation:* Season tickets belong to specific owners. While owners frequently donate unused passes to the shared group queue (*"Pas vrijgeven"*), they occasionally want to bring a personal guest or lend their own card to a specific person for a matchday.
-  - *UI / UX Flow:*
-    - The pass indication interface presents three primary actions: *"Ik ga"* (Keep), *"Pas vrijgeven"* (Release to group queue), and *"Pas overdragen"* (Direct transfer/delegation).
-    - Selecting *"Pas overdragen"* opens a dialog prompting for the target recipient (a group member or custom guest name, e.g. *"Vader"*, *"Vriend Jan"*).
-  - *Domain & Queue Engine Architecture:*
-    - Creates a new `queue_entry` with monotonic SQLite `AUTOINCREMENT id`, tagged with `kind: "delegated"` and `delegated_from_pass_id: passId`.
-    - Directly transitions `pass_game_states.status = 'assigned'` bound to this specific queue entry, overruling general queue priority without disrupting the position of waiting members.
-    - Appends a transparent `pass.delegated` event to `activity_events` recording `{ passId, ownerMemberId, recipientName }` so the group timeline remains fully auditable.
-    - If the delegated recipient cancels, the pass reverts to `unindicated` for the owner to decide anew.
-  - *Why deferred beyond MVP:* Requires extending domain action types (`DelegatePass`), updating queue allocation logic to handle bypassed assignment, adding schema fields, and testing precedence rules.
+- **Direct Pass Transfer / Delegation (*Pas Overdragen*):**
+  - *Description:* Allow season ticket owners to directly delegate their seat for a match to a specific friend, family member, or group member, bypassing the general FIFO queue.
+  - *User Flow:* Pass owners can choose between *"Ik ga"* (Keep), *"Pas vrijgeven"* (Release to group queue), and *"Pas overdragen"* (Direct transfer/delegation with recipient name).
+  - *Status:* Planned. Technical specification documented in [`docs/future-architecture.md#1-direct-pass-transfer--delegation`](docs/future-architecture.md#1-direct-pass-transfer--delegation).
 
-- **Verified Identity via Cloudflare Access for Workers (v0.2):** Switch Worker-level Access policy from `bypass` to `allow` with email one-time-PIN / IdP allowlist. Read verified identity server-side via `ctx.access.getIdentity()` (zero JWT signature parsing or manual cert verification required), map verified email to `members.access_email`, retain `passie_member` cookie as dev fallback, bind email to `posthog.identify()`, and simulate locally using `wrangler.jsonc` `access.dev` block with required `aud`.
-  - *Why not in MVP:* Frictionless initial rollout for soft launch using country-level bypass + cookie picker.
+- **Member & Pass Administration (`/beheer`):**
+  - *Description:* Web-based administration area for managing group members, profile details, active status, and season ticket configurations without manually editing database files.
+  - *Status:* **Partially delivered (v0.1.1):** Member creation, profile editing, distinct avatar color assignment, visual drag-and-drop sort ordering, and guarded deactivation. Pass CRUD and ownership management are planned for a subsequent iteration.
+  - *Technical Notes:* Detailed constraints for pass CRUD and self-service sequencing are documented in [`docs/future-architecture.md#2-member--pass-administration-beheer`](docs/future-architecture.md#2-member--pass-administration-beheer).
 
-- **Matchday Deadline Reminders:** Automated notification (WhatsApp bot / webhook / webpush) at deadline − 24h to nudge unindicated pass owners.
-  - *Why not in MVP:* High-trust friend group uses manual group WhatsApp chat reminders for MVP launch.
+- **Verified Identity via Cloudflare Access (v0.2):**
+  - *Description:* Authenticate members seamlessly via email one-time PIN or SSO allowlist, replacing the local unauthenticated picker for production deployments while keeping login frictionless.
+  - *Status:* Planned. Architecture documented in [`docs/future-architecture.md#3-verified-identity-via-cloudflare-access-for-workers-v02`](docs/future-architecture.md#3-verified-identity-via-cloudflare-access-for-workers-v02).
 
-- **Server-Side PostHog & Error Capture:** Server-side event capture and exception tracking via direct `fetch` to PostHog EU ingestion (`/i/v0/e/` or `/otlp/v1/logs` inside request context wrapped in `waitUntil()`, never via OpenTelemetry Node SDK) and Next.js `onRequestError`.
-  - *Why not in MVP:* Client-side product analytics + Cloudflare Workers Logs / `wrangler tail` provide complete visibility without OpenTelemetry worker bundling hazards.
+- **Matchday Deadline Reminders:**
+  - *Description:* Automated notifications (e.g. WhatsApp webhook, web push) sent to pass owners who haven't indicated attendance by `deadline - 24h`.
+  - *Status:* Planned.
 
-- **Member & Pass Admin UI:** Web interface to manage members, avatars, pass ownership shares, and active status without editing JSON/DB directly.
-  - *Why not in MVP:* Seed scripts cover initial group setup with zero UI overhead.
-- **Web Push Notifications:** Real-time push alerts for *pass assigned to you* and *handover expected of you*.
-  - *Why not in MVP:* Users open the web app directly before games; notifications add service worker / VAPID complexity.
-- **Staging Subdomain (`passie-dev.goedvolk.org`):** Dedicated remote staging environment with isolated D1 database.
-  - *Why not in MVP:* Local dev + workerd preview covers validation for single-group MVP.
-- **Two-Step Handover Confirmation:** Holder marks handover -> receiver confirms receipt (with 24h auto-confirm).
-  - *Why not in MVP:* One-step optimistic handover is sufficient for high-trust friend groups.
-- **WhatsApp Status Share Sheet:** Generate a formatted text summary with one tap to paste into the WhatsApp group.
-  - *Why not in MVP:* Nice-to-have convenience feature; users can view the web app directly.
+- **Server-Side Event & Error Analytics:**
+  - *Description:* Server-side exception tracking and telemetry to capture backend errors and API usage without reliance on client JavaScript.
+  - *Status:* Planned.
+
+- **Web Push Notifications:**
+  - *Description:* Real-time device notifications for key events (e.g. *a pass has been assigned to you*, *physical card handover needed*).
+  - *Status:* Planned.
+
+- **Staging Subdomain (`passie-dev.goedvolk.org`):**
+  - *Description:* Dedicated remote preview environment with an isolated test database for validating updates before production deployment.
+  - *Status:* Planned.
+
+- **Twee-staps wisselbevestiging:**
+  - *Description:* Twee-fasen paswissel waarbij de huidige houder de wissel registreert en de ontvanger de ontvangst bevestigt (met een automatische bevestiging na 24 uur).
+  - *Status:* Planned.
+
+- **WhatsApp Matchday Summary Share:**
+  - *Description:* One-tap button to copy a clean, formatted matchday roster and pass distribution summary directly into the group WhatsApp chat.
+  - *Status:* Planned.
+
+- **Timeline Date & Time Formatting:**
+  - *Description:* Display a compact day/date prefix (e.g. *"vr 20:07"*, *"12 sep 09:42"*, or relative date indicator) in the matchday activity timeline rather than just a wall-clock time, making events that occurred across multiple days easily distinguishable.
+  - *Status:* Planned.
 
 ---
 
 ## Later
 
-- **Realtime via Durable Objects + SSE:** Server-Sent Events pushed from a per-game Durable Object, replacing 5s client polling while preserving identical snapshot API shapes.
-  - *Why not in MVP:* TanStack Query polling is simple, battery-friendly when tab is active, and requires no stateful infrastructure.
-  - *Architecture Note:* Worker-level Cloudflare Access policies support SSE (plain HTTP streaming) natively, but do not currently support WebSocket connection upgrades (which return 403 under Worker-level policies). SSE is fully compatible with Worker-level Access; if WebSocket transport is ever adopted in the future, Access must be migrated to hostname-based first.
-- **Multi-Group & Multi-Club Onboarding & Dynamic Theming:** Support multiple groups and clubs (Eredivisie & Eerste Divisie) with dynamic club theme selector, club logos, and automatic accessible color palette generation.
-  - *Why not in MVP:* Schema is multi-tenant ready, but MVP focuses on single-club (`Excelsior`) validation.
-  - *Scalability & Contrast Learnings (Eredivisie):*
-    - **Dual-Mode Color Roles:** Eredivisie clubs fall into distinct color archetypes (Red/Black like Excelsior/NEC, Red/White like Ajax/Feyenoord/PSV/Sparta/Twente/Utrecht, Yellow/Black or Yellow/Green like NAC/Fortuna/Go Ahead, Blue/White like Heerenveen/PEC Zwolle, and Green/White like FC Groningen).
-    - **WCAG Contrast on Yellow/Light Primaries:** Yellow primary clubs (e.g. NAC Breda, Go Ahead Eagles, Fortuna) cannot use white text on primary buttons (contrast ratio ~1.15:1). The theming model requires `colorOnPrimary` (e.g. `#000000` for yellow, `#FFFFFF` for red/blue/dark) and dark-mode adjusted luminance tokens so all CTAs and badges achieve ≥4.5:1 WCAG AA contrast.
-    - **Dark Mode Hue Tuning:** Dark backgrounds require slightly higher-luminance primary tones (e.g., Excelsior red `#FF2E44` vs `#E2001A` on dark) to prevent muddy saturated text on dark cards (`#131B2E`).
-    - **Dynamic Inversion Labels:** The theme toggle adapts to the club's colors (e.g. Excelsior: *Rood-Zwart* / *Zwart-Rood*; NAC Breda: *Geel-Zwart* / *Zwart-Geel*; Heerenveen: *Blauw-Wit* / *Nacht-Blauw*).
-- **Per-Member Notification Preferences:** Granular email/push settings per fixture or event type.
-  - *Why not in MVP:* Requires user settings storage and authentication layer.
-- **Opt-in Auto-Free at Deadline:** Automatically release unindicated passes to the queue at `kickoff - 24h`.
-  - *Why not in MVP:* High-trust group prefers soft countdown reminder without forcing unintended releases.
-- **Priority Tiers in Queue:** Priority rules giving members without passes first priority over guest requests.
-  - *Why not in MVP:* Strict FCFS is simpler, unambiguous, and matches existing group consensus.
-- **Fairness & Attendance Statistics:** Season stats showing attendance rate, passes shared, and queue wait times.
-  - *Why not in MVP:* Fun post-season engagement metric, not core for matchday ledger.
-- **Away & Cup Games:** Support fixtures outside the standard home league schedule.
-  - *Why not in MVP:* Excelsior season tickets only apply to home league matches in MVP.
-- **Personal ICS Export:** Subscribe to an iCal feed of matches where you personally have an assigned pass.
-  - *Why not in MVP:* Non-critical convenience feature.
-- **Expense Settlement (Tikkie Integration):** Track pass costs, guest fees, and generate payment requests.
-  - *Why not in MVP:* Financial settlement is handled outside Passie in the group's existing banking app.
-- **Admin Audit & Correction View:** Interactive log viewer with rollback/compensating action triggers.
-  - *Why not in MVP:* Append-only logs exist in D1 and can be queried or compensated manually if needed.
-- **English Locale + Switcher:** Multi-language UI support.
-  - *Why not in MVP:* MVP users are Dutch; code and i18n structure are English-ready.
-- **Playwright MCP / CI Regression Suite:** Headless browser integration for automated multi-device / multi-context regression tests.
-  - *Why not in MVP:* Kilo Code built-in Browser Use + deterministic `scripts/race-check.sh` cover MVP testing.
-- **Native App Shell (Capacitor / PWA wrapper):** App Store distribution.
-  - *Why not in MVP:* Mobile-first PWA (Add to Home Screen) is instantaneous and zero-maintenance.
+- **Realtime State Updates (Server-Sent Events):**
+  - *Description:* Instantaneous live updates for open pools via Server-Sent Events, eliminating the 5-second polling interval while keeping battery and data usage minimal.
+  - *Technical Notes:* [`docs/future-architecture.md#4-realtime-streaming-sse--durable-objects`](docs/future-architecture.md#4-realtime-streaming-sse--durable-objects).
+
+- **Multi-Club Onboarding & Dynamic Theming:**
+  - *Description:* Support multiple football clubs across the Eredivisie & Eerste Divisie with automated accessible club palette generation and custom club branding.
+  - *Technical Notes:* Color science and WCAG AA contrast rules documented in [`docs/future-architecture.md#5-multi-club-onboarding--accessible-color-science`](docs/future-architecture.md#5-multi-club-onboarding--accessible-color-science).
+
+- **Personal ICS Calendar Feed:**
+  - *Description:* Individualized calendar subscription feed showing only the matchdays where you personally hold or have been assigned a pass.
+
+- **Per-Member Notification Preferences:**
+  - *Description:* Granular user controls for email and push alerts per fixture or event type.
+
+- **Opt-in Auto-Free at Deadline:**
+  - *Description:* Optional group setting to automatically release unindicated passes to the waiting list when the deadline expires.
+
+- **Season Attendance & Sharing Statistics:**
+  - *Description:* Year-end stats highlighting attendance rates, passes shared, and queue wait times across the group.
+
+- **Expense & Tikkie Settlement:**
+  - *Description:* Record season ticket costs, guest fees, and generate payment requests for simple end-of-season settlement.
+
+- **Multi-Language Support (English / Dutch):**
+  - *Description:* Language selector for international visitors and non-Dutch speaking friends.
+
+- **Away & Cup Match Fixtures:**
+  - *Description:* Support for away games, cup ties, and playoff matches beyond the regular home season.
 
 ---
 
 ## Ideas
 
-- **Visual Seat Map:** Stadium diagram showing exact seat positions (Vak, rij, stoel).
-- **Physical Card Photo:** Stored pass photo on `/pas/[id]` for gate verification emergencies.
-- **Pickup Location Hints:** Member profile default neighborhood/pickup instructions.
-- **Season Attendance Leaderboard:** Group gamification of away/home support.
-- **Ownership Shares & Payment Tracking:** Co-owner fraction tracking (e.g. 50/50 vs 1/3 splits).
+- **Visual Stadium Seat Map:** Diagram showing exact seat locations per pass (stand, row, seat).
+- **Physical Card Photo Storage:** Stored digital backup photo of the physical barcode for gate verification emergencies.
+- **Member Pickup Location Notes:** Default neighborhood or matchday meeting spot displayed on member profiles.
+- **Season Attendance Leaderboard:** Friendly group stats for home and away match attendance.
+- **Fractional Ownership Splits:** Explicit tracking of shared pass fractions (e.g. 50/50 vs 1/3 ownership).
