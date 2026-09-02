@@ -180,27 +180,42 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
    pnpm cf-typegen
    ```
    `worker-configuration.d.ts` is generated per environment and gitignored — it is not committed. Each contributor and each worktree regenerates it after adding a secret to `.dev.vars` (`.kilo/setup-script.sh` does this automatically for new worktrees).
-   Ensure `NEXT_PUBLIC_POSTHOG_KEY` (production project key) and `NEXT_PUBLIC_PASSIE_ENV=production` are set in the deployment shell before building.
 
-2. **Apply any pending D1 migrations:**
+   ⚠️ **`pnpm cf-typegen` can change `pnpm typecheck` results.** Wrangler types every key present in `.dev.vars` as a required `string` on `NodeJS.ProcessEnv`, so code that simulates an absent variable (`delete process.env.X`) starts failing with `TS2790` once that key is generated. Use `Reflect.deleteProperty(process.env, "X")` in tests instead of `delete`. Because the generated file is gitignored, typecheck outcomes differ between machines depending on each contributor's `.dev.vars` — always re-run `pnpm typecheck` after `pnpm cf-typegen`.
+
+2. **Export the production build-time variables** (they are inlined into the client bundle by `next build`):
+   ```bash
+   export NEXT_PUBLIC_POSTHOG_KEY=<passie-prod project key>
+   export NEXT_PUBLIC_PASSIE_ENV=production
+   ```
+   ⚠️ **Do not skip this.** `next build` loads `.env.local`, which holds the **development** PostHog key and `NEXT_PUBLIC_PASSIE_ENV=development`. Deploying without exporting the production values ships a production bundle that tags all traffic as `development` and sends it to the `passie-dev` PostHog project. Shell-exported variables take precedence over `.env.local`, so exporting them (or prefixing the `pnpm deploy` command with them) is what makes the build correct.
+
+3. **Apply any pending D1 migrations:**
    ```bash
    pnpm db:migrate:prod
    ```
    Safe to run every time: Wrangler tracks applied migrations per-database and only executes new files in `drizzle/`. Prints `No migrations to apply!` when there is nothing pending.
 
-3. **Do not re-run `pnpm seed:local --remote --confirm` or the manual ingest trigger** — both are Initial Setup steps only (see warnings above). Skip straight to building and deploying.
+4. **Do not re-run `pnpm seed:local --remote --confirm` or the manual ingest trigger** — both are Initial Setup steps only (see warnings above). Skip straight to building and deploying.
 
-4. **Build and deploy Worker & static assets:**
+5. **Record a pre-deploy data baseline** so the release can be proven non-destructive:
+   ```bash
+   pnpm exec wrangler d1 execute passie --remote --json --command "SELECT (SELECT count(*) FROM members) AS members, (SELECT count(*) FROM passes) AS passes, (SELECT count(*) FROM fixtures) AS fixtures, (SELECT count(*) FROM queue_entries) AS queue_entries, (SELECT count(*) FROM possession_events) AS possession_events, (SELECT count(*) FROM activity_events) AS activity_events;"
+   ```
+
+6. **Build and deploy Worker & static assets:**
    ```bash
    pnpm deploy
    ```
 
-5. **Smoke-test the changed surface in production** (e.g. log in to `/beheer` after an admin-auth change, confirm a new API route responds as expected).
-
-6. **Verify production data is unaffected:**
+7. **Smoke-test the changed surface in production.** Admin auth can be verified without knowing the password — an unauthenticated admin API call returns `401` when `PASSIE_ADMIN_PASSWORD` is configured and `503` when it is missing:
    ```bash
-   pnpm exec wrangler d1 execute passie --remote --command "SELECT count(*) FROM fixtures; SELECT count(*) FROM members; SELECT count(*) FROM passes;"
+   curl -s -o /dev/null -w "%{http_code}\n" https://passie.goedvolk.org/api/admin/members      # expect 401
+   curl -s -o /dev/null -w "%{http_code}\n" https://passie.goedvolk.org/beheer/inloggen         # expect 200
    ```
+   Then confirm an actual login in the browser at `/beheer`.
+
+8. **Re-run the baseline query from step 5 and diff the counts** — they must be identical unless the release intentionally writes data.
 
 ### Rollback & Recovery
 
