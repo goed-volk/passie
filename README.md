@@ -136,12 +136,16 @@ cp .dev.vars.example .dev.vars
 
 Deployments target Cloudflare Workers using OpenNext, Cloudflare D1, and Cloudflare Access.
 
+Passie has been live in production since **2026-08-18**. The steps below are split into **Initial Setup** (run exactly once, when the Worker and database did not exist yet) and **Every Subsequent Deploy** (run for every code/feature release afterwards). Running an Initial Setup step against an already-populated production database can silently overwrite live data — see the warnings inline.
+
+### Initial Setup (run once, first deploy only)
+
 1. **Authenticate with Cloudflare:**
    ```bash
    pnpm exec wrangler login
    ```
 
-2. **Provision the production D1 database (initial setup):**
+2. **Provision the production D1 database:**
    ```bash
    pnpm exec wrangler d1 create passie
    ```
@@ -153,42 +157,55 @@ Deployments target Cloudflare Workers using OpenNext, Cloudflare D1, and Cloudfl
    - Disable the `workers.dev` route for the `passie` Worker in the Cloudflare dashboard as hygiene.
    - Enable Workers Logs / Observability for the `passie` Worker.
 
-4. **Configure production secrets & build environment:**
-   ```bash
-   pnpm exec wrangler secret put PASSIE_CRON_SECRET
-   pnpm exec wrangler secret put PASSIE_ADMIN_PASSWORD
-   ```
-   Ensure `NEXT_PUBLIC_POSTHOG_KEY` (production project key) and `NEXT_PUBLIC_PASSIE_ENV=production` are set in the deployment shell before building.
-
-5. **Apply D1 migrations to the production database:**
-   ```bash
-   pnpm db:migrate:prod
-   ```
-
-6. **Seed production group data from `seed/group.local.json`:**
+4. **Seed production group data from `seed/group.local.json`:**
    ```bash
    pnpm seed:local --remote --confirm
    ```
+   ⚠️ **One-time only.** `passes` rows are upserted with `holder_member_id` taken from the seed file (`scripts/seed.ts`, `ON CONFLICT(group_id, label) DO UPDATE SET ... holder_member_id = excluded.holder_member_id`). Re-running this after real physical handovers have been recorded in production **silently resets every pass back to its original seed-file holder**, discarding live custody state. `members` rows are insert-only (`ON CONFLICT DO NOTHING`) and are safe to reseed at any time.
 
-7. **Build and deploy Worker & static assets:**
+5. **Trigger initial fixture ingestion:**
+   ```bash
+   curl -i -H "Authorization: Bearer $PASSIE_CRON_SECRET" https://passie.goedvolk.org/api/cron/ingest
+   ```
+   Needed only because no fixtures exist yet. Once live, the cron trigger (`0 */6 * * *`) keeps fixtures current automatically — do not re-run this manually on later deploys.
+
+### Every Subsequent Deploy
+
+1. **Set any *new* secrets introduced by this release** (check the Environment Variables table above for anything added since the last deploy):
+   ```bash
+   pnpm exec wrangler secret put <NEW_SECRET_NAME>
+   ```
+   Then regenerate the typed Worker environment and commit the result:
+   ```bash
+   pnpm cf-typegen
+   ```
+   Ensure `NEXT_PUBLIC_POSTHOG_KEY` (production project key) and `NEXT_PUBLIC_PASSIE_ENV=production` are set in the deployment shell before building.
+
+2. **Apply any pending D1 migrations:**
+   ```bash
+   pnpm db:migrate:prod
+   ```
+   Safe to run every time: Wrangler tracks applied migrations per-database and only executes new files in `drizzle/`. Prints `No migrations to apply!` when there is nothing pending.
+
+3. **Do not re-run `pnpm seed:local --remote --confirm` or the manual ingest trigger** — both are Initial Setup steps only (see warnings above). Skip straight to building and deploying.
+
+4. **Build and deploy Worker & static assets:**
    ```bash
    pnpm deploy
    ```
 
-8. **Trigger initial fixture ingestion:**
+5. **Smoke-test the changed surface in production** (e.g. log in to `/beheer` after an admin-auth change, confirm a new API route responds as expected).
+
+6. **Verify production data is unaffected:**
    ```bash
-   curl -i -H "Authorization: Bearer $PASSIE_CRON_SECRET" https://passie.goedvolk.org/api/cron/ingest
+   pnpm exec wrangler d1 execute passie --remote --command "SELECT count(*) FROM fixtures; SELECT count(*) FROM members; SELECT count(*) FROM passes;"
    ```
 
-9. **Verify production data:**
-   ```bash
-   pnpm exec wrangler d1 execute passie --remote --command "SELECT count(*) FROM fixtures; SELECT count(*) FROM members;"
-   ```
+### Rollback & Recovery
 
-10. **Rollback & recovery:**
-    - Worker rollback: `pnpm exec wrangler deployments list` -> `pnpm exec wrangler rollback [id]`.
-    - D1 recovery: record bookmark via `pnpm exec wrangler d1 time-travel info passie --remote`.
-    - Kill switch: switch Access policy decision from `Bypass` to `Block` in Zero Trust dashboard.
+- Worker rollback: `pnpm exec wrangler deployments list` -> `pnpm exec wrangler rollback [id]`.
+- D1 recovery: record bookmark via `pnpm exec wrangler d1 time-travel info passie --remote`.
+- Kill switch: switch Access policy decision from `Bypass` to `Block` in Zero Trust dashboard.
 
 ---
 

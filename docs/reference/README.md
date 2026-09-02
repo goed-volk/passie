@@ -27,6 +27,7 @@ This document tracks verified external documentation, checked dates, and known p
 - **Drizzle ORM (SQLite / D1)**
   - URL: `https://orm.drizzle.team/docs/get-started/d1-new` | `/docs/migrations`
   - Gotchas: Partial unique indices (e.g. `WHERE status = 'assigned'`) may require hand-edited Drizzle migration SQL files.
+  - **Known drift (unresolved):** `drizzle/0001_pool_version_guards.sql` and `drizzle/0002_performance_indices.sql` were hand-written directly into `drizzle/` and applied successfully via `wrangler d1 migrations apply` (which tracks state in D1 itself, independent of Drizzle metadata). However, `drizzle/meta/_journal.json` still only lists `0000_flowery_blob`, and no `0001_snapshot.json` / `0002_snapshot.json` exist. The next run of `pnpm db:generate` will diff the current `src/server/schema.ts` against the stale `0000_snapshot.json` and will likely try to regenerate `pool_version_guards` and the four performance indices as a new migration, colliding with the existing hand-written files. Before the next real schema change: reconcile the journal/snapshots (e.g. via `drizzle-kit up` or by hand-crafting matching snapshot entries) and verify `pnpm db:generate` output against `drizzle/` before committing or applying it.
 
 - **Next.js App Router**
   - URL: `https://nextjs.org/docs/app`
