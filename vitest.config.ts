@@ -6,6 +6,8 @@ export default defineConfig({
     globals: true,
     environment: "node",
     fileParallelism: false,
+    include: ["src/**/*.{test,spec}.ts", "scripts/**/*.{test,spec}.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.kilo/**"],
     setupFiles: ["./src/test/setup.ts"],
     coverage: {
       provider: "v8",
