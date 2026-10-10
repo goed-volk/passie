@@ -160,6 +160,7 @@ export async function mutate(
       if (!isSentinelConflict) {
         // Fatal non-concurrency error (e.g. syntax, foreign key corruption)
         console.error("Non-retryable database error during mutate:", err);
+        await captureServerDatabaseError(gamePoolId, err, action);
         return {
           ok: false,
           error: {
@@ -191,4 +192,65 @@ export async function mutate(
       message: "Concurrent mutation conflict: please retry",
     },
   };
+}
+
+async function captureServerDatabaseError(
+  gamePoolId: string,
+  err: unknown,
+  action: Action
+): Promise<void> {
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!posthogKey) return;
+
+  const errName = err instanceof Error ? err.name : "UnknownError";
+  const rawMsg = err instanceof Error ? err.message : String(err);
+  // Redact potential PII (e.g. quoted string literals in SQLite errors)
+  const sanitize = (str: string) =>
+    str
+      .replace(/'[^']*'/g, "'[redacted]'")
+      .replace(/"[^"]*"/g, '"[redacted]"');
+
+  const sanitizedMsg = sanitize(rawMsg).slice(0, 500);
+  const sanitizedStack =
+    err instanceof Error && err.stack ? sanitize(err.stack).slice(0, 1000) : undefined;
+
+  const env =
+    process.env.NEXT_PUBLIC_PASSIE_ENV ||
+    (process.env.NODE_ENV === "production" ? "production" : "development");
+
+  const payload = {
+    api_key: posthogKey,
+    event: "$exception",
+    distinct_id: `pool_${gamePoolId}`,
+    properties: {
+      $exception_type: errName,
+      $exception_message: sanitizedMsg,
+      $exception_stack_trace: sanitizedStack,
+      $exception_list: [
+        {
+          type: errName,
+          value: sanitizedMsg,
+        },
+      ],
+      $process_person_profile: false,
+      game_pool_id: gamePoolId,
+      action_type: action.type,
+      environment: env,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    await fetch("https://eu.i.posthog.com/capture/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+  } catch {
+    // Non-blocking fallback: never fail mutation return on analytics delivery
+  }
 }

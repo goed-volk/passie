@@ -25,7 +25,8 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Status:* Planned.
 
 - **Server-Side Event & Error Analytics:**
-  - *Description:* Server-side exception tracking and telemetry to capture backend errors and API usage without reliance on client JavaScript.
+  - *Description:* Server-side exception tracking and telemetry to capture backend errors, API usage, and authoritative matchday domain events without reliance on client JavaScript.
+  - *Technical Notes:* Authoritative domain events can be emitted from `mutate()` call sites via Cloudflare Worker `ctx.waitUntil` or direct API calls using the authenticated `passie_member` cookie as `distinct_id` and `$groups: { group: "goedvolk" }`. Touches the transaction commit path, requiring dedicated domain review per Golden Rule 2.
   - *Status:* Planned.
 
 - **Web Push Notifications:**
