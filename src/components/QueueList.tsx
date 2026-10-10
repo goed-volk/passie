@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { t } from "@/i18n/t";
+import { t, formatPassLabel } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
 interface QueueListProps {
@@ -63,7 +63,7 @@ export function QueueList({ queue, onCancelEntry, loading }: QueueListProps) {
 
                     {entry.status === "assigned" && entry.assignedPassLabel && (
                       <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                        {t("statusAssigned")}: {entry.assignedPassLabel}
+                        {t("statusAssigned")}: {formatPassLabel(entry.assignedPassLabel)}
                       </span>
                     )}
                   </div>
