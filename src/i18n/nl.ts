@@ -35,7 +35,7 @@ export const nl = {
   expectedHolder: "Moet naar",
   indicatedBy: "Aangegeven door",
   coOwners: "Pas van",
-  guestOf: "'s gast",
+  guestOf: "gast van {name}",
   currentAllocation: "de huidige toewijzing",
   changeHolderTitle: "Pashouder wijzigen",
   changeHolderDesc: "Selecteer wie de fysieke seizoenkaart momenteel in bezit heeft.",

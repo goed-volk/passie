@@ -46,7 +46,9 @@ export function PassCard({
 
   const claimantDisplayName = pass.claimant
     ? pass.claimant.kind === "guest"
-      ? `${pass.claimant.member.displayName}${t("guestOf")}${pass.claimant.guestName ? ` (${pass.claimant.guestName})` : ""}`
+      ? pass.claimant.guestName
+        ? `${pass.claimant.guestName} (${t("guestOf", { name: pass.claimant.member.displayName })})`
+        : t("guestOf", { name: pass.claimant.member.displayName })
       : pass.claimant.member.displayName
     : t("currentAllocation");
 
@@ -65,7 +67,7 @@ export function PassCard({
           <Badge variant="info">
             {t("claimedBy")}{" "}
             {pass.claimant?.kind === "guest"
-              ? `${pass.claimant.member.displayName}${t("guestOf")}`
+              ? t("guestOf", { name: pass.claimant.member.displayName })
               : pass.claimant?.member.displayName}
           </Badge>
         );
