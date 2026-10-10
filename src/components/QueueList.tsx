@@ -24,7 +24,7 @@ export function QueueList({ queue, onCancelEntry, loading }: QueueListProps) {
       {activeEntries.length === 0 ? (
         <Card className="border-dashed bg-slate-50/50 dark:bg-slate-900/30">
           <CardContent className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
-            De wachtrij is momenteel leeg.
+            {t("step2Empty")}
           </CardContent>
         </Card>
       ) : (

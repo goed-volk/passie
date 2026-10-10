@@ -21,8 +21,9 @@ export const nl = {
   // Steps
   step1Title: "Stap 1 — Passen aangeven",
   step1Subtitle: "Ga je zelf of geef je je pas vrij aan de groep?",
-  step2Title: "Stap 2 — Wachtrij",
+  step2Title: "Stap 2 — Op de bank",
   step2Subtitle: "Wie het eerst komt, wie het eerst maalt.",
+  step2Empty: "De bank is momenteel leeg.",
   step3Title: "Stap 3 — Wissels",
   step3Subtitle: "Wie moet zijn fysieke pas aan wie geven?",
   stepTimelineTitle: "Tijdlijn",
