@@ -32,6 +32,10 @@ describe("ensurePool & findNextHomeFixture tests", () => {
   beforeEach(async () => {
     await cleanupTestPoolData(db, poolId1, fixtureId1);
     await cleanupTestPoolData(db, poolId2, fixtureId2);
+    await db.delete(schema.fixtures).where(eq(schema.fixtures.id, "fix_test_past"));
+    await db.delete(schema.fixtures).where(eq(schema.fixtures.id, "fix_test_away"));
+    await db.delete(schema.fixtures).where(eq(schema.fixtures.id, "fix_test_next_home"));
+    await db.delete(schema.fixtures).where(eq(schema.fixtures.id, "fix_test_later_home"));
   });
 
   it("throws error if fixture does not exist", async () => {

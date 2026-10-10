@@ -45,6 +45,21 @@ export function formatDeadlineDateTime(
   return `${weekday} ${day} ${month} om ${time} uur`;
 }
 
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getCachedDateTimeFormat(
+  locale: string,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  const key = `${locale}_${JSON.stringify(options)}`;
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    formatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+
 export function formatTimelineTimestamp(
   timestampSec: number,
   referenceDate: Date = new Date(),
@@ -54,7 +69,7 @@ export function formatTimelineTimestamp(
   const eventDate = new Date(timestampSec * 1000);
 
   // Compare calendar days in the specified timezone
-  const dtfDay = new Intl.DateTimeFormat("en-CA", {
+  const dtfDay = getCachedDateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
     month: "2-digit",
@@ -63,11 +78,12 @@ export function formatTimelineTimestamp(
   const eventDayKey = dtfDay.format(eventDate);
   const refDayKey = dtfDay.format(referenceDate);
 
-  const timeStr = new Intl.DateTimeFormat(locale, {
+  const timeFormatter = getCachedDateTimeFormat(locale, {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
-  }).format(eventDate);
+  });
+  const timeStr = timeFormatter.format(eventDate);
 
   // Same calendar day -> time only (e.g. "11:25")
   if (eventDayKey === refDayKey) {
@@ -79,19 +95,21 @@ export function formatTimelineTimestamp(
 
   // Within past 7 days -> weekday + time (e.g. "wo 11:25")
   if (diffDays >= 0 && diffDays < 7) {
-    const weekday = new Intl.DateTimeFormat(locale, {
+    const weekdayFormatter = getCachedDateTimeFormat(locale, {
       timeZone,
       weekday: "short",
-    }).format(eventDate);
+    });
+    const weekday = weekdayFormatter.format(eventDate);
     return `${weekday} ${timeStr}`;
   }
 
   // Older than 7 days -> date + time (e.g. "12 sep 11:25")
-  const dayMonth = new Intl.DateTimeFormat(locale, {
+  const dayMonthFormatter = getCachedDateTimeFormat(locale, {
     timeZone,
     day: "numeric",
     month: "short",
-  }).format(eventDate);
+  });
+  const dayMonth = dayMonthFormatter.format(eventDate);
   return `${dayMonth} ${timeStr}`;
 }
 
