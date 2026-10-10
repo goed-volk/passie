@@ -53,11 +53,22 @@ export function QueueList({ queue, onCancelEntry, loading }: QueueListProps) {
 
                   <div>
                     <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 flex items-center space-x-2">
-                      <span>{entry.member.displayName}</span>
-                      {entry.kind === "guest" && (
-                        <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal">
-                          {entry.guestName ? `gast: ${entry.guestName}` : t("guestLabel")}
-                        </Badge>
+                      {entry.kind === "guest" && entry.guestName ? (
+                        <>
+                          <span>{entry.guestName}</span>
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal">
+                            {t("guestOf", { name: entry.member.displayName })}
+                          </Badge>
+                        </>
+                      ) : entry.kind === "guest" ? (
+                        <>
+                          <span>{t("guestLabel")}</span>
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-normal">
+                            {t("guestOf", { name: entry.member.displayName })}
+                          </Badge>
+                        </>
+                      ) : (
+                        <span>{entry.member.displayName}</span>
                       )}
                     </div>
 
