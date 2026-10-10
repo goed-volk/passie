@@ -9,6 +9,10 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "POSTHOG_HOST": "https://eu.i.posthog.com",
+    "PASSIE_ENV": "production"
+  },
   "routes": [
     {
       "pattern": "passie.goedvolk.org",

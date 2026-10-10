@@ -1,3 +1,8 @@
 PASSIE_CRON_SECRET=local-secret
 PASSIE_INGEST_COOLDOWN_SECONDS=300
 PASSIE_ADMIN_PASSWORD=local-dev-password
+
+# PostHog telemetry configuration (optional for local dev; if left empty, telemetry is disabled)
+POSTHOG_KEY=
+POSTHOG_HOST=https://eu.i.posthog.com
+PASSIE_ENV=development
