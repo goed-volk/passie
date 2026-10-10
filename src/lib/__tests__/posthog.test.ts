@@ -98,39 +98,32 @@ describe("posthog client telemetry & privacy", () => {
     it("does nothing if window is undefined (SSR)", () => {
       // @ts-expect-error ensure undefined
       delete globalThis.window;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
       expect(posthog.init).not.toHaveBeenCalled();
     });
 
     it("does nothing if already loaded", () => {
       globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
       (posthog as unknown as { __loaded: boolean }).__loaded = true;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
       expect(posthog.init).not.toHaveBeenCalled();
     });
 
-    it("does nothing if NEXT_PUBLIC_POSTHOG_KEY is not set", () => {
+    it("does nothing if posthogKey is not set", () => {
       globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
-      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
-      initPostHog();
+      initPostHog({ posthogKey: null, posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
       expect(posthog.init).not.toHaveBeenCalled();
     });
 
     it("does nothing on localhost in production mode", () => {
       globalThis.window = { location: { hostname: "localhost" } } as unknown as Window & typeof globalThis;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      process.env.NEXT_PUBLIC_PASSIE_ENV = "production";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "production" });
       expect(posthog.init).not.toHaveBeenCalled();
     });
 
     it("initializes posthog with history_change pageview and security options on valid host", () => {
       globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      process.env.NEXT_PUBLIC_PASSIE_ENV = "production";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "production" });
 
       expect(posthog.init).toHaveBeenCalledTimes(1);
       const firstCall = vi.mocked(posthog.init).mock.calls[0];
@@ -147,8 +140,7 @@ describe("posthog client telemetry & privacy", () => {
 
     it("before_send filters out unlisted events", () => {
       globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
 
       const options = vi.mocked(posthog.init).mock.calls[0]![1];
       const beforeSend = options!.before_send as (event: unknown) => unknown;
@@ -164,8 +156,7 @@ describe("posthog client telemetry & privacy", () => {
 
     it("before_send sanitizes URLs and strips PII fields", () => {
       globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
 
       const options = vi.mocked(posthog.init).mock.calls[0]![1];
       const beforeSend = options!.before_send as (event: unknown) => { properties: Record<string, unknown> } | null;
@@ -196,8 +187,7 @@ describe("posthog client telemetry & privacy", () => {
 
     it("before_send sanitizes api pool paths", () => {
       globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
-      initPostHog();
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
 
       const options = vi.mocked(posthog.init).mock.calls[0]![1];
       const beforeSend = options!.before_send as (event: unknown) => { properties: Record<string, unknown> } | null;

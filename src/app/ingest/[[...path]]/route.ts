@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { getTelemetryConfig } from "@/server/telemetryConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,8 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ path?: string[] }> }
 ) {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  const { posthogKey, posthogHost } = await getTelemetryConfig();
+  if (!posthogKey) {
     return NextResponse.json({ error: "Telemetry disabled" }, { status: 404 });
   }
 
@@ -72,7 +74,7 @@ export async function GET(
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
   }
 
-  const url = new URL(`https://eu.i.posthog.com/${targetPath}`);
+  const url = new URL(`${posthogHost}/${targetPath}`);
   url.search = request.nextUrl.search;
 
   try {
@@ -99,7 +101,8 @@ export async function POST(
   request: NextRequest,
   props: { params: Promise<{ path?: string[] }> }
 ) {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  const { posthogKey, posthogHost } = await getTelemetryConfig();
+  if (!posthogKey) {
     return NextResponse.json({ error: "Telemetry disabled" }, { status: 404 });
   }
 
@@ -132,7 +135,7 @@ export async function POST(
     );
   }
 
-  const url = new URL(`https://eu.i.posthog.com/${targetPath}`);
+  const url = new URL(`${posthogHost}/${targetPath}`);
   url.search = request.nextUrl.search;
 
   try {

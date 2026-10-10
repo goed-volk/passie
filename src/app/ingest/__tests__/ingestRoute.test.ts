@@ -1,25 +1,36 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+
+// Mock getTelemetryConfig so tests are not coupled to Cloudflare Workers runtime or
+// POSTHOG_KEY env var resolution. Each test overrides the mock return value as needed.
+// NOTE: vi.mock is hoisted — the factory must not reference outer variables.
+vi.mock("@/server/telemetryConfig", () => ({
+  getTelemetryConfig: vi.fn(),
+}));
+
+import { getTelemetryConfig } from "@/server/telemetryConfig";
 import { GET, POST } from "../[[...path]]/route";
 
-describe("/ingest proxy route security & filtering", () => {
-  const originalKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+const mockGetTelemetryConfig = vi.mocked(getTelemetryConfig);
 
+describe("/ingest proxy route security & filtering", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+    // Default: telemetry is enabled with a test key
+    mockGetTelemetryConfig.mockResolvedValue({
+      posthogKey: "phc_test_key",
+      posthogHost: "https://eu.i.posthog.com",
+      passieEnv: "development",
+    });
   });
 
-  afterAll(() => {
-    if (originalKey === undefined) {
-      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    } else {
-      process.env.NEXT_PUBLIC_POSTHOG_KEY = originalKey;
-    }
-  });
-
-  it("returns 404 when NEXT_PUBLIC_POSTHOG_KEY is not set (GET & POST)", async () => {
-    delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  it("returns 404 when posthogKey is not set (GET & POST)", async () => {
+    // Override: simulate telemetry disabled (no key)
+    mockGetTelemetryConfig.mockResolvedValue({
+      posthogKey: null,
+      posthogHost: "https://eu.i.posthog.com",
+      passieEnv: "development",
+    });
     const fetchSpy = vi.spyOn(global, "fetch");
 
     const getReq = new NextRequest("http://localhost/ingest/decide?v=3");
@@ -42,6 +53,7 @@ describe("/ingest proxy route security & filtering", () => {
   });
 
   it("returns 404 for disallowed path prefixes", async () => {
+    // posthogKey is set (default mock), but path is not in allowlist
     const req = new NextRequest("http://localhost/ingest/admin/secret");
     const res = await GET(req, { params: Promise.resolve({ path: ["admin", "secret"] }) });
     expect(res.status).toBe(404);

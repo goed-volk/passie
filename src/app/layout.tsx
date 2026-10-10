@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { Providers } from "./providers";
+import { getTelemetryConfig } from "@/server/telemetryConfig";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://passie.goedvolk.org"),
@@ -55,6 +56,7 @@ export default async function RootLayout({
   const themeCookie = cookieStore.get("passie_theme")?.value;
   const isDark = themeCookie === "black-red";
   const initialTheme = themeCookie === "black-red" || themeCookie === "red-black" ? themeCookie : undefined;
+  const telemetryConfig = await getTelemetryConfig();
 
   return (
     <html
@@ -86,7 +88,9 @@ export default async function RootLayout({
         />
       </head>
       <body className="antialiased bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 min-h-[100dvh]">
-        <Providers initialTheme={initialTheme}>{children}</Providers>
+        <Providers initialTheme={initialTheme} telemetryConfig={telemetryConfig}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import * as schema from "./schema";
 import { loadGamePoolState, diffToStatements } from "./repo";
 import { reduce } from "../domain/engine";
 import type { Action, MemberId, DomainError, ReduceContext, ActivityEventType } from "../domain/types";
+import { getTelemetryConfig } from "@/server/telemetryConfig";
 
 export interface MutateOptions {
   idempotencyKey?: string | null;
@@ -199,8 +200,16 @@ async function captureServerDatabaseError(
   err: unknown,
   action: Action
 ): Promise<void> {
-  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const { posthogKey, posthogHost, passieEnv } = await getTelemetryConfig();
   if (!posthogKey) return;
+
+  // Safeguard: if passieEnv is "production" but we are NOT running inside a
+  // Cloudflare Workers request context (e.g. Vitest locally, a CLI script, or
+  // a Node.js process where NODE_ENV !== "production"), skip the dispatch.
+  // This prevents dev/test errors from polluting the production PostHog project.
+  if (passieEnv === "production" && process.env.NODE_ENV !== "production") {
+    return;
+  }
 
   const errName = err instanceof Error ? err.name : "UnknownError";
   const rawMsg = err instanceof Error ? err.message : String(err);
@@ -213,10 +222,6 @@ async function captureServerDatabaseError(
   const sanitizedMsg = sanitize(rawMsg).slice(0, 500);
   const sanitizedStack =
     err instanceof Error && err.stack ? sanitize(err.stack).slice(0, 1000) : undefined;
-
-  const env =
-    process.env.NEXT_PUBLIC_PASSIE_ENV ||
-    (process.env.NODE_ENV === "production" ? "production" : "development");
 
   const payload = {
     api_key: posthogKey,
@@ -235,7 +240,7 @@ async function captureServerDatabaseError(
       $process_person_profile: false,
       game_pool_id: gamePoolId,
       action_type: action.type,
-      environment: env,
+      environment: passieEnv,
     },
     timestamp: new Date().toISOString(),
   };
@@ -243,7 +248,7 @@ async function captureServerDatabaseError(
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
-    await fetch("https://eu.i.posthog.com/capture/", {
+    await fetch(`${posthogHost}/capture/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

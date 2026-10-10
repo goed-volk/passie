@@ -30,6 +30,12 @@ export const ALLOWED_ANALYTICS_EVENTS = new Set([
   "$performance_event",
 ]);
 
+export interface ClientTelemetryConfig {
+  posthogKey: string | null;
+  posthogHost: string;
+  passieEnv: string;
+}
+
 function sanitizeUrl(rawUrl: string): string {
   try {
     const url = new URL(rawUrl, "https://passie.goedvolk.org");
@@ -55,19 +61,17 @@ function sanitizePathname(rawPath: string): string {
   return rawPath;
 }
 
-export function initPostHog() {
+export function initPostHog(config?: ClientTelemetryConfig) {
   if (typeof window === "undefined") return;
   if (posthog.__loaded) return;
 
-  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const posthogKey = config?.posthogKey;
   if (!posthogKey) {
     return;
   }
 
   const hostname = window.location.hostname;
-  const env =
-    process.env.NEXT_PUBLIC_PASSIE_ENV ||
-    (process.env.NODE_ENV === "production" ? "production" : "development");
+  const env = config?.passieEnv || "development";
 
   // Prevent production key pollution if running on localhost with a production environment tag
   if (
@@ -79,9 +83,14 @@ export function initPostHog() {
     return;
   }
 
+  const rawHost = config?.posthogHost || "https://eu.i.posthog.com";
+  const uiHost = rawHost.includes("us.i.posthog.com")
+    ? "https://us.posthog.com"
+    : "https://eu.posthog.com";
+
   posthog.init(posthogKey, {
     api_host: "/ingest",
-    ui_host: "https://eu.posthog.com",
+    ui_host: uiHost,
     person_profiles: "identified_only",
     autocapture: false,
     capture_heatmaps: false,
@@ -131,9 +140,6 @@ export function initPostHog() {
       return event;
     },
     loaded: (ph) => {
-      const env =
-        process.env.NEXT_PUBLIC_PASSIE_ENV ||
-        (process.env.NODE_ENV === "production" ? "production" : "development");
       ph.register({
         environment: env,
       });
