@@ -95,15 +95,24 @@ export function QueueJoinSheet({
     <div className="fixed bottom-0 left-0 right-0 pt-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-40">
       <div className="max-w-xl mx-auto">
         {multipleUnindicated ? (
-          <Button
-            variant="club"
-            disabled={loading}
-            onClick={handleScrollToPassList}
-            className="w-full flex items-center justify-center space-x-2 shadow-sm font-semibold py-2.5 min-w-0"
-          >
-            <ListFilter className="h-4 w-4 shrink-0" />
-            <span className="truncate">{t("choosePassToIndicate", { count: activeUnindicated.length })}</span>
-          </Button>
+          <div className="space-y-1.5">
+            <div className="text-center px-2">
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
+                {t("choosePassToIndicate", { count: activeUnindicated.length })}
+              </p>
+            </div>
+            <Button
+              variant="club"
+              disabled={loading}
+              onClick={handleScrollToPassList}
+              className="w-full flex items-center justify-center space-x-2 shadow-sm font-semibold py-2.5 min-w-0"
+            >
+              <ListFilter className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {activeUnindicated.map((p) => p.label).join(", ")}
+              </span>
+            </Button>
+          </div>
         ) : singleUnindicated && onIndicate ? (
           <div className="space-y-1.5">
             <div className="text-center px-2">
