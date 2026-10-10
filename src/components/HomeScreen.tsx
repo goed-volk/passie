@@ -34,11 +34,12 @@ export function HomeScreen({
     isTransferring,
   } = usePool(gamePoolId, initialSnapshot);
 
+  const actingMember = pool?.actingMember;
   useEffect(() => {
-    if (pool?.actingMember) {
-      trackMemberIdentity(pool.actingMember);
+    if (actingMember) {
+      trackMemberIdentity(actingMember);
     }
-  }, [pool?.actingMember]);
+  }, [actingMember]);
 
   if (!pool) {
     return (

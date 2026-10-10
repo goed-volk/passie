@@ -1,10 +1,44 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { NextRequest } from "next/server";
 import { GET, POST } from "../[[...path]]/route";
 
 describe("/ingest proxy route security & filtering", () => {
+  const originalKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+
   beforeEach(() => {
     vi.restoreAllMocks();
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = "phc_test_key";
+  });
+
+  afterAll(() => {
+    if (originalKey === undefined) {
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = originalKey;
+    }
+  });
+
+  it("returns 404 when NEXT_PUBLIC_POSTHOG_KEY is not set (GET & POST)", async () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const fetchSpy = vi.spyOn(global, "fetch");
+
+    const getReq = new NextRequest("http://localhost/ingest/decide?v=3");
+    const getRes = await GET(getReq, { params: Promise.resolve({ path: ["decide"] }) });
+    expect(getRes.status).toBe(404);
+    const getJson = await getRes.json();
+    expect(getJson).toEqual({ error: "Telemetry disabled" });
+
+    const postReq = new NextRequest("http://localhost/ingest/e", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ event: "pass.indicate_keep" }),
+    });
+    const postRes = await POST(postReq, { params: Promise.resolve({ path: ["e"] }) });
+    expect(postRes.status).toBe(404);
+    const postJson = await postRes.json();
+    expect(postJson).toEqual({ error: "Telemetry disabled" });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("returns 404 for disallowed path prefixes", async () => {

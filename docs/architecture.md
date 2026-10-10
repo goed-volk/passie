@@ -108,6 +108,7 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - **Interactive Physical Possession Handover:** Tappable holder pill affordance allows group members to immediately record physical pass transfers from matchday cards or detail views.
 - User copy strictly resolved via `src/i18n/` dictionary.
 - Cookie-based session identity (`passie_member`) with `/wie-ben-jij` picker.
+- **Privacy-Preserving Telemetry & PostHog Proxy:** Client-side product analytics and error tracking via PostHog EU cloud reverse proxied through same-origin `/ingest`. Comprehensive taxonomy, identity lifecycle, URL sanitization rules, and HogQL query recipes are documented in [`docs/analytics.md`](analytics.md).
 
 ---
 

@@ -1,6 +1,7 @@
 import posthog from "posthog-js";
 
 export const ALLOWED_ANALYTICS_EVENTS = new Set([
+  // Core Matchday Lifecycle
   "pass.indicate_keep",
   "pass.indicate_release",
   "pass.reclaim",
@@ -9,6 +10,19 @@ export const ALLOWED_ANALYTICS_EVENTS = new Set([
   "queue.cancel",
   "pass.give_back",
   "pass.handover",
+
+  // Identity & Navigation
+  "member.selected",
+  "$pageview",
+
+  // Admin Administration
+  "admin.login",
+  "admin.member_created",
+  "admin.member_updated",
+  "admin.members_reordered",
+
+  // Errors & Internal Metrics
+  "$exception",
   "$identify",
   "$set",
   "$groupidentify",
@@ -73,7 +87,7 @@ export function initPostHog() {
     capture_heatmaps: false,
     capture_dead_clicks: false,
     rageclick: false,
-    capture_pageview: false,
+    capture_pageview: "history_change",
     capture_pageleave: false,
     disable_session_recording: true,
     disable_surveys: true,
@@ -143,25 +157,46 @@ export function trackMemberIdentity(
   if (typeof window === "undefined" || !posthog.__loaded) return;
 
   const currentDistinctId = posthog.get_distinct_id();
-  if (currentDistinctId && currentDistinctId !== member.id) {
+  const userState = posthog.get_property("$user_state");
+
+  // Only reset when switching away from an already identified different person.
+  // Never reset before a first identify (which would break anonymous -> identified merge).
+  if (userState === "identified" && currentDistinctId && currentDistinctId !== member.id) {
     posthog.reset();
   }
 
-  posthog.identify(
-    member.id,
-    {
-      member_slug: member.slug,
-      display_name: member.displayName,
-      group_slug: groupSlug,
-      is_pass_owner: Boolean(member.isPassOwner),
-      owned_pass_count: member.ownedPassCount ?? 0,
-    },
-    {
-      first_identified_at: new Date().toISOString(),
-    }
-  );
+  const isAlreadyIdentified =
+    posthog.get_property("$user_state") === "identified" &&
+    posthog.get_distinct_id() === member.id;
 
-  posthog.group("group", groupSlug, { name: groupName });
+  if (!isAlreadyIdentified) {
+    posthog.identify(
+      member.id,
+      {
+        member_slug: member.slug,
+        display_name: member.displayName,
+        group_slug: groupSlug,
+        is_pass_owner: Boolean(member.isPassOwner),
+        owned_pass_count: member.ownedPassCount ?? 0,
+      },
+      {
+        first_identified_at: new Date().toISOString(),
+      }
+    );
+  }
+
+  const existingGroups = typeof posthog.getGroups === "function" ? posthog.getGroups() : {};
+  if (!existingGroups || existingGroups.group !== groupSlug) {
+    posthog.group("group", groupSlug, { name: groupName });
+  }
+}
+
+export function trackMemberSelected(member: MemberIdentityPayload) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("member.selected", {
+    is_pass_owner: Boolean(member.isPassOwner),
+    owned_pass_count: member.ownedPassCount ?? 0,
+  });
 }
 
 export function resetAnalytics() {

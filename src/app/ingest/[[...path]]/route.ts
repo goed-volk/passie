@@ -61,6 +61,10 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ path?: string[] }> }
 ) {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    return NextResponse.json({ error: "Telemetry disabled" }, { status: 404 });
+  }
+
   const { path } = await props.params;
   const targetPath = path ? path.join("/") : "";
 
@@ -95,6 +99,10 @@ export async function POST(
   request: NextRequest,
   props: { params: Promise<{ path?: string[] }> }
 ) {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    return NextResponse.json({ error: "Telemetry disabled" }, { status: 404 });
+  }
+
   const { path } = await props.params;
   const targetPath = path ? path.join("/") : "";
 
