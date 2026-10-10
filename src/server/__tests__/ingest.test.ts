@@ -23,6 +23,7 @@ describe("ingestClubFixtures tests", () => {
     path.resolve(__dirname, "./fixtures/excelsior-home.ics"),
     "utf-8"
   );
+  const testNow = 1789294500; // Fixed timestamp: 2026-09-13T10:15:00Z
 
   beforeAll(async () => {
     const res = await createTestDb();
@@ -92,7 +93,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => sampleIcs,
     } as Response);
 
-    const result = await ingestClubFixtures(db, "excelsior");
+    const result = await ingestClubFixtures(db, "excelsior", { now: testNow });
     expect(result.clubSlug).toBe("excelsior");
     expect(result.totalParsed).toBe(4);
     expect(result.inserted).toBeGreaterThanOrEqual(1);
@@ -121,6 +122,7 @@ describe("ingestClubFixtures tests", () => {
     const result = await ingestClubFixtures(db, "excelsior", {
       eTag: '"cached-etag"',
       ifModifiedSince: "Mon, 10 Aug 2026 12:00:00 GMT",
+      now: testNow,
     });
 
     expect(result.notModified).toBe(true);
@@ -139,7 +141,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => sampleIcs,
     } as Response);
 
-    await ingestClubFixtures(db, "excelsior");
+    await ingestClubFixtures(db, "excelsior", { now: testNow });
 
     const fixtureId = "fix_excelsior_64235e165487771765001@fixtur.es";
 
@@ -161,7 +163,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => updatedIcs,
     } as Response);
 
-    const result = await ingestClubFixtures(db, "excelsior");
+    const result = await ingestClubFixtures(db, "excelsior", { now: testNow });
     expect(result.updated).toBeGreaterThanOrEqual(1);
 
     const updatedFix = await db.query.fixtures.findFirst({
@@ -180,7 +182,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => sampleIcs,
     } as Response);
 
-    await ingestClubFixtures(db, "excelsior");
+    await ingestClubFixtures(db, "excelsior", { now: testNow });
 
     const disappearingFixtureId = "fix_excelsior_64235e165487771765002@fixtur.es"; // Feyenoord match
     const pool = await ensurePool(db, "group_goedvolk", disappearingFixtureId);
@@ -209,7 +211,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => reducedIcs,
     } as Response);
 
-    const result = await ingestClubFixtures(db, "excelsior");
+    const result = await ingestClubFixtures(db, "excelsior", { now: testNow });
     expect(result.cancelled).toBe(1);
 
     const fix = await db.query.fixtures.findFirst({
@@ -238,7 +240,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => sampleIcs,
     } as Response);
 
-    await ingestClubFixtures(db, "excelsior");
+    await ingestClubFixtures(db, "excelsior", { now: testNow });
 
     const fixtureId = "fix_excelsior_64235e165487771765001@fixtur.es";
     const pool = await ensurePool(db, "group_goedvolk", fixtureId);
@@ -256,7 +258,7 @@ describe("ingestClubFixtures tests", () => {
       text: async () => updatedIcs,
     } as Response);
 
-    const result = await ingestClubFixtures(db, "excelsior");
+    const result = await ingestClubFixtures(db, "excelsior", { now: testNow });
     expect(result.updated).toBeGreaterThanOrEqual(1);
 
     // Verify fixture kickoff updated
