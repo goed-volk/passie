@@ -51,7 +51,9 @@ export function HomeScreen({
   }
 
   const isMutating = isIndicating || isJoining || isCancelling || isTransferring;
-  const isPoolOpen = pool.status === "open";
+  const nowSec = Math.floor(Date.now() / 1000);
+  const isPostMatch = pool.fixture.kickoffAt + 2 * 3600 <= nowSec;
+  const isPoolOpen = pool.status === "open" && !isPostMatch;
 
   const unindicatedOwnedPasses = pool.passes.filter(
     (p) => p.canIndicate && p.status === "unindicated"
@@ -82,7 +84,7 @@ export function HomeScreen({
           </div>
         )}
 
-        {pool.status === "closed" && (
+        {pool.status === "closed" && !isPostMatch && (
           <div className="bg-slate-500/10 dark:bg-slate-950/30 border border-slate-500/30 dark:border-slate-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
             <AlertCircle className="h-5 w-5 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
@@ -91,6 +93,20 @@ export function HomeScreen({
               </h3>
               <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
                 De aanmelding voor deze wedstrijd is gesloten.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isPostMatch && pool.status !== "cancelled" && (
+          <div className="bg-slate-500/10 dark:bg-slate-950/30 border border-slate-500/30 dark:border-slate-500/40 rounded-2xl p-4 flex items-start space-x-3.5 shadow-xs">
+            <Clock className="h-5 w-5 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                {t("matchFinishedBannerTitle")}
+              </h3>
+              <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {t("matchFinishedBannerDesc")}
               </p>
             </div>
           </div>

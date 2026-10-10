@@ -14,6 +14,8 @@ export function FixtureHeader({ pool }: { pool: PoolSnapshot }) {
   });
 
   const isCancelled = pool.fixture.status === "cancelled" || pool.status === "cancelled";
+  const nowSec = Math.floor(Date.now() / 1000);
+  const isPostMatch = pool.fixture.kickoffAt + 2 * 3600 <= nowSec;
 
   return (
     <header
@@ -45,6 +47,13 @@ export function FixtureHeader({ pool }: { pool: PoolSnapshot }) {
 
           {isCancelled ? (
             <Badge variant="destructive">{t("poolCancelled")}</Badge>
+          ) : isPostMatch ? (
+            <Badge
+              variant="secondary"
+              className="bg-slate-800/90 text-slate-300 border-slate-700/80 backdrop-blur-xs font-semibold"
+            >
+              {t("matchFinished")}
+            </Badge>
           ) : pool.deadline.passed ? (
             <Badge variant="warning">{t("deadlinePassed")}</Badge>
           ) : (
