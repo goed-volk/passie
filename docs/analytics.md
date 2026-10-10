@@ -22,19 +22,19 @@ Passie employs a privacy-first, client-side product analytics architecture backe
   │
   ▼
 [ Next.js Same-Origin Proxy: /ingest/[[...path]] ]
-  ├── Strict Opt-in: returns 404 immediately if NEXT_PUBLIC_POSTHOG_KEY is unset
+  ├── Strict Opt-in: returns 404 immediately if POSTHOG_KEY is unset in runtime config
   ├── Path Prefix Allowlist: e, i/v0/e, decide, array, flags, s, batch, static
   ├── Header Filtering & Sensitive Header Stripping
   └── 64 KB Payload Limit
   ▼
-[ PostHog EU Cloud (eu.i.posthog.com) ]
+[ PostHog Upstream (configured via POSTHOG_HOST, defaults to eu.i.posthog.com) ]
 ```
 
 ### Privacy & Compliance Guarantees
 - **No Autocapture or Session Replay:** `autocapture: false`, `disable_session_recording: true`, `capture_heatmaps: false`, `capture_dead_clicks: false`, and `rageclick: false` are enforced in `initPostHog()`.
 - **Zero Third-Party Tracking / Ad Blocker Immunity:** Telemetry is forwarded via the same-origin `/ingest` route, eliminating third-party cookie access and preventing tracking script blockades.
 - **Strict Data Minimization:** Event payloads omit personal names, guest names, seat numbers, and pass identifiers.
-- **Strict Opt-in Behavior:** When `NEXT_PUBLIC_POSTHOG_KEY` is omitted, the client SDK does not initialize and the `/ingest` proxy returns HTTP 404 without making upstream calls. In local development (`localhost`, `127.0.0.1`), production telemetry is suppressed.
+- **Strict Opt-in Behavior:** When `POSTHOG_KEY` is omitted, the client SDK does not initialize and the `/ingest` proxy returns HTTP 404 without making upstream calls. In local development (`localhost`, `127.0.0.1`), production telemetry is suppressed.
 
 ---
 
@@ -103,8 +103,8 @@ To prevent season ticket IDs, game pool IDs, and personal query parameters from 
 ## 5. Reverse Proxy Route (`/ingest`) Specification
 
 The reverse proxy at `src/app/ingest/[[...path]]/route.ts` provides strict boundary defense:
-- **Environment Gate:** Returns HTTP 404 `{ error: "Telemetry disabled" }` immediately if `NEXT_PUBLIC_POSTHOG_KEY` is undefined or empty.
-- **Allowed Path Prefixes:** Only `e`, `i/v0/e`, `decide`, `array`, `flags`, `s`, `batch`, `static` are forwarded to `https://eu.i.posthog.com/`. All others return HTTP 404.
+- **Environment Gate:** Returns HTTP 404 `{ error: "Telemetry disabled" }` immediately if `POSTHOG_KEY` is undefined or empty in runtime config.
+- **Allowed Path Prefixes:** Only `e`, `i/v0/e`, `decide`, `array`, `flags`, `s`, `batch`, `static` are forwarded to the upstream `POSTHOG_HOST` (default `https://eu.i.posthog.com/`). All others return HTTP 404.
 - **Allowed Inbound Request Headers:** `content-type`, `content-encoding`, `user-agent`, `accept`, `accept-encoding`. All other headers (including `Cookie`, `Authorization`, `CF-Ray`) are discarded.
 - **Allowed Outbound Response Headers:** `content-type`, `cache-control`. Sensitive headers (e.g. `Set-Cookie`) are stripped.
 - **Payload Size Enforcement:** Enforces a maximum body size of 64 KB (65,536 bytes). Excessively large requests receive HTTP 413.
@@ -188,13 +188,30 @@ WHERE event = 'member.selected'
 ## 7. Operator Guide: Setup & Verification
 
 ### Configuring Telemetry
-1. In Cloudflare Workers environment or `.env.local`, set:
+Telemetry configuration is runtime-resolved via Cloudflare Worker context and `.dev.vars` (see [ADR 0013](decisions/0013-runtime-telemetry-env-config.md)):
+1. **Local Development:**
+   Configure in `.dev.vars` (see `.dev.vars.example`):
    ```env
-   NEXT_PUBLIC_POSTHOG_KEY=phc_your_eu_posthog_project_key
-   NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
-   NEXT_PUBLIC_PASSIE_ENV=production
+   POSTHOG_KEY=phc_your_dev_posthog_project_key
+   POSTHOG_HOST=https://eu.i.posthog.com
+   PASSIE_ENV=development
    ```
-2. For local testing with telemetry enabled, run with `NEXT_PUBLIC_PASSIE_ENV=development` in `.env.local`.
+   *(If `POSTHOG_KEY` is omitted or left empty, telemetry is completely disabled).*
+
+2. **Production Cloudflare Worker:**
+   Set the production project key securely as a Cloudflare Worker secret:
+   ```bash
+   pnpm exec wrangler secret put POSTHOG_KEY
+   ```
+   *(Enter your production `phc_...` key when prompted, or configure it via the Cloudflare Dashboard under **Workers & Pages → passie → Settings → Variables and Secrets**).*
+
+   Non-sensitive defaults are maintained in `wrangler.jsonc` under `"vars"`:
+   ```jsonc
+   "vars": {
+     "POSTHOG_HOST": "https://eu.i.posthog.com",
+     "PASSIE_ENV": "production"
+   }
+   ```
 
 ### Verifying Telemetry in Browser
 Append `?__posthog_debug=true` to the URL. The browser console will print:

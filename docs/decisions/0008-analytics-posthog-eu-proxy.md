@@ -1,7 +1,7 @@
 # ADR 0008: PostHog Analytics via Same-Origin Reverse Proxy
 
 ## Status
-Accepted
+Accepted (Amended by [ADR 0013](0013-runtime-telemetry-env-config.md))
 
 ## Context
 Understand app usage and queue contention while respecting user privacy and avoiding third-party tracker ad blockers.
@@ -13,7 +13,7 @@ Use PostHog EU cloud via a same-origin `/ingest` API reverse proxy route. Produc
 - Only 8 explicit functional domain events are tracked without personal names, guest names, or pass identifiers in event payloads.
 - Person identity (`distinct_id`) is bound to member ID on person profiles only, and reset on member switch.
 - The `/ingest` proxy allowlists request headers, enforces a 64 KB payload limit, strips sensitive cookies/credentials, and restricts allowed path prefixes.
-- Fully deactivated when `NEXT_PUBLIC_POSTHOG_KEY` is not set or on localhost.
+- Fully deactivated when `POSTHOG_KEY` is not set or on localhost (see ADR 0013 for runtime configuration).
 
 ## Consequences
 - Clean event telemetry without third-party ad blocker interference or cookie leakage.

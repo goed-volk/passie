@@ -39,15 +39,15 @@ Client-side product analytics and Web Vitals are sent via a first-party same-ori
 
 ## Environment Variables & Secrets
 
-Passie uses environment variables for build-time analytics and Cloudflare secrets for scheduled background ingestion.
+Passie uses Cloudflare runtime environment variables (`vars` / `.dev.vars`) and secrets for configuration (see ADR 0013). Zero API keys are inlined at build time.
 
 | Variable | Target | Required? | Description |
 | :--- | :--- | :---: | :--- |
 | `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for HTTP cron route | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint (returns 503 if unconfigured). |
 | `PASSIE_ADMIN_PASSWORD` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for `/beheer` | Shared password protecting the member administration area (`/beheer`, returns 503 if unconfigured). |
-| `NEXT_PUBLIC_POSTHOG_KEY` | `.env.local` (dev) / deploy shell env (prod) | Optional | PostHog project API key. Separate project keys for `passie-dev` and `passie-prod`. If left blank or unset, all analytics tracking is completely disabled. |
-| `NEXT_PUBLIC_POSTHOG_HOST` | `.env.local` (local) / deploy shell env (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
-| `NEXT_PUBLIC_PASSIE_ENV` | `.env.local` (local) / deploy shell env (prod) | Optional | Environment tag: `development` or `production`. |
+| `POSTHOG_KEY` | `.dev.vars` (local) / `wrangler secret put` (prod) | Optional | PostHog project API key. If left blank or unset, all analytics tracking is completely disabled. |
+| `POSTHOG_HOST` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
+| `PASSIE_ENV` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Environment tag: `development` or `production`. |
 
 For local development, copy the templates:
 ```bash
@@ -183,12 +183,12 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
 
    ⚠️ **`pnpm cf-typegen` can change `pnpm typecheck` results.** Wrangler types every key present in `.dev.vars` as a required `string` on `NodeJS.ProcessEnv`, so code that simulates an absent variable (`delete process.env.X`) starts failing with `TS2790` once that key is generated. Use `Reflect.deleteProperty(process.env, "X")` in tests instead of `delete`. Because the generated file is gitignored, typecheck outcomes differ between machines depending on each contributor's `.dev.vars` — always re-run `pnpm typecheck` after `pnpm cf-typegen`.
 
-2. **Export the production build-time variables** (they are inlined into the client bundle by `next build`):
+2. **Verify production environment variables & secrets:**
+   Telemetry (`POSTHOG_HOST`, `PASSIE_ENV`) is configured in `wrangler.jsonc` `"vars"`. The production API token is stored securely in Cloudflare:
    ```bash
-   export NEXT_PUBLIC_POSTHOG_KEY=<passie-prod project key>
-   export NEXT_PUBLIC_PASSIE_ENV=production
+   pnpm exec wrangler secret put POSTHOG_KEY
    ```
-   ⚠️ **Do not skip this.** `next build` loads `.env.local`, which holds the **development** PostHog key and `NEXT_PUBLIC_PASSIE_ENV=development`. Deploying without exporting the production values ships a production bundle that tags all traffic as `development` and sends it to the `passie-dev` PostHog project. Shell-exported variables take precedence over `.env.local`, so exporting them (or prefixing the `pnpm deploy` command with them) is what makes the build correct.
+   No build-time `export NEXT_PUBLIC_*` commands are needed before deployment.
 
 3. **Apply any pending D1 migrations:**
    ```bash
