@@ -38,6 +38,7 @@ export interface PoolSnapshot {
   deadline: {
     at: number;
     passed: boolean;
+    isPostMatch: boolean;
   };
   actingMember: MemberRef | null;
   members: MemberRef[];
@@ -208,6 +209,7 @@ export async function buildPoolSnapshot(
   const deadline = {
     at: pool.indicationDeadlineAt,
     passed: now >= pool.indicationDeadlineAt,
+    isPostMatch: now >= fixture.kickoffAt + 2 * 3600,
   };
 
   // 8. Build pass views

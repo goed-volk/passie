@@ -14,8 +14,7 @@ export function FixtureHeader({ pool }: { pool: PoolSnapshot }) {
   });
 
   const isCancelled = pool.fixture.status === "cancelled" || pool.status === "cancelled";
-  const nowSec = Math.floor(Date.now() / 1000);
-  const isPostMatch = pool.fixture.kickoffAt + 2 * 3600 <= nowSec;
+  const isPostMatch = pool.deadline.isPostMatch;
 
   return (
     <header

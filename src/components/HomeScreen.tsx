@@ -51,8 +51,7 @@ export function HomeScreen({
   }
 
   const isMutating = isIndicating || isJoining || isCancelling || isTransferring;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const isPostMatch = pool.fixture.kickoffAt + 2 * 3600 <= nowSec;
+  const isPostMatch = pool.deadline.isPostMatch;
   const isPoolOpen = pool.status === "open" && !isPostMatch;
 
   const unindicatedOwnedPasses = pool.passes.filter(
