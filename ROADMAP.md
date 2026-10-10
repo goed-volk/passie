@@ -1,10 +1,27 @@
 # ROADMAP — Passie Product Backlog
 
-This document outlines planned features and enhancements for Passie. Technical architecture findings and implementation notes are documented in [`docs/future-architecture.md`](docs/future-architecture.md).
+This document outlines planned features and enhancements for Passie. Technical architecture findings and implementation notes are documented in [`docs/future-architecture.md`](docs/future-architecture.md), and UX/UI audit recommendations are tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
 
 ---
 
 ## Next up
+
+- **Matchday Terminology & Copy Polish (UX Audit F-19 – F-22):**
+  - *Description:* Refine matchday microcopy based on real-device findings to enhance clarity and football culture resonance.
+  - *Improvements:*
+    - **"Op de bank" (F-19):** Replace generic *"wachtrij"* with the football metaphor *"Op de bank"* (*Stap 2 — Op de bank* / *"De bank is momenteel leeg"*).
+    - **Pass Assignment Clarity (F-20):** Change ambiguous *"Toegewezen: [Naam]"* in queue cards to *"Toegewezen: pas van [Naam]"* so users clearly understand that a season ticket was allocated, not the person.
+    - **Attendee-First Guest Display (F-21):** Invert queue attendee hierarchy from *"[Lid] (gast: [Naam])"* to *"[Naam] (gast van [Lid])"*, putting the person who actually goes first.
+    - **Natural Guest Claim Phrasing (F-22):** Rephrase pass badge from awkward *"[Lid]'s gast"* to natural Dutch *"Geclaimd door gast van [Lid]"*.
+  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
+
+- **Localized Action Loading & Multi-Pass Disambiguation (UX Audit F-11 & F-07):**
+  - *Description:* Fine-grained loading spinners per action button (preventing global button freeze) and contextual pass label captioning on the multi-pass bottom action button.
+  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
+
+- **Settled Post-Match View Mode (UX Audit F-12):**
+  - *Description:* Automatically transition matchday pool display 2 hours after kickoff to a settled match summary with finished badge, hiding pre-match indication action bars.
+  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
 
 - **Direct Pass Transfer / Delegation (*Pas Overdragen*):**
   - *Description:* Allow season ticket owners to directly delegate their seat for a match to a specific friend, family member, or group member, bypassing the general FIFO queue.
@@ -45,9 +62,12 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Description:* One-tap button to copy a clean, formatted matchday roster and pass distribution summary directly into the group WhatsApp chat.
   - *Status:* Planned.
 
-- **Timeline Date & Time Formatting:**
-  - *Description:* Display a compact day/date prefix (e.g. *"vr 20:07"*, *"12 sep 09:42"*, or relative date indicator) in the matchday activity timeline rather than just a wall-clock time, making events that occurred across multiple days easily distinguishable.
-  - *Status:* Planned.
+- **Adaptive Timeline Timestamp Formatting (UX Audit F-23):**
+  - *Description:* Format timeline timestamps with 3-tier adaptive granularity in Dutch (`Europe/Amsterdam`) so events are instantly contextualized across days:
+    - **Today:** Only wall-clock time (e.g. *"11:25"*).
+    - **Past 7 days (< 7d):** Abbreviated weekday + time (e.g. *"wo 11:25"*).
+    - **Older (> 7d):** Calendar date + time (e.g. *"12 sep 11:25"*).
+  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md#f-23`](.kilo/plans/1787002200000-ux-audit-findings.md).
 
 ---
 
