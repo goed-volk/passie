@@ -12,6 +12,8 @@ describe("mutate integration tests", () => {
 
   const fixtureId = "fix_test_mutate";
   const poolId = "pool_group_goedvolk_fix_test_mutate";
+  const fixtureIdB = "fix_test_mutate_b";
+  const poolIdB = "pool_group_goedvolk_fix_test_mutate_b";
 
   beforeAll(async () => {
     const res = await createTestDb();
@@ -21,6 +23,7 @@ describe("mutate integration tests", () => {
 
   afterAll(async () => {
     await cleanupTestPoolData(db, poolId, fixtureId);
+    await cleanupTestPoolData(db, poolIdB, fixtureIdB);
     if (proxy) {
       await proxy.dispose();
     }
@@ -464,5 +467,61 @@ describe("mutate integration tests", () => {
 
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it("allows assigning the same pass in consecutive game pools without cross-pool constraint collisions", async () => {
+    // Setup Pool A and Pool B
+    await setupIsolatedTestPool(db, poolId, fixtureId);
+    await setupIsolatedTestPool(db, poolIdB, fixtureIdB);
+
+    // Pool A: Sam releases pass 1, Daan joins queue -> Daan gets assigned pass 1 in Pool A
+    const releaseResA = await mutate(
+      db,
+      poolId,
+      { type: "IndicateRelease", passId: "pass_goedvolk_1" },
+      "member_goedvolk_sam",
+      { idempotencyKey: "test-cross-release-a" }
+    );
+    expect(releaseResA.ok).toBe(true);
+
+    const joinResA = await mutate(
+      db,
+      poolId,
+      { type: "JoinQueue", nextEntryId: 0, kind: "self", guestName: null },
+      "member_goedvolk_daan",
+      { idempotencyKey: "test-cross-join-a" }
+    );
+    expect(joinResA.ok).toBe(true);
+
+    const queueEntryA = await db.query.queueEntries.findFirst({
+      where: eq(schema.queueEntries.gamePoolId, poolId),
+    });
+    expect(queueEntryA?.status).toBe("assigned");
+    expect(queueEntryA?.assignedPassId).toBe("pass_goedvolk_1");
+
+    // Pool B: Sam releases pass 1, Eva joins queue -> Eva gets assigned pass 1 in Pool B
+    const releaseResB = await mutate(
+      db,
+      poolIdB,
+      { type: "IndicateRelease", passId: "pass_goedvolk_1" },
+      "member_goedvolk_sam",
+      { idempotencyKey: "test-cross-release-b" }
+    );
+    expect(releaseResB.ok).toBe(true);
+
+    const joinResB = await mutate(
+      db,
+      poolIdB,
+      { type: "JoinQueue", nextEntryId: 0, kind: "self", guestName: null },
+      "member_goedvolk_eva",
+      { idempotencyKey: "test-cross-join-b" }
+    );
+    expect(joinResB.ok).toBe(true);
+
+    const queueEntryB = await db.query.queueEntries.findFirst({
+      where: eq(schema.queueEntries.gamePoolId, poolIdB),
+    });
+    expect(queueEntryB?.status).toBe("assigned");
+    expect(queueEntryB?.assignedPassId).toBe("pass_goedvolk_1");
   });
 });

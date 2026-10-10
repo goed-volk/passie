@@ -116,7 +116,7 @@ export const queueEntries = sqliteTable("queue_entries", {
   cancelledByMemberId: text("cancelled_by_member_id").references(() => members.id),
   createdAt: integer("created_at").notNull(),
 }, (table) => [
-  uniqueIndex("queue_entries_assigned_pass_unique").on(table.assignedPassId).where(sql`status = 'assigned'`),
+  uniqueIndex("queue_entries_pool_assigned_pass_unique").on(table.gamePoolId, table.assignedPassId).where(sql`status = 'assigned'`),
   index("queue_entries_pool_status_id_idx").on(table.gamePoolId, table.status, table.id),
 ]);
 

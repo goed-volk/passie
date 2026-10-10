@@ -8,6 +8,27 @@
       "when": 1786885170529,
       "tag": "0000_flowery_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786885170530,
+      "tag": "0001_pool_version_guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786885170531,
+      "tag": "0002_performance_indices",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786885170532,
+      "tag": "0003_scope_assigned_pass_index",
+      "breakpoints": true
     }
   ]
 }
