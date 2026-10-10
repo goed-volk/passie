@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus, User, Check, ArrowUpRight, ListFilter } from "lucide-react";
+import { UserPlus, User, Check, ArrowUpRight, ListFilter, Loader2 } from "lucide-react";
 import { t } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
@@ -22,7 +22,10 @@ export function QueueJoinSheet({
 }: QueueJoinSheetProps) {
   const [openGuestDialog, setOpenGuestDialog] = useState(false);
   const [openReleaseDialog, setOpenReleaseDialog] = useState(false);
+  const [isKeepingLocal, setIsKeepingLocal] = useState(false);
   const [isReleasingLocal, setIsReleasingLocal] = useState(false);
+  const [isJoiningSelfLocal, setIsJoiningSelfLocal] = useState(false);
+  const [isJoiningGuestLocal, setIsJoiningGuestLocal] = useState(false);
   const [guestName, setGuestName] = useState("");
 
   const activeUnindicated = unindicatedPasses ?? [];
@@ -35,30 +38,39 @@ export function QueueJoinSheet({
     : "";
 
   const handleJoinSelf = async () => {
+    setIsJoiningSelfLocal(true);
     try {
       await onJoin("self");
     } catch {
       // Handled in mutation
+    } finally {
+      setIsJoiningSelfLocal(false);
     }
   };
 
   const handleJoinGuest = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsJoiningGuestLocal(true);
     try {
       await onJoin("guest", guestName.trim() || null);
       setGuestName("");
       setOpenGuestDialog(false);
     } catch {
       // Handled in mutation
+    } finally {
+      setIsJoiningGuestLocal(false);
     }
   };
 
   const handleKeep = async () => {
     if (singleUnindicated && onIndicate) {
+      setIsKeepingLocal(true);
       try {
         await onIndicate(singleUnindicated.id, "keep");
       } catch {
         // Handled in mutation
+      } finally {
+        setIsKeepingLocal(false);
       }
     }
   };
@@ -102,11 +114,15 @@ export function QueueJoinSheet({
             <div className="flex gap-3">
               <Button
                 variant="club"
-                disabled={loading}
+                disabled={loading || isKeepingLocal}
                 onClick={handleKeep}
                 className="flex-1 min-w-0 text-sm font-bold flex items-center justify-center space-x-2 shadow-sm"
               >
-                <Check className="h-4 w-4 shrink-0" />
+                {isKeepingLocal ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 shrink-0" />
+                )}
                 <span className="truncate">{t("actionKeep")}</span>
               </Button>
 
@@ -117,7 +133,11 @@ export function QueueJoinSheet({
                     disabled={loading || isReleasingLocal}
                     className="flex-1 min-w-0 text-sm font-bold flex items-center justify-center space-x-2 border-2 border-emerald-600 dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
                   >
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                    {isReleasingLocal ? (
+                      <Loader2 className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300 animate-spin" />
+                    ) : (
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                    )}
                     <span className="truncate">{t("actionRelease")}</span>
                   </Button>
                 </DialogTrigger>
@@ -161,11 +181,15 @@ export function QueueJoinSheet({
           <div className="flex gap-3">
             <Button
               variant="club"
-              disabled={loading}
+              disabled={loading || isJoiningSelfLocal}
               onClick={handleJoinSelf}
               className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 shadow-sm"
             >
-              <User className="h-4 w-4 shrink-0" />
+              {isJoiningSelfLocal ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              ) : (
+                <User className="h-4 w-4 shrink-0" />
+              )}
               <span className="truncate">{t("joinForSelf")}</span>
             </Button>
 
@@ -173,10 +197,14 @@ export function QueueJoinSheet({
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  disabled={loading}
+                  disabled={loading || isJoiningGuestLocal}
                   className="flex-1 min-w-0 text-sm font-semibold flex items-center justify-center space-x-2 border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
-                  <UserPlus className="h-4 w-4 shrink-0" />
+                  {isJoiningGuestLocal ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 shrink-0" />
+                  )}
                   <span className="truncate">{t("joinForGuest")}</span>
                 </Button>
               </DialogTrigger>

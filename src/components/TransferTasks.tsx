@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { t } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
@@ -17,6 +18,7 @@ export function TransferTasks({
   onTransfer,
   loading,
 }: TransferTasksProps) {
+  const [transferringPassId, setTransferringPassId] = useState<string | null>(null);
   return (
     <section className="space-y-3">
       <div>
@@ -60,11 +62,22 @@ export function TransferTasks({
                   <Button
                     size="sm"
                     variant="club"
-                    disabled={loading}
+                    disabled={loading || transferringPassId === task.passId}
                     className="min-w-0"
-                    onClick={() => onTransfer(task.passId, task.to.id, fixtureId)}
+                    onClick={async () => {
+                      setTransferringPassId(task.passId);
+                      try {
+                        await onTransfer(task.passId, task.to.id, fixtureId);
+                      } finally {
+                        setTransferringPassId(null);
+                      }
+                    }}
                   >
-                    <span className="truncate">{t("markTransferred")}</span>
+                    {transferringPassId === task.passId ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <span className="truncate">{t("markTransferred")}</span>
+                    )}
                   </Button>
                 )}
               </CardContent>

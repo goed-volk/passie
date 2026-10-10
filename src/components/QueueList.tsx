@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 import { t, formatPassLabel } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
@@ -12,6 +14,7 @@ interface QueueListProps {
 }
 
 export function QueueList({ queue, onCancelEntry, loading }: QueueListProps) {
+  const [cancellingEntryId, setCancellingEntryId] = useState<number | null>(null);
   const activeEntries = queue.filter((q) => q.status !== "cancelled");
 
   return (
@@ -84,11 +87,22 @@ export function QueueList({ queue, onCancelEntry, loading }: QueueListProps) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    disabled={loading}
-                    onClick={() => onCancelEntry(entry.entryId)}
+                    disabled={loading || cancellingEntryId === entry.entryId}
+                    onClick={async () => {
+                      setCancellingEntryId(entry.entryId);
+                      try {
+                        await onCancelEntry(entry.entryId);
+                      } finally {
+                        setCancellingEntryId(null);
+                      }
+                    }}
                     className="text-xs min-w-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
                   >
-                    <span className="truncate">{t("leaveQueue")}</span>
+                    {cancellingEntryId === entry.entryId ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <span className="truncate">{t("leaveQueue")}</span>
+                    )}
                   </Button>
                 )}
               </CardContent>

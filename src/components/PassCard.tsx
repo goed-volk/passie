@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, Check, ArrowUpRight, RotateCcw } from "lucide-react";
+import { ArrowRightLeft, Check, ArrowUpRight, RotateCcw, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ export function PassCard({
   const [openReleaseDialog, setOpenReleaseDialog] = useState(false);
   const [openReclaimDialog, setOpenReclaimDialog] = useState(false);
   const [openGiveBackDialog, setOpenGiveBackDialog] = useState(false);
+  const [isKeepingLocal, setIsKeepingLocal] = useState(false);
   const [isTransferringLocal, setIsTransferringLocal] = useState(false);
   const [isReleasingLocal, setIsReleasingLocal] = useState(false);
   const [isReclaimingLocal, setIsReclaimingLocal] = useState(false);
@@ -236,12 +237,15 @@ export function PassCard({
             <Button
               size="sm"
               variant="club"
-              disabled={loading}
+              disabled={loading || isKeepingLocal}
               onClick={async () => {
+                setIsKeepingLocal(true);
                 try {
                   await onIndicate(pass.id, "keep");
                 } catch {
                   // Handled in mutation
+                } finally {
+                  setIsKeepingLocal(false);
                 }
               }}
               className={`w-full min-w-0 transition-all font-bold ${
@@ -250,7 +254,11 @@ export function PassCard({
                   : ""
               }`}
             >
-              <Check className="h-3.5 w-3.5 mr-1 shrink-0" />
+              {isKeepingLocal ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 shrink-0 animate-spin" />
+              ) : (
+                <Check className="h-3.5 w-3.5 mr-1 shrink-0" />
+              )}
               <span className="truncate">{t("actionKeep")}</span>
             </Button>
             <Dialog open={openReleaseDialog} onOpenChange={setOpenReleaseDialog}>
@@ -264,7 +272,9 @@ export function PassCard({
                       : ""
                   }`}
                 >
-                  {pass.status === "released" ? (
+                  {isReleasingLocal ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300 animate-spin" />
+                  ) : pass.status === "released" ? (
                     <Check className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
                   ) : (
                     <ArrowUpRight className="h-3.5 w-3.5 mr-1 shrink-0 text-emerald-700 dark:text-emerald-300" />
@@ -319,7 +329,11 @@ export function PassCard({
                   disabled={loading || isReclaimingLocal}
                   className="w-full min-w-0 flex items-center justify-center space-x-1.5 shadow-sm font-semibold"
                 >
-                  <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                  {isReclaimingLocal ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+                  )}
                   <span className="truncate">{t("actionReclaim")}</span>
                 </Button>
               </DialogTrigger>
@@ -366,6 +380,9 @@ export function PassCard({
                   disabled={loading || isGivingBackLocal}
                   className="w-full min-w-0 flex items-center justify-center space-x-1.5"
                 >
+                  {isGivingBackLocal ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : null}
                   <span className="truncate">{t("actionGiveBack")}</span>
                 </Button>
               </DialogTrigger>
