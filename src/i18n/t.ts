@@ -45,6 +45,56 @@ export function formatDeadlineDateTime(
   return `${weekday} ${day} ${month} om ${time} uur`;
 }
 
+export function formatTimelineTimestamp(
+  timestampSec: number,
+  referenceDate: Date = new Date(),
+  timeZone: string = "Europe/Amsterdam",
+  locale: string = "nl-NL"
+): string {
+  const eventDate = new Date(timestampSec * 1000);
+
+  // Compare calendar days in the specified timezone
+  const dtfDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const eventDayKey = dtfDay.format(eventDate);
+  const refDayKey = dtfDay.format(referenceDate);
+
+  const timeStr = new Intl.DateTimeFormat(locale, {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(eventDate);
+
+  // Same calendar day -> time only (e.g. "11:25")
+  if (eventDayKey === refDayKey) {
+    return timeStr;
+  }
+
+  // Elapsed difference in days
+  const diffDays = Math.floor((referenceDate.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // Within past 7 days -> weekday + time (e.g. "wo 11:25")
+  if (diffDays >= 0 && diffDays < 7) {
+    const weekday = new Intl.DateTimeFormat(locale, {
+      timeZone,
+      weekday: "short",
+    }).format(eventDate);
+    return `${weekday} ${timeStr}`;
+  }
+
+  // Older than 7 days -> date + time (e.g. "12 sep 11:25")
+  const dayMonth = new Intl.DateTimeFormat(locale, {
+    timeZone,
+    day: "numeric",
+    month: "short",
+  }).format(eventDate);
+  return `${dayMonth} ${timeStr}`;
+}
+
 export function formatPassLabel(label: string, options?: { capitalize?: boolean }): string {
   const trimmed = label.trim();
   const lower = trimmed.toLowerCase();

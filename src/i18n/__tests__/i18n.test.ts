@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { formatEventText, formatKickoffDateTime, formatDeadlineDateTime, t } from "../t";
+import { formatEventText, formatKickoffDateTime, formatDeadlineDateTime, formatTimelineTimestamp, t } from "../t";
 import { nl } from "../nl";
 
 describe("i18n discipline", () => {
@@ -99,8 +99,31 @@ describe("i18n discipline", () => {
       "possession.handover",
       { passId: "pass_1", fromMemberId: "member_1", toMemberId: "member_2" },
       membersMap,
-      passLabelsMap
+      passLabelsMap,
+      "Sam"
     );
     expect(textHandover).toBe("Pas 1 gewisseld van Sam naar Daan");
+  });
+
+  it("formats timeline timestamps adaptively based on age (today, <7d, >7d)", () => {
+    // Reference date: Saturday 2026-10-10 15:30:00 CEST (13:30:00 UTC)
+    const refDate = new Date(Date.UTC(2026, 9, 10, 13, 30, 0));
+
+    // Same day: 2026-10-10 09:25:00 CEST (07:25:00 UTC)
+    const todaySec = Math.floor(Date.UTC(2026, 9, 10, 7, 25, 0) / 1000);
+    expect(formatTimelineTimestamp(todaySec, refDate, "Europe/Amsterdam")).toBe("09:25");
+
+    // 3 days ago: Wednesday 2026-10-07 11:15:00 CEST (09:15:00 UTC)
+    const threeDaysAgoSec = Math.floor(Date.UTC(2026, 9, 7, 9, 15, 0) / 1000);
+    const threeDaysFormatted = formatTimelineTimestamp(threeDaysAgoSec, refDate, "Europe/Amsterdam");
+    expect(threeDaysFormatted).toContain("wo");
+    expect(threeDaysFormatted).toContain("11:15");
+
+    // 12 days ago: Monday 2026-09-28 20:30:00 CEST (18:30:00 UTC)
+    const twelveDaysAgoSec = Math.floor(Date.UTC(2026, 8, 28, 18, 30, 0) / 1000);
+    const twelveDaysFormatted = formatTimelineTimestamp(twelveDaysAgoSec, refDate, "Europe/Amsterdam");
+    expect(twelveDaysFormatted).toContain("28");
+    expect(twelveDaysFormatted).toContain("sep");
+    expect(twelveDaysFormatted).toContain("20:30");
   });
 });

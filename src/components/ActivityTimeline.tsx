@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, History } from "lucide-react";
-import { t } from "@/i18n/t";
+import { t, formatTimelineTimestamp } from "@/i18n/t";
 import type { PoolSnapshot } from "@/server/snapshot";
 
 export function ActivityTimeline({
@@ -47,11 +47,7 @@ export function ActivityTimeline({
       <Card>
         <CardContent className="p-4 space-y-3 divide-y divide-slate-100 dark:divide-slate-800">
           {displayedEvents.map((evt) => {
-            const time = new Date(evt.at * 1000).toLocaleTimeString("nl-NL", {
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZone: "Europe/Amsterdam",
-            });
+            const time = formatTimelineTimestamp(evt.at);
 
             return (
               <div key={evt.id} className="pt-2.5 first:pt-0 flex items-start justify-between text-xs space-x-3">
