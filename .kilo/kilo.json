@@ -1,5 +1,8 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
+  "indexing": {
+    "enabled": true
+  },
   "instructions": [
     "AGENTS.md",
     "docs/reference/README.md",
@@ -26,6 +29,18 @@
       "git diff": "allow",
       "git status": "allow",
       "*": "ask"
+    }
+  },
+  "mcp": {
+    "better-auth": {
+      "type": "remote",
+      "url": "https://mcp.better-auth.com/mcp",
+      "enabled": true
+    },
+    "cloudflare-docs": {
+      "type": "remote",
+      "url": "https://docs.mcp.cloudflare.com/mcp",
+      "enabled": true
     }
   }
 }
