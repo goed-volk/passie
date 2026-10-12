@@ -47,12 +47,12 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
 - **External Directory & File Policy:** Never create, modify, or consult folders or files outside this repository workspace (including `/tmp`, global caches, or system paths) without first asking for explicit user permission and providing clear reasoning.
 - **Tool Transparency & Permission:** Be explicit about which CLI tools and scripts are executed, explaining why and how they are used. Do not use unapproved third-party or community tools without explicit user permission. Official tools (such as Cloudflare's `wrangler` and `@cloudflare/next-on-pages` / `create-cloudflare`) are permitted.
 - **Manual Cloudflare Configuration:** Not every Cloudflare setup step needs automation via CLI/API. The repository owner can manually create applications, bindings, or routes in the Cloudflare dashboard if preferred.
-- **Todo Tool:** Drive every non-trivial task using the native `todowrite` tool. Maintain one `in_progress` item at a time. Mark completed immediately when verified. Never batch completions.
+- **Todo Tool & Plan Alignment:** Drive every non-trivial task using the native `todowrite` tool. Structure plan steps and to-do list items around distinct, committable functional milestones. Maintain one `in_progress` item at a time. Mark completed immediately when verified. Never batch completions.
 - **Question Tool:** Use the `question` tool with a recommended option when a requirement is ambiguous or irreversible. Do not guess or ask in plain prose.
 - **Agent Roles:**
   - Use `task` with subagent `explore` for codebase discovery.
   - Use `passie-domain` subagent (`.kilo/agent/passie-domain.md`) for any changes to the allocation engine, queue ordering, or D1 commit path.
-- **Plan Mode:** Enter plan mode before touching `src/domain/**`, DB schema, or concurrency mechanisms.
+- **Plan Mode:** Enter plan mode before touching `src/domain/**`, DB schema, or concurrency mechanisms. When writing plans for multi-step features, explicitly design the deliverables and execution phases to align with the incremental functional commit boundaries.
 - **Skill:** Load the `kilo-config` skill before modifying configuration in `.kilo/`.
 - **Tool Selection:**
   - File reading: `read` (never `cat`, `head`, `tail`).
@@ -61,6 +61,7 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
   - File search: `glob` (never `find`, `ls`).
   - Content search: `grep` (never `grep`, `rg`).
   - Shell: reserve `bash` strictly for `pnpm`, `wrangler`, `git`, `drizzle-kit`, and `scripts/*`.
+- **Incremental Functional Commits:** For large features or multi-step tasks, chunk work into distinct, verified functional groups (e.g., schema and migrations, core backend logic, API route endpoints, UI components, tests and documentation) and commit each group iteratively as it is completed. Align plan phases and to-do items directly with these commit boundaries so that checking off a completed functional milestone includes verifying and committing it. Never accumulate hundreds or thousands of lines across disparate subsystems to commit in one massive monolithic dump. Committing in functional increments enforces development discipline, makes code changes untangleable and reviewable for both human engineers and AI sub-agents, and keeps git history bisectable. Every functional commit must leave the codebase in a working, passing state.
 - **Pre-commit Verification:** Run `/verify` (`pnpm typecheck && pnpm lint && pnpm test && pnpm build`) before every commit. Never commit broken code. Write readable, accessible, functional, short commit messages in plain English without semantic prefixes like "chore:" or "feat:".
 - **Code Review:** Proactively suggest a local review (`/review uncommitted`) after completing non-trivial changes.
 
