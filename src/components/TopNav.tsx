@@ -33,9 +33,9 @@ export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
 
         {actingMember && (
           <Link
-            href="/wie-ben-jij"
+            href="/instellingen"
             className="min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Wie ben jij"
+            aria-label="Profiel en instellingen"
           >
             <Avatar
               className="h-8 w-8 ring-2 ring-slate-200 dark:ring-slate-700 hover:ring-slate-400 dark:hover:ring-slate-500 transition-all"

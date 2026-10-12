@@ -13,6 +13,12 @@ export const ALLOWED_ANALYTICS_EVENTS = new Set([
 
   // Identity & Navigation
   "member.selected",
+  "auth.sign_in_otp_requested",
+  "auth.sign_in_success",
+  "auth.sign_out",
+  "auth.passkey_registered",
+  "auth.passkey_deleted",
+  "auth.sessions_revoked",
   "$pageview",
 
   // Admin Administration
@@ -206,6 +212,18 @@ export function trackMemberSelected(member: MemberIdentityPayload) {
 }
 
 export function resetAnalytics() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.reset();
+}
+
+export function identifyUser(memberId: string) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  if (posthog.get_distinct_id() !== memberId) {
+    posthog.identify(memberId);
+  }
+}
+
+export function resetUser() {
   if (typeof window === "undefined" || !posthog.__loaded) return;
   posthog.reset();
 }

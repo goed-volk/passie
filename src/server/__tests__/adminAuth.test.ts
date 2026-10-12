@@ -1,26 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  ADMIN_COOKIE_NAME,
-  ADMIN_SESSION_TTL_SECONDS,
-  constantTimeEquals,
-  createSessionToken,
-  getAdminPassword,
-  getAdminPrincipal,
-  requireAdminApi,
-  requireAdminSession,
-  verifySessionToken,
-  type AdminPrincipal,
-} from "../adminAuth";
-
-// Mock next/headers
-const mockGetCookie = vi.fn();
-const mockDeleteCookie = vi.fn();
-vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: mockGetCookie,
-    delete: mockDeleteCookie,
-  }),
-}));
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { getAdminPrincipal, requireAdminSession, requireAdminApi, assertCapability } from "../adminAuth";
+import { createTestDb } from "./helpers/testDb";
+import type { DbClient } from "../db";
+import * as schema from "../schema";
+import { eq } from "drizzle-orm";
+import type { PlatformProxy } from "wrangler";
+import { getAuth } from "../auth";
 
 // Mock next/navigation
 const mockRedirect = vi.fn();
@@ -31,162 +16,123 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-describe("adminAuth", () => {
-  const originalEnv = process.env.PASSIE_ADMIN_PASSWORD;
+describe("adminAuth tests", () => {
+  let proxy: PlatformProxy<{ DB: D1Database }>;
+  let db: DbClient;
+  let adminUserId: string;
+  let regularUserId: string;
+  let adminHeaders: Headers;
+  let regularHeaders: Headers;
 
-  beforeEach(() => {
-    mockGetCookie.mockReset();
-    mockDeleteCookie.mockReset();
-    mockRedirect.mockReset();
-    process.env.PASSIE_ADMIN_PASSWORD = "test-secret-password-123";
+  beforeAll(async () => {
+    const res = await createTestDb();
+    proxy = res.proxy;
+    db = res.db;
+
+    // Create admin user and link to member_goedvolk_sam (who has role: admin)
+    const now = new Date();
+    const existingSam = await db.query.auth_user.findFirst({
+      where: eq(schema.auth_user.email, "sam@example.com"),
+    });
+
+    if (existingSam) {
+      adminUserId = existingSam.id;
+      await db
+        .update(schema.auth_user)
+        .set({ role: "admin" })
+        .where(eq(schema.auth_user.id, adminUserId));
+    } else {
+      adminUserId = "user_admin_test";
+      await db.insert(schema.auth_user).values({
+        id: adminUserId,
+        email: "sam@example.com",
+        name: "Sam",
+        emailVerified: true,
+        role: "admin",
+        banned: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await db
+      .update(schema.members)
+      .set({ userId: adminUserId, role: "admin" })
+      .where(eq(schema.members.slug, "sam"));
+
+    const existingDaan = await db.query.auth_user.findFirst({
+      where: eq(schema.auth_user.email, "daan@example.com"),
+    });
+
+    if (existingDaan) {
+      regularUserId = existingDaan.id;
+      await db
+        .update(schema.auth_user)
+        .set({ role: "user" })
+        .where(eq(schema.auth_user.id, regularUserId));
+    } else {
+      regularUserId = "user_regular_test";
+      await db.insert(schema.auth_user).values({
+        id: regularUserId,
+        email: "daan@example.com",
+        name: "Daan",
+        emailVerified: true,
+        role: "user",
+        banned: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await db
+      .update(schema.members)
+      .set({ userId: regularUserId, role: "member" })
+      .where(eq(schema.members.slug, "daan"));
+
+    const auth = await getAuth({ db });
+    const ctx = (await (auth as any).$context) as {
+      test: { login: (opts: { userId: string }) => Promise<{ headers: Headers }> };
+    };
+
+    const adminLogin = await ctx.test.login({ userId: adminUserId });
+    adminHeaders = adminLogin.headers;
+
+    const regularLogin = await ctx.test.login({ userId: regularUserId });
+    regularHeaders = regularLogin.headers;
   });
 
-  afterEach(() => {
-    if (originalEnv !== undefined) {
-      process.env.PASSIE_ADMIN_PASSWORD = originalEnv;
-    } else {
-      Reflect.deleteProperty(process.env, "PASSIE_ADMIN_PASSWORD");
+  afterAll(async () => {
+    if (proxy) {
+      await proxy.dispose();
     }
   });
 
-  describe("getAdminPassword & constantTimeEquals", () => {
-    it("returns null when password is unset or empty", async () => {
-      Reflect.deleteProperty(process.env, "PASSIE_ADMIN_PASSWORD");
-      expect(await getAdminPassword()).toBeNull();
-
-      process.env.PASSIE_ADMIN_PASSWORD = "   ";
-      expect(await getAdminPassword()).toBeNull();
-    });
-
-    it("verifies matching and non-matching passwords with constantTimeEquals", async () => {
-      expect(await constantTimeEquals("test-secret-password-123", "test-secret-password-123")).toBe(true);
-      expect(await constantTimeEquals("test-secret-password-123", "wrong-password")).toBe(false);
-      expect(await constantTimeEquals("short", "longer-password")).toBe(false);
-    });
+  it("returns null when no session is present", async () => {
+    const emptyHeaders = new Headers();
+    const principal = await getAdminPrincipal(db, emptyHeaders);
+    expect(principal).toBeNull();
   });
 
-  describe("createSessionToken & verifySessionToken", () => {
-    const principal: AdminPrincipal = {
-      subject: "shared",
-      method: "password",
-      memberId: null,
+  it("returns null when regular non-admin user is logged in", async () => {
+    const principal = await getAdminPrincipal(db, regularHeaders);
+    expect(principal).toBeNull();
+  });
+
+  it("returns principal when admin user is logged in", async () => {
+    const principal = await getAdminPrincipal(db, adminHeaders);
+    expect(principal).not.toBeNull();
+    expect(principal?.email).toBe("sam@example.com");
+    expect(principal?.role).toBe("platform_admin");
+  });
+
+  it("assertCapability checks capabilities correctly", () => {
+    const principal = {
+      subject: "test",
+      memberId: "m1",
+      email: "sam@example.com",
+      role: "group_admin" as const,
     };
-
-    it("creates a valid v1 structured session token and verifies it", async () => {
-      const token = await createSessionToken(principal);
-      expect(token.startsWith("v1.")).toBe(true);
-
-      const verified = await verifySessionToken(token);
-      expect(verified).not.toBeNull();
-      expect(verified?.subject).toBe("shared");
-      expect(verified?.method).toBe("password");
-      expect(verified?.memberId).toBeNull();
-    });
-
-    it("rejects token with unknown version prefix", async () => {
-      const token = await createSessionToken(principal);
-      const invalidVersionToken = token.replace(/^v1\./, "v2.");
-      expect(await verifySessionToken(invalidVersionToken)).toBeNull();
-    });
-
-    it("rejects token with tampered signature", async () => {
-      const token = await createSessionToken(principal);
-      const parts = token.split(".");
-      const tampered = `${parts[0]}.${parts[1]}.${parts[2]?.slice(0, -2)}00`;
-      expect(await verifySessionToken(tampered)).toBeNull();
-    });
-
-    it("rejects expired token", async () => {
-      const now = Math.floor(Date.now() / 1000);
-      const pastNow = now - (ADMIN_SESSION_TTL_SECONDS + 100);
-      const token = await createSessionToken(principal, pastNow);
-      expect(await verifySessionToken(token, now)).toBeNull();
-    });
-
-    it("rejects token minted under an old/different password", async () => {
-      process.env.PASSIE_ADMIN_PASSWORD = "original-password";
-      const token = await createSessionToken(principal);
-
-      // Rotate password
-      process.env.PASSIE_ADMIN_PASSWORD = "new-rotated-password";
-      expect(await verifySessionToken(token)).toBeNull();
-    });
-  });
-
-  describe("getAdminPrincipal & requireAdminSession", () => {
-    it("returns null when session cookie is absent", async () => {
-      mockGetCookie.mockReturnValue(undefined);
-      expect(await getAdminPrincipal()).toBeNull();
-    });
-
-    it("returns principal when session cookie is valid", async () => {
-      const principal: AdminPrincipal = {
-        subject: "shared",
-        method: "password",
-        memberId: null,
-      };
-      const token = await createSessionToken(principal);
-      mockGetCookie.mockImplementation((name: string) => {
-        if (name === ADMIN_COOKIE_NAME) {
-          return { name: ADMIN_COOKIE_NAME, value: token };
-        }
-        return undefined;
-      });
-
-      const res = await getAdminPrincipal();
-      expect(res).not.toBeNull();
-      expect(res?.subject).toBe("shared");
-
-      const required = await requireAdminSession();
-      expect(required.subject).toBe("shared");
-      expect(mockRedirect).not.toHaveBeenCalled();
-    });
-
-    it("redirects to /beheer/inloggen when requireAdminSession fails", async () => {
-      mockGetCookie.mockReturnValue(undefined);
-      await expect(requireAdminSession()).rejects.toThrow("NEXT_REDIRECT:/beheer/inloggen");
-      expect(mockRedirect).toHaveBeenCalledWith("/beheer/inloggen");
-    });
-  });
-
-  describe("requireAdminApi", () => {
-    it("returns 503 response when PASSIE_ADMIN_PASSWORD is unset", async () => {
-      Reflect.deleteProperty(process.env, "PASSIE_ADMIN_PASSWORD");
-      const res = await requireAdminApi();
-      expect(res instanceof Response).toBe(true);
-      if (res instanceof Response) {
-        expect(res.status).toBe(503);
-      }
-    });
-
-    it("returns 401 response when session cookie is invalid or absent", async () => {
-      mockGetCookie.mockReturnValue(undefined);
-      const res = await requireAdminApi();
-      expect(res instanceof Response).toBe(true);
-      if (res instanceof Response) {
-        expect(res.status).toBe(401);
-      }
-    });
-
-    it("returns principal object when authenticated", async () => {
-      const principal: AdminPrincipal = {
-        subject: "shared",
-        method: "password",
-        memberId: null,
-      };
-      const token = await createSessionToken(principal);
-      mockGetCookie.mockImplementation((name: string) => {
-        if (name === ADMIN_COOKIE_NAME) {
-          return { name: ADMIN_COOKIE_NAME, value: token };
-        }
-        return undefined;
-      });
-
-      const res = await requireAdminApi();
-      expect("principal" in res).toBe(true);
-      if ("principal" in res) {
-        expect(res.principal.subject).toBe("shared");
-      }
-    });
+    expect(assertCapability(principal, "members.read")).toBe(true);
+    expect(assertCapability(principal, "members.write")).toBe(true);
   });
 });

@@ -12,16 +12,27 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Checking dev server health on $BASE_URL..."
-if ! curl -s -f "$BASE_URL/api/me" > /dev/null 2>&1; then
-  # Try checking root if /api/me returns 200 or 401
-  HTTP_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/me" || echo "000")
-  if [ "$HTTP_CHECK" = "000" ]; then
-    echo "❌ Dev server not reachable on $BASE_URL."
-    echo "Please start the dev server first: PASSIE_PORT=$PORT .kilo/run-script.sh"
-    exit 1
-  fi
+HTTP_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/me" || echo "000")
+if [ "$HTTP_CHECK" = "000" ]; then
+  echo "❌ Dev server not reachable on $BASE_URL."
+  echo "Please start the dev server first: PASSIE_PORT=$PORT .kilo/run-script.sh"
+  exit 1
 fi
 echo "==> Dev server is healthy."
+
+get_cookie() {
+  local slug="$1"
+  local res
+  res=$(curl -s -X POST "$BASE_URL/api/dev/login-as" -H "Content-Type: application/json" -d "{\"memberSlug\":\"$slug\"}")
+  node -e "const r = JSON.parse(process.argv[1]); if (!r.cookie) { console.error('Failed to get cookie for ' + process.argv[2] + ':', r); process.exit(1); } console.log(r.cookie);" "$res" "$slug"
+}
+
+echo "==> Acquiring test member authentication cookies via /api/dev/login-as..."
+COOKIE_DAAN=$(get_cookie "daan")
+COOKIE_EVA=$(get_cookie "eva")
+COOKIE_SAM=$(get_cookie "sam")
+COOKIE_BRAM=$(get_cookie "bram")
+COOKIE_NOOR=$(get_cookie "noor")
 
 echo "==> Running Passie multi-scenario deterministic race-check on $BASE_URL for pool $POOL_ID ($ITERATIONS iterations)"
 
@@ -39,28 +50,28 @@ for ((iteration=1; iteration<=ITERATIONS; iteration++)); do
   RESP_DIR=$(mktemp -d)
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_daan" \
+    -H "Cookie: $COOKIE_DAAN" \
     -H "Idempotency-Key: s1-join-daan-$iteration-$RANDOM" \
     -d '{"kind":"self"}' -o "$RESP_DIR/join_daan.body" > "$RESP_DIR/join_daan.code" &
   PID1=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_eva" \
+    -H "Cookie: $COOKIE_EVA" \
     -H "Idempotency-Key: s1-join-eva-$iteration-$RANDOM" \
     -d '{"kind":"self"}' -o "$RESP_DIR/join_eva.body" > "$RESP_DIR/join_eva.code" &
   PID2=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/pass/pass_goedvolk_1/indicate" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_sam" \
+    -H "Cookie: $COOKIE_SAM" \
     -H "Idempotency-Key: s1-rel-sam-$iteration-$RANDOM" \
     -d '{"action":"release"}' -o "$RESP_DIR/rel_sam.body" > "$RESP_DIR/rel_sam.code" &
   PID3=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/pass/pass_goedvolk_3/indicate" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_bram" \
+    -H "Cookie: $COOKIE_BRAM" \
     -H "Idempotency-Key: s1-rel-bram-$iteration-$RANDOM" \
     -d '{"action":"release"}' -o "$RESP_DIR/rel_bram.body" > "$RESP_DIR/rel_bram.code" &
   PID4=$!
@@ -149,28 +160,28 @@ for ((iteration=1; iteration<=ITERATIONS; iteration++)); do
   RESP_DIR=$(mktemp -d)
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_daan" \
+    -H "Cookie: $COOKIE_DAAN" \
     -H "Idempotency-Key: s2-join-daan-$iteration-$RANDOM" \
     -d '{"kind":"self"}' -o "$RESP_DIR/join_daan.body" > "$RESP_DIR/join_daan.code" &
   PID1=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_eva" \
+    -H "Cookie: $COOKIE_EVA" \
     -H "Idempotency-Key: s2-join-eva-$iteration-$RANDOM" \
     -d '{"kind":"self"}' -o "$RESP_DIR/join_eva.body" > "$RESP_DIR/join_eva.code" &
   PID2=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_noor" \
+    -H "Cookie: $COOKIE_NOOR" \
     -H "Idempotency-Key: s2-join-noor-$iteration-$RANDOM" \
     -d '{"kind":"self"}' -o "$RESP_DIR/join_noor.body" > "$RESP_DIR/join_noor.code" &
   PID3=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/pass/pass_goedvolk_1/indicate" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_sam" \
+    -H "Cookie: $COOKIE_SAM" \
     -H "Idempotency-Key: s2-rel-sam-$iteration-$RANDOM" \
     -d '{"action":"release"}' -o "$RESP_DIR/rel_sam.body" > "$RESP_DIR/rel_sam.code" &
   PID4=$!
@@ -245,14 +256,14 @@ for ((iteration=1; iteration<=ITERATIONS; iteration++)); do
   RESP_DIR=$(mktemp -d)
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/pass/pass_goedvolk_1/indicate" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_daan" \
+    -H "Cookie: $COOKIE_DAAN" \
     -H "Idempotency-Key: s3-giveback-daan-$iteration-$RANDOM" \
     -d '{"action":"giveBack"}' -o "$RESP_DIR/giveback_daan.body" > "$RESP_DIR/giveback_daan.code" &
   PID1=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_eva" \
+    -H "Cookie: $COOKIE_EVA" \
     -H "Idempotency-Key: s3-join-eva-$iteration-$RANDOM" \
     -d '{"kind":"self"}' -o "$RESP_DIR/join_eva.body" > "$RESP_DIR/join_eva.code" &
   PID2=$!
@@ -316,14 +327,14 @@ for ((iteration=1; iteration<=ITERATIONS; iteration++)); do
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_daan" \
+    -H "Cookie: $COOKIE_DAAN" \
     -H "Idempotency-Key: $REPLAY_KEY" \
     -d '{"kind":"self"}' -o "$RESP_DIR/replay_1.body" > "$RESP_DIR/replay_1.code" &
   PID1=$!
 
   curl -s -w "%{http_code}" -X POST "$BASE_URL/api/pool/$POOL_ID/queue" \
     -H "Content-Type: application/json" \
-    -H "Cookie: passie_member=member_goedvolk_daan" \
+    -H "Cookie: $COOKIE_DAAN" \
     -H "Idempotency-Key: $REPLAY_KEY" \
     -d '{"kind":"self"}' -o "$RESP_DIR/replay_2.body" > "$RESP_DIR/replay_2.code" &
   PID2=$!

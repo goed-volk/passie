@@ -30,8 +30,11 @@ Built for groups sharing season tickets at Dutch football clubs (Excelsior Rotte
 
 ## Authentication & Privacy Disclosure
 
-⚠️ **The MVP has NO passwords or cryptographic authentication.**
-Access is protected by Cloudflare Access at Worker scope (with a regional Bypass policy for the Netherlands during soft launch). Identity within the group is selected by members via a simple *"Wie ben jij?"* profile picker stored in a local HTTP-only session cookie (`passie_member`). Actions and physical pass transfers are socially accountable via an append-only activity timeline.
+Passie uses **Better Auth** for secure, passwordless authentication backed by Cloudflare D1 ([ADR 0014](docs/decisions/0014-identity-via-better-auth-on-d1.md)):
+- **Primary Authentication:** WebAuthn Passkeys (Touch ID, Face ID, or platform screen lock).
+- **Bootstrap & Fallback:** 6-digit Email One-Time Passcodes (OTP), valid for 10 minutes.
+- **Zero Public Sign-Up:** Accounts are pre-created and linked to group members by administrators. Uninvited visitors cannot self-register.
+- **Sessions:** Database-backed sessions stored in Cloudflare D1 with instant server-side revocation on deactivation or security events.
 
 Client-side product analytics and Web Vitals are sent via a first-party same-origin `/ingest` proxy with autocapture, heatmaps, and session recording strictly disabled. URLs are sanitized to route templates before leaving the client. Never place confidential or sensitive personal data into the application.
 
@@ -39,12 +42,16 @@ Client-side product analytics and Web Vitals are sent via a first-party same-ori
 
 ## Environment Variables & Secrets
 
-Passie uses Cloudflare runtime environment variables (`vars` / `.dev.vars`) and secrets for configuration (see ADR 0013). Zero API keys are inlined at build time.
+Passie uses Cloudflare runtime environment variables (`vars` / `.dev.vars`) and secrets for configuration (see ADR 0013 and ADR 0014). Zero API keys are inlined at build time.
 
 | Variable | Target | Required? | Description |
 | :--- | :--- | :---: | :--- |
+| `BETTER_AUTH_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required | Secret encryption key for Better Auth tokens and cookies (min 32 chars). |
+| `PASSIE_PUBLIC_ORIGIN` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Required | Base public URL (e.g. `https://passie.goedvolk.org` or `http://localhost:3000`). Used for WebAuthn RP origin. |
+| `PASSIE_MAILER` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Mail transport: `cloudflare` (uses Worker `EMAIL` binding) or `console` (local dev fallback). |
+| `PASSIE_MAIL_FROM` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Sender address for OTP emails (defaults to `inloggen@passie.goedvolk.org`). |
+| `PASSIE_DEV_LOGIN` | `.dev.vars` (local) | Dev only | Set to `1` on localhost to enable `/api/dev/login-as` dev authentication harness. |
 | `PASSIE_CRON_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for HTTP cron route | Bearer secret protecting the `/api/cron/ingest` fixture ingestion endpoint (returns 503 if unconfigured). |
-| `PASSIE_ADMIN_PASSWORD` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required for `/beheer` | Shared password protecting the member administration area (`/beheer`, returns 503 if unconfigured). |
 | `POSTHOG_KEY` | `.dev.vars` (local) / `wrangler secret put` (prod) | Optional | PostHog project API key. If left blank or unset, all analytics tracking is completely disabled. |
 | `POSTHOG_HOST` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | PostHog host URL (defaults to `https://eu.i.posthog.com`). |
 | `PASSIE_ENV` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Environment tag: `development` or `production`. |
@@ -100,12 +107,69 @@ cp .dev.vars.example .dev.vars
    .kilo/run-script.sh
    ```
 
-5. **First-Time User Walkthrough:**
+5. **First-Time User Walkthrough & Login:**
    - Open [http://localhost:3000](http://localhost:3000) in your browser.
-   - You will automatically be redirected to `/wie-ben-jij` because no session cookie exists.
-   - Select a member profile (e.g. **Sam** or **Ilse**) to set your identity cookie.
-   - On the home screen (`/`), indicate pass availability, join the queue, or transfer physical tickets.
-   - Switch identity at any time via `/instellingen` or by visiting `/wie-ben-jij`.
+   - You will automatically be redirected to `/inloggen` because no active session exists.
+   - Enter `sam@example.com` (pre-seeded local admin) and click **Stuur code**.
+   - Check the server console log for the 6-digit OTP code (`[mailer:console] Je inlogcode voor Passie is: 123456`).
+   - Enter the code to sign in. When prompted, you can enroll your device passkey (Touch ID, Face ID, etc.) for passwordless one-tap login.
+   - Once signed in as an admin, you can access the admin panel at `/beheer` to invite, link, or reorder members.
+   - Manage your sessions or passkeys at `/instellingen`.
+
+---
+
+## Admin User Bootstrapping
+
+Passie has zero public registration: members must be pre-created and linked by an administrator.
+
+### Local Development Admin
+When you run `.kilo/setup-script.sh` or `pnpm seed:example`, **Sam** (`sam@example.com`, `slug: "sam"`) is automatically provisioned as a group administrator with an active `auth_user` link.
+
+To grant administrator rights to another local member or link an email:
+```bash
+# Grant group admin rights to a member:
+pnpm tsx scripts/grant-admin.ts --member daan
+
+# Link an email address to a member:
+pnpm tsx scripts/link-member-emails.ts --member daan --email daan@example.com
+```
+
+### Production First Admin (Cloudflare D1)
+
+To create the initial admin user in production, choose one of two paths:
+
+#### Path A: Via `seed/group.local.json` (Recommended for initial group setup)
+1. In your gitignored `seed/group.local.json`, add `"email"` and `"role": "admin"` to your member entry:
+   ```json
+   {
+     "slug": "jouwnaam",
+     "displayName": "Jouw Naam",
+     "email": "jouw-email@voorbeeld.nl",
+     "role": "admin",
+     ...
+   }
+   ```
+2. Run the remote seed command (which creates the member, `auth_user`, and link on remote D1):
+   ```bash
+   pnpm seed:local --remote --confirm
+   ```
+
+#### Path B: Direct Cloudflare CLI commands (Existing production database)
+If members were already seeded without email links on remote D1:
+```bash
+# 1. Insert auth_user on remote D1:
+pnpm exec wrangler d1 execute passie --remote --command "
+  INSERT INTO auth_user (id, name, email, email_verified, role, banned, created_at, updated_at)
+  VALUES ('user_admin_1', 'Jouw Naam', 'jouw-email@voorbeeld.nl', 1, 'admin', 0, cast(unixepoch('subsecond')*1000 as integer), cast(unixepoch('subsecond')*1000 as integer));
+"
+
+# 2. Link member and set group admin role:
+pnpm exec wrangler d1 execute passie --remote --command "
+  UPDATE members SET user_id = 'user_admin_1', role = 'admin' WHERE slug = 'jouwnaam';
+"
+```
+
+Once logged in at `https://passie.goedvolk.org/inloggen`, you can manage all other group members and their email addresses directly in the UI at `/beheer`.
 
 ---
 
@@ -208,12 +272,12 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
    pnpm deploy
    ```
 
-7. **Smoke-test the changed surface in production.** Admin auth can be verified without knowing the password — an unauthenticated admin API call returns `401` when `PASSIE_ADMIN_PASSWORD` is configured and `503` when it is missing:
+7. **Smoke-test the changed surface in production.** Admin auth can be verified by confirming unauthorized access returns `403` or `401`:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}\n" https://passie.goedvolk.org/api/admin/members      # expect 401
-   curl -s -o /dev/null -w "%{http_code}\n" https://passie.goedvolk.org/beheer/inloggen         # expect 200
+   curl -s -o /dev/null -w "%{http_code}\n" https://passie.goedvolk.org/api/admin/members      # expect 403
+   curl -s -o /dev/null -w "%{http_code}\n" https://passie.goedvolk.org/inloggen              # expect 200
    ```
-   Then confirm an actual login in the browser at `/beheer`.
+   Then confirm an actual login in the browser at `/inloggen` and navigate to `/beheer`.
 
 8. **Re-run the baseline query from step 5 and diff the counts** — they must be identical unless the release intentionally writes data.
 

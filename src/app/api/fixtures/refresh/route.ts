@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/server/db";
 import { getActingMember } from "@/server/actingMember";
+import { assertSameOrigin } from "@/server/http/assertSameOrigin";
 import {
   ingestClubFixtures,
   checkIngestCooldown,
@@ -61,6 +62,16 @@ export async function handleRefreshPost(d1Override?: D1Database) {
   }
 }
 
-export async function POST() {
+export async function POST(request?: Request) {
+  if (request) {
+    try {
+      assertSameOrigin(request);
+    } catch {
+      return NextResponse.json(
+        { ok: false, error: "FORBIDDEN", message: "Verboden verzoek." },
+        { status: 403 }
+      );
+    }
+  }
   return handleRefreshPost();
 }

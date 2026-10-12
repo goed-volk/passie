@@ -1,5 +1,8 @@
 import { sqliteTable, text, integer, uniqueIndex, index, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import { auth_user } from "./authSchema";
+
+export * from "./authSchema";
 
 export const clubs = sqliteTable("clubs", {
   id: text("id").primaryKey(),
@@ -58,6 +61,8 @@ export const groups = sqliteTable("groups", {
 export const members = sqliteTable("members", {
   id: text("id").primaryKey(),
   groupId: text("group_id").notNull().references(() => groups.id),
+  userId: text("user_id").references(() => auth_user.id),
+  role: text("role", { enum: ["admin", "member"] }).notNull().default("member"),
   slug: text("slug").notNull(),
   displayName: text("display_name").notNull(),
   initials: text("initials").notNull(),
@@ -67,6 +72,7 @@ export const members = sqliteTable("members", {
   createdAt: integer("created_at").notNull(),
 }, (table) => [
   uniqueIndex("members_group_slug_idx").on(table.groupId, table.slug),
+  uniqueIndex("members_user_group_idx").on(table.userId, table.groupId).where(sql`user_id IS NOT NULL`),
 ]);
 
 export const passes = sqliteTable("passes", {

@@ -78,7 +78,7 @@ describe("/ingest proxy route security & filtering", () => {
       headers: {
         "content-type": "application/json",
         "user-agent": "test-agent",
-        cookie: "passie_member=member_secret",
+        cookie: "passie_session=session_token_12345; passie_member=member_secret",
         authorization: "Bearer secret",
         "x-forwarded-for": "1.2.3.4",
         "cf-ray": "ray123",

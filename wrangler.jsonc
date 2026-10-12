@@ -31,6 +31,15 @@
       "migrations_dir": "drizzle"
     }
   ],
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": [
+        "inloggen@passie.goedvolk.org",
+        "noreply@passie.goedvolk.org"
+      ]
+    }
+  ],
   "triggers": {
     "crons": [
       "0 */6 * * *"

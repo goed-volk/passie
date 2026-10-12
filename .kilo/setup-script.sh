@@ -7,7 +7,9 @@ REPO_PATH="${REPO_PATH:-$WORKTREE_PATH}"
 echo "==> Setting up Passie in $WORKTREE_PATH (repo: $REPO_PATH)"
 
 # 1. Install dependencies
-corepack enable
+if command -v corepack >/dev/null 2>&1; then
+  corepack enable
+fi
 pnpm install --frozen-lockfile
 
 # 2. Copy private/local files if present in root and missing here

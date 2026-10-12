@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { DbClient } from "./db";
 import * as schema from "./schema";
 import type { AdminPrincipal } from "./adminAuth";
+import { updateMemberEmailAndSync } from "./authAdmin";
 import { deriveInitials, deriveSlugBase } from "@/lib/memberNames";
 
 export { deriveInitials, deriveSlugBase };
@@ -18,6 +19,9 @@ export interface AdminMemberListItem {
   createdAt: number;
   ownedPassLabels: string[];
   holdsPassLabels: string[];
+  userId?: string | null;
+  email?: string | null;
+  role?: string | null;
 }
 
 export const DISTINCT_AVATAR_COLORS = [
@@ -44,6 +48,8 @@ export interface CreateMemberInput {
   initials?: string;
   avatarColor?: string;
   sortOrder?: number;
+  email?: string;
+  role?: "admin" | "member";
 }
 
 export type MemberUpdatableField =
@@ -51,7 +57,9 @@ export type MemberUpdatableField =
   | "initials"
   | "avatarColor"
   | "sortOrder"
-  | "isActive";
+  | "isActive"
+  | "email"
+  | "role";
 
 export type DeactivatableCheckResult =
   | { ok: true }
@@ -151,6 +159,19 @@ export async function listAdminMembers(db: DbClient, groupId: string): Promise<A
     }
   }
 
+  const userIds = allMembers
+    .map((m) => m.userId)
+    .filter((id): id is string => Boolean(id));
+  const userMap = new Map<string, string>();
+  if (userIds.length > 0) {
+    const users = await db.query.auth_user.findMany({
+      where: inArray(schema.auth_user.id, userIds),
+    });
+    for (const u of users) {
+      userMap.set(u.id, u.email);
+    }
+  }
+
   return allMembers.map((m) => ({
     id: m.id,
     groupId: m.groupId,
@@ -163,6 +184,9 @@ export async function listAdminMembers(db: DbClient, groupId: string): Promise<A
     createdAt: m.createdAt,
     ownedPassLabels: ownerMap.get(m.id) ?? [],
     holdsPassLabels: holderMap.get(m.id) ?? [],
+    userId: m.userId,
+    email: m.userId ? userMap.get(m.userId) ?? null : null,
+    role: m.role,
   }));
 }
 
@@ -236,9 +260,49 @@ export async function createMember(
   }
 
   const now = Math.floor(Date.now() / 1000);
+  const statements: any[] = [];
+  let userId: string | null = null;
+
+  if (input.email && input.email.trim() !== "") {
+    const normalizedEmail = input.email.toLowerCase().trim();
+    const existingUser = await db.query.auth_user.findFirst({
+      where: eq(schema.auth_user.email, normalizedEmail),
+    });
+    if (existingUser) {
+      // Check if user is already linked to another member in the same group
+      const existingMember = await db.query.members.findFirst({
+        where: and(
+          eq(schema.members.groupId, groupId),
+          eq(schema.members.userId, existingUser.id)
+        ),
+      });
+      if (existingMember) {
+        throw new Error(`Email "${normalizedEmail}" is already linked to member "${existingMember.displayName}" in this group`);
+      }
+      userId = existingUser.id;
+    } else {
+      userId = crypto.randomUUID();
+      const userDate = new Date();
+      statements.push(
+        db.insert(schema.auth_user).values({
+          id: userId,
+          email: normalizedEmail,
+          name: input.displayName.trim(),
+          emailVerified: false,
+          role: "user",
+          banned: false,
+          createdAt: userDate,
+          updatedAt: userDate,
+        })
+      );
+    }
+  }
+
   const memberValues = {
     id: memberId,
     groupId,
+    userId,
+    role: input.role ?? "member",
     slug,
     displayName: input.displayName.trim(),
     initials,
@@ -257,13 +321,14 @@ export async function createMember(
     type: "member.created",
     payloadJson: JSON.stringify({
       actor: principal.subject,
-      method: principal.method,
       memberId,
       slug,
       displayName: memberValues.displayName,
       initials: memberValues.initials,
       avatarColor: memberValues.avatarColor,
       sortOrder: memberValues.sortOrder,
+      email: input.email ? input.email.trim() : null,
+      role: memberValues.role,
     }),
     idempotencyKey: null,
     createdAt: now,
@@ -272,7 +337,8 @@ export async function createMember(
   const insertMemberStmt = db.insert(schema.members).values(memberValues);
   const insertAuditStmt = db.insert(schema.activityEvents).values(auditEventValues);
 
-  await db.batch([insertMemberStmt, insertAuditStmt] as any);
+  statements.push(insertMemberStmt, insertAuditStmt);
+  await db.batch(statements as any);
 
   return memberValues;
 }
@@ -325,7 +391,6 @@ export async function reorderMembers(
       type: "members.reordered",
       payloadJson: JSON.stringify({
         actor: principal.subject,
-        method: principal.method,
         groupId,
         orderedMemberIds,
       }),
@@ -347,6 +412,8 @@ export async function updateMember(
     avatarColor: string;
     sortOrder: number;
     isActive: number;
+    email: string;
+    role: "admin" | "member";
   }>,
   allowedFields: MemberUpdatableField[],
   principal: AdminPrincipal
@@ -398,6 +465,19 @@ export async function updateMember(
           updateData.isActive = patch.isActive;
           changedFields.push("isActive");
         }
+      } else if (field === "role" && (patch.role === "admin" || patch.role === "member")) {
+        if (patch.role !== existing.role) {
+          updateData.role = patch.role;
+          changedFields.push("role");
+        }
+      } else if (field === "email" && typeof patch.email === "string" && patch.email.trim() !== "") {
+        await updateMemberEmailAndSync(
+          db,
+          memberId,
+          patch.email,
+          (patch.displayName as string) || existing.displayName
+        );
+        changedFields.push("email");
       }
     }
   }
@@ -416,7 +496,6 @@ export async function updateMember(
     type: "member.updated",
     payloadJson: JSON.stringify({
       actor: principal.subject,
-      method: principal.method,
       memberId,
       changed: changedFields,
       patch: updateData,
@@ -425,14 +504,20 @@ export async function updateMember(
     createdAt: now,
   };
 
-  const updateStmt = db
-    .update(schema.members)
-    .set(updateData)
-    .where(eq(schema.members.id, memberId));
+  const statements: any[] = [];
+  if (Object.keys(updateData).length > 0) {
+    statements.push(
+      db
+        .update(schema.members)
+        .set(updateData)
+        .where(eq(schema.members.id, memberId))
+    );
+  }
 
   const auditStmt = db.insert(schema.activityEvents).values(auditEventValues);
+  statements.push(auditStmt);
 
-  await db.batch([updateStmt, auditStmt] as any);
+  await db.batch(statements as any);
 
   const updatedMember = await db.query.members.findFirst({
     where: eq(schema.members.id, memberId),

@@ -33,6 +33,12 @@ This document tracks verified external documentation, checked dates, and known p
   - URL: `https://nextjs.org/docs/app`
   - Notes: Using Next.js 16 App Router on Cloudflare Workers.
 
+- **Better Auth & Passkeys on Cloudflare D1 (Verified 2026-10-11)**
+  - URL: `https://better-auth.com` | `/docs/concepts/session-management` | `/docs/plugins/passkey` | `/docs/plugins/email-otp`
+  - Integration: Next.js App Router on Cloudflare Workers (`@opennextjs/cloudflare`) with Cloudflare D1 (`@better-auth/drizzle-adapter`).
+  - Architecture: ADR 0014. Zero public sign-up via invitation gates; database-backed sessions; WebAuthn passkeys (`residentKey: "required"`, `userVerification: "required"`) + email OTP fallback; transactional isolation (`transaction: false` for D1); timestamp exception (`timestamp_ms` for `auth_*` tables).
+  - Minimal Footprint: Bounded route profile via `disabledPaths`; subpath imports (`better-auth/minimal`, `better-auth/plugins/email-otp`, `@better-auth/passkey`).
+
 - **shadcn/ui & Lucide Icons**
   - URL: `https://ui.shadcn.com/docs/installation/next` | `https://lucide.dev/icons/`
 

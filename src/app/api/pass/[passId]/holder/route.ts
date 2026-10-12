@@ -7,6 +7,7 @@ import * as schema from "@/server/schema";
 import { mutate } from "@/server/commit";
 import { buildPoolSnapshot } from "@/server/snapshot";
 import { ensurePool, findNextHomeFixture } from "@/server/ensurePool";
+import { assertSameOrigin } from "@/server/http/assertSameOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,15 @@ export async function POST(
   request: Request,
   props: { params: Promise<{ passId: string }> }
 ) {
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return NextResponse.json(
+      { error: "Forbidden", code: "FORBIDDEN" },
+      { status: 403 }
+    );
+  }
+
   const { passId } = await props.params;
   const db = await getDb();
   const actor = await getActingMember(db);

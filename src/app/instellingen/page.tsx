@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ExternalLink, Lock, Palette, ShieldAlert, User } from "lucide-react";
 import { t } from "@/i18n/t";
+import { SecuritySettings } from "@/components/auth/SecuritySettings";
 
 export const dynamic = "force-dynamic";
 
@@ -52,45 +53,31 @@ export default async function InstellingenPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {actingMember ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar
-                    className="h-10 w-10"
-                    style={{ backgroundColor: actingMember.avatarColor }}
-                  >
-                    <AvatarFallback style={{ backgroundColor: actingMember.avatarColor }}>
-                      {actingMember.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {actingMember.displayName}
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      {t("selectedParticipant")}
-                    </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Avatar
+                  className="h-10 w-10"
+                  style={{ backgroundColor: actingMember.avatarColor }}
+                >
+                  <AvatarFallback style={{ backgroundColor: actingMember.avatarColor }}>
+                    {actingMember.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                    {actingMember.displayName}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    {actingMember.email || t("selectedParticipant")}
                   </div>
                 </div>
-
-                <Link href="/wie-ben-jij">
-                  <Button size="sm" variant="outline" className="text-xs dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                    {t("switchMember")}
-                  </Button>
-                </Link>
               </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500 dark:text-slate-400">{t("noProfileChosen")}</span>
-                <Link href="/wie-ben-jij">
-                  <Button size="sm" variant="default" className="text-xs">
-                    {t("chooseProfile")}
-                  </Button>
-                </Link>
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Auth & Security (Passkeys, Sessions, Sign Out) */}
+        <SecuritySettings userEmail={actingMember.email} />
 
         {/* Privacy & Info */}
         <Card className="dark:bg-[#131B2E] dark:border-slate-800">
@@ -102,11 +89,10 @@ export default async function InstellingenPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
             <p>{t("privacyText")}</p>
-            <p>{t("privacyCommunityNote")}</p>
           </CardContent>
         </Card>
 
-        {/* Beheer / Admin */}
+        {/* Beheer / Admin (only if group admin or platform admin) */}
         <Card className="dark:bg-[#131B2E] dark:border-slate-800">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center space-x-2 text-slate-600 dark:text-slate-300">
@@ -129,7 +115,7 @@ export default async function InstellingenPage() {
         {/* Version info */}
         <Card className="dark:bg-[#131B2E] dark:border-slate-800">
           <CardContent className="p-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>Passie MVP v0.1.0 ({process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "dev"})</span>
+            <span>Passie ({process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "dev"})</span>
             <a
               href="https://github.com/jvanu/passie"
               target="_blank"

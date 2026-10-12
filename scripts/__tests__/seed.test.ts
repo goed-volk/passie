@@ -67,7 +67,7 @@ describe("generateSeedSql", () => {
     expect(sql).toContain("INSERT INTO members");
     expect(sql).toContain("'member_goedvolk_bram'");
     expect(sql).toContain("'member_goedvolk_daan'");
-    expect(sql).toContain("ON CONFLICT(group_id, slug) DO NOTHING");
+    expect(sql).toContain("ON CONFLICT(group_id, slug) DO UPDATE SET");
 
     expect(sql).toContain("INSERT INTO passes");
     expect(sql).toContain("'pass_goedvolk_1'");

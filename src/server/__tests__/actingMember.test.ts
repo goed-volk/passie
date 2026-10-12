@@ -1,20 +1,11 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
-import { getActingMemberId, getActingMember, requireActingMember, COOKIE_NAME } from "../actingMember";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { getActingMemberId, getActingMember, requireActingMember } from "../actingMember";
 import { createTestDb } from "./helpers/testDb";
 import type { DbClient } from "../db";
 import * as schema from "../schema";
 import { eq } from "drizzle-orm";
 import type { PlatformProxy } from "wrangler";
-
-// Mock next/headers
-const mockGetCookie = vi.fn();
-const mockDeleteCookie = vi.fn();
-vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: mockGetCookie,
-    delete: mockDeleteCookie,
-  }),
-}));
+import { getAuth } from "../auth";
 
 const mockRedirect = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -24,14 +15,78 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-describe("actingMember tests", () => {
+describe("actingMember session tests", () => {
   let proxy: PlatformProxy<{ DB: D1Database }>;
   let db: DbClient;
+  let activeUserId: string;
+  let unlinkedUserId: string;
+  let activeHeaders: Headers;
+  let unlinkedHeaders: Headers;
 
   beforeAll(async () => {
     const res = await createTestDb();
     proxy = res.proxy;
     db = res.db;
+
+    activeUserId = "user_acting_active";
+    unlinkedUserId = "user_acting_unlinked";
+    const now = new Date();
+
+    const existingSam = await db.query.auth_user.findFirst({
+      where: eq(schema.auth_user.email, "sam@example.com"),
+    });
+
+    if (existingSam) {
+      activeUserId = existingSam.id;
+    } else {
+      activeUserId = "user_acting_active";
+      await db.insert(schema.auth_user).values({
+        id: activeUserId,
+        email: "sam@example.com",
+        name: "Sam",
+        emailVerified: true,
+        role: "admin",
+        banned: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const existingOutsider = await db.query.auth_user.findFirst({
+      where: eq(schema.auth_user.email, "outsider@example.com"),
+    });
+
+    if (existingOutsider) {
+      unlinkedUserId = existingOutsider.id;
+    } else {
+      unlinkedUserId = "user_acting_unlinked";
+      await db.insert(schema.auth_user).values({
+        id: unlinkedUserId,
+        email: "outsider@example.com",
+        name: "Outsider",
+        emailVerified: true,
+        role: "user",
+        banned: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await db
+      .update(schema.members)
+      .set({ userId: activeUserId })
+      .where(eq(schema.members.slug, "sam"));
+
+    const auth = await getAuth({ db });
+    const ctx = (await (auth as any).$context) as {
+      test: { login: (opts: { userId: string }) => Promise<{ headers: Headers }> };
+    };
+
+    const activeLogin = await ctx.test.login({ userId: activeUserId });
+    activeHeaders = activeLogin.headers;
+
+    const unlinkedLogin = await ctx.test.login({ userId: unlinkedUserId });
+    unlinkedHeaders = unlinkedLogin.headers;
   });
 
   afterAll(async () => {
@@ -40,97 +95,38 @@ describe("actingMember tests", () => {
     }
   });
 
-  beforeEach(() => {
-    mockGetCookie.mockReset();
-    mockDeleteCookie.mockReset();
-    mockRedirect.mockReset();
-  });
+  it("returns null when session is absent", async () => {
+    const emptyHeaders = new Headers();
+    const member = await getActingMember(db, emptyHeaders);
+    expect(member).toBeNull();
 
-  it("returns null when cookie is absent", async () => {
-    mockGetCookie.mockReturnValue(undefined);
-
-    const memberId = await getActingMemberId();
+    const memberId = await getActingMemberId(db, emptyHeaders);
     expect(memberId).toBeNull();
-
-    const member = await getActingMember(db);
-    expect(member).toBeNull();
   });
 
-  it("returns member reference when cookie is set to an active member", async () => {
-    mockGetCookie.mockImplementation((name: string) => {
-      if (name === COOKIE_NAME) {
-        return { name: COOKIE_NAME, value: "member_goedvolk_sam" };
-      }
-      return undefined;
-    });
-
-    const memberId = await getActingMemberId();
-    expect(memberId).toBe("member_goedvolk_sam");
-
-    const member = await getActingMember(db);
+  it("returns member reference when session is valid and linked to active member", async () => {
+    const member = await getActingMember(db, activeHeaders);
     expect(member).not.toBeNull();
-    expect(member?.id).toBe("member_goedvolk_sam");
     expect(member?.displayName).toBe("Sam");
-    expect(member?.slug).toBe("sam");
-    expect(member?.avatarColor).toBe("#E30613");
+    expect(member?.email).toBe("sam@example.com");
 
-    const required = await requireActingMember(db);
-    expect(required.id).toBe("member_goedvolk_sam");
-    expect(mockRedirect).not.toHaveBeenCalled();
+    const memberId = await getActingMemberId(db, activeHeaders);
+    expect(memberId).toBe(member?.id);
+
+    const required = await requireActingMember(db, activeHeaders);
+    expect(required.id).toBe(member?.id);
   });
 
-  it("returns null and redirects to /wie-ben-jij when member does not exist in DB", async () => {
-    mockGetCookie.mockImplementation((name: string) => {
-      if (name === COOKIE_NAME) {
-        return { name: COOKIE_NAME, value: "member_non_existent" };
-      }
-      return undefined;
-    });
-
-    const member = await getActingMember(db);
-    expect(member).toBeNull();
-
-    await expect(requireActingMember(db)).rejects.toThrow("NEXT_REDIRECT:/wie-ben-jij");
-    expect(mockRedirect).toHaveBeenCalledWith("/wie-ben-jij");
-    expect(mockDeleteCookie).toHaveBeenCalledWith(COOKIE_NAME);
+  it("redirects to /inloggen when requireActingMember is called without session", async () => {
+    const emptyHeaders = new Headers();
+    await expect(requireActingMember(db, emptyHeaders)).rejects.toThrow(
+      "NEXT_REDIRECT:/inloggen"
+    );
   });
 
-  it("returns null and redirects to /wie-ben-jij when member exists but isActive is 0", async () => {
-    const inactiveMemberId = "member_goedvolk_inactive_test";
-    const now = Math.floor(Date.now() / 1000);
-
-    await db
-      .insert(schema.members)
-      .values({
-        id: inactiveMemberId,
-        groupId: "group_goedvolk",
-        slug: "inactive_user",
-        displayName: "Inactive User",
-        initials: "IU",
-        avatarColor: "#999999",
-        isActive: 0,
-        sortOrder: 99,
-        createdAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [schema.members.groupId, schema.members.slug],
-        set: { isActive: 0 },
-      });
-
-    mockGetCookie.mockImplementation((name: string) => {
-      if (name === COOKIE_NAME) {
-        return { name: COOKIE_NAME, value: inactiveMemberId };
-      }
-      return undefined;
-    });
-
-    const member = await getActingMember(db);
-    expect(member).toBeNull();
-
-    await expect(requireActingMember(db)).rejects.toThrow("NEXT_REDIRECT:/wie-ben-jij");
-    expect(mockRedirect).toHaveBeenCalledWith("/wie-ben-jij");
-
-    // Clean up
-    await db.delete(schema.members).where(eq(schema.members.id, inactiveMemberId));
+  it("redirects to /geen-toegang when user has no active group membership", async () => {
+    await expect(requireActingMember(db, unlinkedHeaders)).rejects.toThrow(
+      "NEXT_REDIRECT:/geen-toegang"
+    );
   });
 });

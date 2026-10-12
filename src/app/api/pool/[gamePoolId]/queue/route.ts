@@ -4,6 +4,7 @@ import { getDb } from "@/server/db";
 import { getActingMember } from "@/server/actingMember";
 import { mutate } from "@/server/commit";
 import { buildPoolSnapshot } from "@/server/snapshot";
+import { assertSameOrigin } from "@/server/http/assertSameOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,15 @@ export async function POST(
   request: Request,
   props: { params: Promise<{ gamePoolId: string }> }
 ) {
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return NextResponse.json(
+      { error: "Forbidden", code: "FORBIDDEN" },
+      { status: 403 }
+    );
+  }
+
   const { gamePoolId } = await props.params;
   const db = await getDb();
   const actor = await getActingMember(db);

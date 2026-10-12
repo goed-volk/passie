@@ -1,7 +1,7 @@
 # ADR 0004: No Authentication in MVP (Cookie Identity Selection)
 
 ## Status
-Accepted
+Superseded by ADR 0014
 
 ## Context
 The MVP is used exclusively by a close-knit group of ~15 friends. Complex password management, OAuth providers, or magic links create unnecessary friction for fast matchday polling.

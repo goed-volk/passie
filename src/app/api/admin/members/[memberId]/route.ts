@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/server/db";
 import { requireAdminApi, assertCapability } from "@/server/adminAuth";
 import { updateMember, type MemberUpdatableField } from "@/server/adminMembers";
+import { assertSameOrigin } from "@/server/http/assertSameOrigin";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ const UpdateMemberSchema = z.object({
   avatarColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.union([z.literal(0), z.literal(1)]).optional(),
+  email: z.string().email().optional(),
+  role: z.enum(["admin", "member"]).optional(),
 });
 
 const ADMIN_ALLOWED_FIELDS: MemberUpdatableField[] = [
@@ -20,12 +23,20 @@ const ADMIN_ALLOWED_FIELDS: MemberUpdatableField[] = [
   "avatarColor",
   "sortOrder",
   "isActive",
+  "email",
+  "role",
 ];
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ memberId: string }> }
 ) {
+  try {
+    assertSameOrigin(request);
+  } catch {
+    return NextResponse.json({ error: "Forbidden: cross-origin request rejected" }, { status: 403 });
+  }
+
   const auth = await requireAdminApi();
   if (auth instanceof Response) {
     return auth;

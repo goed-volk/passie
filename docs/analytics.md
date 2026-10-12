@@ -45,7 +45,13 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | Event Name | Category | Trigger Location | Allowed Payload Properties | PII Status |
 | --- | --- | --- | --- | --- |
 | `$pageview` | Navigation | SPA route transition (`history_change`) | `$current_url`, `$pathname` (both templated) | Sanitized (no query params, no IDs) |
-| `member.selected` | Identity | Explicit avatar selection in `/wie-ben-jij` | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
+| `member.selected` | Identity | Legacy identity selection | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
+| `auth.sign_in_otp_requested` | Auth | Email OTP requested | _None_ | Clean (email omitted) |
+| `auth.sign_in_success` | Auth | Successful sign-in | `method` (`otp` or `passkey`) | Clean |
+| `auth.sign_out` | Auth | Explicit user sign-out | _None_ | Clean |
+| `auth.passkey_registered` | Auth | New passkey enrolled | _None_ | Clean |
+| `auth.passkey_deleted` | Auth | Passkey deleted by user | _None_ | Clean |
+| `auth.sessions_revoked` | Auth | Other sessions revoked | _None_ | Clean |
 | `pass.indicate_keep` | Matchday | Owner indicates attendance (*"Ik ga"*) | `hoursToKickoffBucket`, `passCount` | Clean |
 | `pass.indicate_release` | Matchday | Owner releases pass (*"Pas vrijgeven"*) | `hoursToKickoffBucket`, `passCount` | Clean |
 | `pass.reclaim` | Matchday | Owner reclaims assigned pass (*"Pas Terugclaimen"*) | `hoursToKickoffBucket` | Clean |

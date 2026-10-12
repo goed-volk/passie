@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AdminMemberDialog } from "@/components/admin/AdminMemberDialog";
 import { t } from "@/i18n/t";
 import { trackAdminMembersReordered } from "@/lib/posthog";
+import { authClient } from "@/lib/authClient";
 import type { AdminMemberListItem } from "@/server/adminMembers";
 
 interface BeheerDashboardClientProps {
@@ -46,8 +47,8 @@ export function BeheerDashboardClient({ members: initialMembers }: BeheerDashboa
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await fetch("/api/admin/session", { method: "DELETE" });
-      router.push("/instellingen");
+      await authClient.signOut();
+      router.push("/inloggen");
       router.refresh();
     } catch {
       setLoggingOut(false);

@@ -9,13 +9,10 @@ import * as schema from "@/server/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import type { PlatformProxy } from "wrangler";
 import { cleanupTestPoolData } from "@/server/__tests__/helpers/testDb";
-import { COOKIE_NAME } from "@/server/actingMember";
 
-const mockGetCookie = vi.fn();
-vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: mockGetCookie,
-  }),
+const mockGetActingMember = vi.fn();
+vi.mock("@/server/actingMember", () => ({
+  getActingMember: () => mockGetActingMember(),
 }));
 
 describe("/api/fixtures/refresh route tests", () => {
@@ -41,7 +38,7 @@ describe("/api/fixtures/refresh route tests", () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks();
-    mockGetCookie.mockReset();
+    mockGetActingMember.mockReset();
     setLastIngestCompletedAt(null);
     const icsFixtures = await db.query.fixtures.findMany({
       where: eq(schema.fixtures.source, "ics"),
@@ -69,7 +66,7 @@ describe("/api/fixtures/refresh route tests", () => {
   });
 
   it("POST returns 401 when unauthenticated", async () => {
-    mockGetCookie.mockReturnValue(undefined);
+    mockGetActingMember.mockResolvedValue(null);
 
     const res = await handleRefreshPost(proxy.env.DB);
     expect(res.status).toBe(401);
@@ -79,11 +76,13 @@ describe("/api/fixtures/refresh route tests", () => {
   });
 
   it("POST triggers manual fetch and returns 200 on first call, 429 on immediate second call when authenticated", async () => {
-    mockGetCookie.mockImplementation((name: string) => {
-      if (name === COOKIE_NAME) {
-        return { name: COOKIE_NAME, value: "member_goedvolk_sam" };
-      }
-      return undefined;
+    mockGetActingMember.mockResolvedValue({
+      id: "member_goedvolk_sam",
+      groupId: "group_goedvolk",
+      displayName: "Sam",
+      slug: "sam",
+      initials: "S",
+      avatarColor: "#E30613",
     });
 
     vi.spyOn(global, "fetch").mockResolvedValue({

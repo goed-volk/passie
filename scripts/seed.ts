@@ -37,6 +37,8 @@ export interface SeedMember {
   initials?: string;
   avatarColor: string;
   sortOrder?: number;
+  email?: string;
+  role?: "admin" | "member";
 }
 
 export interface SeedPass {
@@ -131,8 +133,9 @@ ON CONFLICT(slug) DO UPDATE SET
     const sortOrder = m.sortOrder ?? index + 1;
     memberMap.set(m.slug, memberId);
 
+    const role = m.role ?? "member";
     statements.push(`
-INSERT INTO members (id, group_id, slug, display_name, initials, avatar_color, is_active, sort_order, created_at)
+INSERT INTO members (id, group_id, slug, display_name, initials, avatar_color, is_active, sort_order, role, created_at)
 VALUES (
   ${sqlEscape(memberId)},
   ${sqlEscape(groupId)},
@@ -142,9 +145,11 @@ VALUES (
   ${sqlEscape(m.avatarColor)},
   1,
   ${sortOrder},
+  ${sqlEscape(role)},
   ${now}
 )
-ON CONFLICT(group_id, slug) DO NOTHING;
+ON CONFLICT(group_id, slug) DO UPDATE SET
+  role = excluded.role;
     `.trim());
   }
 
@@ -340,6 +345,7 @@ export async function runSeed(args = process.argv.slice(2)) {
     const initials = m.initials ?? m.displayName.slice(0, 2).toUpperCase();
     const sortOrder = m.sortOrder ?? index + 1;
 
+    const role = m.role ?? "member";
     await db
       .insert(schema.members)
       .values({
@@ -351,9 +357,43 @@ export async function runSeed(args = process.argv.slice(2)) {
         avatarColor: m.avatarColor,
         isActive: 1,
         sortOrder,
+        role,
         createdAt: now,
       })
-      .onConflictDoNothing();
+      .onConflictDoUpdate({
+        target: [schema.members.groupId, schema.members.slug],
+        set: {
+          role,
+        },
+      });
+
+    if (m.email) {
+      const normalizedEmail = m.email.toLowerCase().trim();
+      let user = await db.query.auth_user.findFirst({
+        where: eq(schema.auth_user.email, normalizedEmail),
+      });
+
+      if (!user) {
+        const userId = crypto.randomUUID();
+        const userDate = new Date();
+        await db.insert(schema.auth_user).values({
+          id: userId,
+          email: normalizedEmail,
+          name: m.displayName,
+          emailVerified: true,
+          role: m.role === "admin" ? "admin" : "user",
+          banned: false,
+          createdAt: userDate,
+          updatedAt: userDate,
+        });
+        user = { id: userId, email: normalizedEmail, name: m.displayName } as any;
+      }
+
+      await db
+        .update(schema.members)
+        .set({ userId: user!.id })
+        .where(eq(schema.members.id, memberId));
+    }
 
     memberMap.set(m.slug, memberId);
   }

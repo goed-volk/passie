@@ -33,9 +33,9 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Status:* **Partially delivered (v0.1.1):** Member creation, profile editing, distinct avatar color assignment, visual drag-and-drop sort ordering, and guarded deactivation. Pass CRUD and ownership management are planned for a subsequent iteration.
   - *Technical Notes:* Detailed constraints for pass CRUD and self-service sequencing are documented in [`docs/future-architecture.md#2-member--pass-administration-beheer`](docs/future-architecture.md#2-member--pass-administration-beheer).
 
-- **Verified Identity via Cloudflare Access (v0.2):**
-  - *Description:* Authenticate members seamlessly via email one-time PIN or SSO allowlist, replacing the local unauthenticated picker for production deployments while keeping login frictionless.
-  - *Status:* Planned. Architecture documented in [`docs/future-architecture.md#3-verified-identity-via-cloudflare-access-for-workers-v02`](docs/future-architecture.md#3-verified-identity-via-cloudflare-access-for-workers-v02).
+- **Verified Identity via Better Auth on D1 (ADR 0014):**
+  - *Description:* Authenticate members securely via WebAuthn passkeys (Face ID, Touch ID, platform lock) and email OTP, replacing the local unauthenticated picker. Full database-backed sessions on Cloudflare D1 with instant revocation and role-based `/beheer` access.
+  - *Status:* **Delivered (v0.2.0).** Architecture documented in [`docs/decisions/0014-identity-via-better-auth-on-d1.md`](docs/decisions/0014-identity-via-better-auth-on-d1.md).
 
 - **Matchday Deadline Reminders:**
   - *Description:* Automated notifications (e.g. WhatsApp webhook, web push) sent to pass owners who haven't indicated attendance by `deadline - 24h`.

@@ -11,6 +11,9 @@ export interface MemberRef {
   initials: string;
   avatarColor: string;
   slug: string;
+  role?: "admin" | "member";
+  email?: string;
+  userId?: string | null;
 }
 
 export interface PoolSnapshot {

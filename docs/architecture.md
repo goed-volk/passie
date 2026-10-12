@@ -92,10 +92,14 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - In MVP, pass names can be amended by updating `seed/group.local.json` and running `pnpm seed:local` (or direct D1 `UPDATE passes SET label = ?`). Future admin UI will expose web-based pass editing.
 
 ### Member Administration & Passless Members
-- Group members are managed via the password-protected admin interface (`/beheer`, gated by `PASSIE_ADMIN_PASSWORD`).
-- **Passless Members / Guest Members:** A member does not need to own a pass (`pass_owners`). Passless members can select their identity in `/wie-ben-jij`, request seats on matchdays via the queue (`JoinQueue`), receive allocated passes, and partake in physical card handovers.
-- **Direct Member Writes:** Member additions and edits (`src/server/adminMembers.ts`) bypass `mutate()` and execute direct guarded D1 batch writes. `members` sits outside the `GamePoolState` aggregate, carries no `version` column, and has no FCFS queue ordering semantics.
-- **Insert-Only Seed Durability:** To protect admin renames and profile updates against `pnpm seed:local` or worktree initialization, member seeding uses `ON CONFLICT(group_id, slug) DO NOTHING`. The database is authoritative for member attributes post-bootstrap.
+- Group members are managed via the role-gated admin interface (`/beheer`), accessible to group administrators (`members.role = 'admin'`) and platform administrators (`auth_user.role = 'admin'`).
+- **Passless Members / Guest Members:** A member does not need to own a pass (`pass_owners`). Passless members can sign in via email OTP or passkey, request seats on matchdays via the queue (`JoinQueue`), receive allocated passes, and partake in physical card handovers.
+- **Direct Member & Auth Writes:** Member additions/edits (`src/server/adminMembers.ts`) and auth user provisioning (`src/server/authAdmin.ts`) bypass `mutate()` and execute direct guarded D1 batch writes. `members` and `auth_*` sit outside the `GamePoolState` aggregate root, carry no pool `version` column, and have no FCFS queue ordering semantics.
+- **Insert-Only Seed Durability:** To protect admin renames and profile updates against `pnpm seed:local` or worktree initialization, member seeding uses `ON CONFLICT(group_id, slug) DO UPDATE SET role = excluded.role`. The database is authoritative for member attributes post-bootstrap.
+- **Admin Bootstrapping & Operator Scripts:** The initial group administrator is seeded via `seed/group.local.json` (or `seed/group.example.json` in dev). Administrators can also be granted via CLI scripts:
+  - `pnpm tsx scripts/grant-admin.ts --member <slug> [--platform]`
+  - `pnpm tsx scripts/link-member-emails.ts --member <slug> --email <email>`
+  Subsequent members and email linkages are managed directly via `/beheer`.
 
 ---
 
@@ -107,7 +111,7 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - **Dynamic Contextual Action Bars & Deadline Reminders:** Bottom navigation surfaces priority actions (owner indication *"Ik ga"* / *"Pas vrijgeven"* when unindicated, or seat request *"Ik wil een pas"* / *"Ik neem iemand mee"* when indicated). Owners with unindicated passes receive prominent contextual deadline reminder banners with formatted Dutch timestamps. Action buttons consistently carry the solid club primary color (`--club-primary`) for *"Ik ga"* (visiting your club) across both cards and bottom sheets, with emerald tokens for *"Pas vrijgeven"*.
 - **Interactive Physical Possession Handover:** Tappable holder pill affordance allows group members to immediately record physical pass transfers from matchday cards or detail views.
 - User copy strictly resolved via `src/i18n/` dictionary.
-- Cookie-based session identity (`passie_member`) with `/wie-ben-jij` picker.
+- **Authentication & Verified Identity:** Better Auth session authentication (WebAuthn passkeys and email OTP; ADR 0014). Acting member resolved server-side per request via `requireActingMember()`.
 - **Privacy-Preserving Telemetry & PostHog Proxy:** Client-side product analytics and error tracking via PostHog EU cloud reverse proxied through same-origin `/ingest`. Comprehensive taxonomy, identity lifecycle, URL sanitization rules, and HogQL query recipes are documented in [`docs/analytics.md`](analytics.md).
 
 ---

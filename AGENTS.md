@@ -10,8 +10,9 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
    - Absolutely no `next/*`, no Drizzle ORM, no `process.env`, no `Date.now()`, no `Math.random()`, no `crypto.randomUUID()`.
    - All time values, identifiers, and actor contexts must be passed as explicit parameters into reducer functions.
 2. **All DB mutations go through `mutate()`:**
-   - Never write directly to Cloudflare D1 from a React Server Component, Client Component, or API route handler.
+   - Never write directly to Cloudflare D1 from a React Server Component, Client Component, or API route handler for matchday pool state.
    - Use the pure reducer + optimistic concurrency (`version` column guard) + D1 atomic `batch()` mutation pattern in `src/server/commit.ts`.
+   - *Exception (ADR 0014 & ADR 0009):* `auth_*` tables (managed by Better Auth and `src/server/authAdmin.ts`) and member administration (`src/server/adminMembers.ts`) execute direct Drizzle/D1 batch writes outside `mutate()` as they sit outside the `GamePoolState` concurrency root.
 3. **Queue order is strictly monotonic:**
    - Ordering is `ORDER BY queue_entries.id ASC` (SQLite `AUTOINCREMENT`).
    - Never order queue entries by wall-clock timestamps (`created_at`).
@@ -23,7 +24,8 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
    - D1 `batch()` executes all statements within a single transaction but cannot branch on intermediate results.
    - Statements must be computed in memory beforehand via `diffToStatements()`.
 6. **Timestamps:**
-   - All timestamps stored in SQLite are integer unix seconds UTC.
+   - All timestamps stored in SQLite for domain tables are integer unix seconds UTC.
+   - *Exception (ADR 0014):* `auth_*` tables use `timestamp_ms` to maintain compatibility with Better Auth's internal millisecond Date calculations.
    - Format timestamps for display only in the UI using `Europe/Amsterdam`.
 7. **i18n discipline:**
    - No hardcoded Dutch string literals in UI components.
@@ -33,8 +35,9 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
    - Secrets are managed via `wrangler secret put` or local `.dev.vars` (gitignored).
    - Real seed data lives in `seed/group.local.json` (gitignored). Only `seed/group.example.json` with fictional data is committed.
 9. **Authentication status:**
-   - The MVP has **no authentication**. Identity is set via the `/wie-ben-jij` picker stored in the `passie_member` HTTP-only cookie.
-   - Never add a code path that assumes a cryptographically trusted or verified identity (note: this rule will be updated in v0.2 when Cloudflare Access verified identity is introduced per `ROADMAP.md`).
+   - Identity is verified via **Better Auth** session authentication (WebAuthn passkeys and email OTP; ADR 0014).
+   - Public registration is completely disabled; members are pre-created and linked by group administrators.
+   - Acting member is resolved per request via `getActingMember()` / `requireActingMember()`. Unauthenticated requests redirect to `/inloggen` or return 401 JSON.
 
 ---
 

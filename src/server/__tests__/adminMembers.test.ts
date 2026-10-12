@@ -24,8 +24,9 @@ describe("adminMembers", () => {
 
   const principal: AdminPrincipal = {
     subject: "shared",
-    method: "password",
     memberId: null,
+    email: "admin@example.com",
+    role: "group_admin",
   };
 
   beforeAll(async () => {
@@ -148,7 +149,6 @@ describe("adminMembers", () => {
 
     const payload = JSON.parse(auditEvent!.payloadJson);
     expect(payload.actor).toBe("shared");
-    expect(payload.method).toBe("password");
     expect(payload.memberId).toBe(newMember.id);
   });
 

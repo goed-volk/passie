@@ -51,6 +51,8 @@ function AdminMemberDialogForm({
 
   const [displayName, setDisplayName] = useState(member?.displayName ?? "");
   const [initials, setInitials] = useState(member?.initials ?? "");
+  const [email, setEmail] = useState(member?.email ?? "");
+  const [role, setRole] = useState<"admin" | "member">((member?.role as "admin" | "member") ?? "member");
   const [isActive, setIsActive] = useState<number>(member?.isActive ?? 1);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -89,6 +91,8 @@ function AdminMemberDialogForm({
             displayName: displayName.trim(),
             initials: initials.trim() || undefined,
             isActive,
+            email: email.trim() || undefined,
+            role,
           }),
         });
 
@@ -126,6 +130,8 @@ function AdminMemberDialogForm({
           body: JSON.stringify({
             displayName: displayName.trim(),
             initials: initials.trim() || undefined,
+            email: email.trim() || undefined,
+            role,
           }),
         });
 
@@ -231,6 +237,38 @@ function AdminMemberDialogForm({
               placeholder={deriveInitials(displayName || "L")}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500 uppercase font-medium"
             />
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              {t("beheerEmail")}
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="bijv. lid@voorbeeld.nl"
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t("beheerEmailHelp")}
+            </p>
+          </div>
+
+          {/* Role */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Rol
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as "admin" | "member")}
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            >
+              <option value="member">Lid</option>
+              <option value="admin">Beheerder</option>
+            </select>
           </div>
 
           {/* Active Status Toggle (Edit only) */}
