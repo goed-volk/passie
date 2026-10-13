@@ -3,6 +3,7 @@ import nextConfig from "eslint-config-next";
 const eslintConfig = [
   {
     ignores: [
+      ".kilo/**",
       ".next/**",
       ".open-next/**",
       ".wrangler/**",
