@@ -15,6 +15,9 @@ fi
 
 echo "Passie dev server: http://localhost:$PORT"
 
+export PASSIE_DEV_LOGIN="${PASSIE_DEV_LOGIN:-1}"
+export PASSIE_PUBLIC_ORIGIN="${PASSIE_PUBLIC_ORIGIN:-http://localhost:$PORT}"
+
 if [ "${PASSIE_PREVIEW:-0}" = "1" ]; then
   echo "Starting OpenNext Cloudflare workerd preview on port $PORT"
   exec pnpm preview --port "$PORT"
