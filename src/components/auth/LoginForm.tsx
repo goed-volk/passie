@@ -127,11 +127,13 @@ export function LoginForm() {
     try {
       const res = await authClient.signIn.passkey();
       if (res && res.error) {
+        console.error("[passkey:signIn] Failed:", res.error);
         setError(t("passkeyAuthError"));
       } else {
         await syncAfterLogin();
       }
-    } catch {
+    } catch (err) {
+      console.error("[passkey:signIn] Exception:", err);
       setError(t("passkeyAuthError"));
     } finally {
       setPasskeyLoading(false);
@@ -148,11 +150,13 @@ export function LoginForm() {
       });
 
       if (res && res.error) {
+        console.error("[passkey:addPasskey] Failed:", res.error);
         setError(t("passkeyAddError"));
       } else {
         await syncAfterLogin();
       }
-    } catch {
+    } catch (err) {
+      console.error("[passkey:addPasskey] Exception:", err);
       setError(t("passkeyAddError"));
     } finally {
       setPasskeyLoading(false);

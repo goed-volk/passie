@@ -33,7 +33,7 @@ describe("actingMember session tests", () => {
     const now = new Date();
 
     const existingSam = await db.query.auth_user.findFirst({
-      where: eq(schema.auth_user.email, "sam@example.com"),
+      where: eq(schema.auth_user.email, "demo@goedvolk.org"),
     });
 
     if (existingSam) {
@@ -42,7 +42,7 @@ describe("actingMember session tests", () => {
       activeUserId = "user_acting_active";
       await db.insert(schema.auth_user).values({
         id: activeUserId,
-        email: "sam@example.com",
+        email: "demo@goedvolk.org",
         name: "Sam",
         emailVerified: true,
         role: "admin",
@@ -53,16 +53,18 @@ describe("actingMember session tests", () => {
     }
 
     const existingOutsider = await db.query.auth_user.findFirst({
-      where: eq(schema.auth_user.email, "outsider@example.com"),
+      where: eq(schema.auth_user.id, unlinkedUserId),
     });
 
     if (existingOutsider) {
-      unlinkedUserId = existingOutsider.id;
+      await db
+        .update(schema.auth_user)
+        .set({ email: "outsider@goedvolk.org" })
+        .where(eq(schema.auth_user.id, unlinkedUserId));
     } else {
-      unlinkedUserId = "user_acting_unlinked";
       await db.insert(schema.auth_user).values({
         id: unlinkedUserId,
-        email: "outsider@example.com",
+        email: "outsider@goedvolk.org",
         name: "Outsider",
         emailVerified: true,
         role: "user",
@@ -108,7 +110,7 @@ describe("actingMember session tests", () => {
     const member = await getActingMember(db, activeHeaders);
     expect(member).not.toBeNull();
     expect(member?.displayName).toBe("Sam");
-    expect(member?.email).toBe("sam@example.com");
+    expect(member?.email).toBe("demo@goedvolk.org");
 
     const memberId = await getActingMemberId(db, activeHeaders);
     expect(memberId).toBe(member?.id);

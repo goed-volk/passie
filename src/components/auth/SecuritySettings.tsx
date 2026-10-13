@@ -90,12 +90,14 @@ export function SecuritySettings({ userEmail }: { userEmail?: string }) {
       });
 
       if (res && res.error) {
+        console.error("[settings:addPasskey] Failed:", res.error);
         setError(t("passkeyAddError"));
       } else {
         setMessage(t("passkeyAddSuccess"));
         await loadData();
       }
-    } catch {
+    } catch (err) {
+      console.error("[settings:addPasskey] Exception:", err);
       setError(t("passkeyAddError"));
     } finally {
       setAddingPasskey(false);

@@ -47,6 +47,7 @@ Passie uses Cloudflare runtime environment variables (`vars` / `.dev.vars`) and 
 | Variable | Target | Required? | Description |
 | :--- | :--- | :---: | :--- |
 | `BETTER_AUTH_SECRET` | `.dev.vars` (local) / `wrangler secret put` (prod) | Required | Secret encryption key for Better Auth tokens and cookies (min 32 chars). |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Comma-separated allowlist of trusted origins for CSRF protection (e.g. `http://localhost:*,http://127.0.0.1:*,https://passie.goedvolk.org`). |
 | `PASSIE_PUBLIC_ORIGIN` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Required | Base public URL (e.g. `https://passie.goedvolk.org` or `http://localhost:3000`). Used for WebAuthn RP origin. |
 | `PASSIE_MAILER` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Mail transport: `cloudflare` (uses Worker `EMAIL` binding) or `console` (local dev fallback). |
 | `PASSIE_MAIL_FROM` | `.dev.vars` (local) / `wrangler.jsonc` `vars` (prod) | Optional | Sender address for OTP emails (defaults to `inloggen@passie.goedvolk.org`). |
@@ -108,9 +109,9 @@ cp .dev.vars.example .dev.vars
    ```
 
 5. **First-Time User Walkthrough & Login:**
-   - Open [http://localhost:3000](http://localhost:3000) in your browser.
+   - Open [http://localhost:3000](http://localhost:3000) (or the assigned port shown by `.kilo/run-script.sh`) in your browser.
    - You will automatically be redirected to `/inloggen` because no active session exists.
-   - Enter `sam@example.com` (pre-seeded local admin) and click **Stuur code**.
+   - Enter `demo@goedvolk.org` (pre-seeded local admin) and click **Stuur code**.
    - Check the server console log for the 6-digit OTP code (`[mailer:console] Je inlogcode voor Passie is: 123456`).
    - Enter the code to sign in. When prompted, you can enroll your device passkey (Touch ID, Face ID, etc.) for passwordless one-tap login.
    - Once signed in as an admin, you can access the admin panel at `/beheer` to invite, link, or reorder members.
@@ -123,7 +124,7 @@ cp .dev.vars.example .dev.vars
 Passie has zero public registration: members must be pre-created and linked by an administrator.
 
 ### Local Development Admin
-When you run `.kilo/setup-script.sh` or `pnpm seed:example`, **Sam** (`sam@example.com`, `slug: "sam"`) is automatically provisioned as a group administrator with an active `auth_user` link.
+When you run `.kilo/setup-script.sh` or `pnpm seed:example`, **Sam** (`demo@goedvolk.org`, `slug: "sam"`) is automatically provisioned as a group administrator with an active `auth_user` link.
 
 To grant administrator rights to another local member or link an email:
 ```bash
@@ -131,7 +132,7 @@ To grant administrator rights to another local member or link an email:
 pnpm tsx scripts/grant-admin.ts --member daan
 
 # Link an email address to a member:
-pnpm tsx scripts/link-member-emails.ts --member daan --email daan@example.com
+pnpm tsx scripts/link-member-emails.ts --member daan --email daan@goedvolk.org
 ```
 
 ### Production First Admin (Cloudflare D1)

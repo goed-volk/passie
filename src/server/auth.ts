@@ -61,6 +61,21 @@ export async function getAuth(options?: AuthContextOptions) {
   const rpID = url.hostname;
   const origin = url.origin;
 
+  const rawTrustedOrigins =
+    (env?.BETTER_AUTH_TRUSTED_ORIGINS as string | undefined) ||
+    process.env.BETTER_AUTH_TRUSTED_ORIGINS;
+
+  const configuredOrigins = rawTrustedOrigins
+    ? rawTrustedOrigins
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean)
+    : (!isProduction
+        ? ["http://localhost:*", "http://127.0.0.1:*"]
+        : []);
+
+  const trustedOrigins = Array.from(new Set([origin, ...configuredOrigins]));
+
   const plugins: BetterAuthPlugin[] = [
     emailOTP({
       disableSignUp: true,
@@ -85,10 +100,10 @@ export async function getAuth(options?: AuthContextOptions) {
     passkey({
       rpID,
       rpName: "Passie",
-      origin,
+      ...(isProduction ? { origin } : {}),
       authenticatorSelection: {
-        residentKey: "required",
-        userVerification: "required",
+        residentKey: "preferred",
+        userVerification: "preferred",
       },
       schema: {
         passkey: {
@@ -115,12 +130,7 @@ export async function getAuth(options?: AuthContextOptions) {
       schema: authSchema,
       transaction: false,
     }),
-    trustedOrigins: [
-      origin,
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "https://passie.goedvolk.org",
-    ],
+    trustedOrigins,
     emailAndPassword: { enabled: false },
     socialProviders: {},
     account: { accountLinking: { enabled: false } },
@@ -168,6 +178,8 @@ export async function getAuth(options?: AuthContextOptions) {
     advanced: {
       cookiePrefix: "passie",
       useSecureCookies: isProduction,
+      disableOriginCheck: false,
+      disableCSRFCheck: false,
       ipAddress: {
         ipAddressHeaders: ["cf-connecting-ip"],
       },
@@ -176,7 +188,7 @@ export async function getAuth(options?: AuthContextOptions) {
       },
     },
     rateLimit: {
-      enabled: true,
+      enabled: process.env.NODE_ENV !== "test",
       storage: "database",
       modelName: "auth_rate_limit",
       customRules: {

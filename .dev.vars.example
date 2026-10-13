@@ -3,6 +3,7 @@ PASSIE_INGEST_COOLDOWN_SECONDS=300
 
 # Better Auth & Identity configuration
 BETTER_AUTH_SECRET=local-dev-better-auth-secret-change-in-production-min-32-chars
+BETTER_AUTH_TRUSTED_ORIGINS=http://localhost:*,http://127.0.0.1:*,https://passie.goedvolk.org
 PASSIE_PUBLIC_ORIGIN=http://localhost:3000
 PASSIE_MAILER=console
 PASSIE_MAIL_FROM=inloggen@passie.goedvolk.org

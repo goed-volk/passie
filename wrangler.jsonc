@@ -11,7 +11,8 @@
   },
   "vars": {
     "POSTHOG_HOST": "https://eu.i.posthog.com",
-    "PASSIE_ENV": "production"
+    "PASSIE_ENV": "production",
+    "BETTER_AUTH_TRUSTED_ORIGINS": "https://passie.goedvolk.org"
   },
   "routes": [
     {

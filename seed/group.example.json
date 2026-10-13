@@ -22,21 +22,21 @@
     "timezone": "Europe/Amsterdam"
   },
   "members": [
-    { "slug": "sam", "displayName": "Sam", "initials": "S", "avatarColor": "#E30613", "sortOrder": 1, "email": "sam@example.com", "role": "admin" },
-    { "slug": "ilse", "displayName": "Ilse", "initials": "I", "avatarColor": "#2563EB", "sortOrder": 2, "email": "ilse@example.com" },
-    { "slug": "noor", "displayName": "Noor", "initials": "N", "avatarColor": "#D97706", "sortOrder": 3, "email": "noor@example.com" },
-    { "slug": "bram", "displayName": "Bram", "initials": "B", "avatarColor": "#059669", "sortOrder": 4, "email": "bram@example.com" },
-    { "slug": "daan", "displayName": "Daan", "initials": "D", "avatarColor": "#7C3AED", "sortOrder": 5, "email": "daan@example.com" },
-    { "slug": "eva", "displayName": "Eva", "initials": "E", "avatarColor": "#DB2777", "sortOrder": 6, "email": "eva@example.com" },
-    { "slug": "finn", "displayName": "Finn", "initials": "F", "avatarColor": "#0891B2", "sortOrder": 7, "email": "finn@example.com" },
-    { "slug": "gijs", "displayName": "Gijs", "initials": "G", "avatarColor": "#4F46E5", "sortOrder": 8, "email": "gijs@example.com" },
-    { "slug": "hannah", "displayName": "Hannah", "initials": "H", "avatarColor": "#EA580C", "sortOrder": 9, "email": "hannah@example.com" },
-    { "slug": "jasper", "displayName": "Jasper", "initials": "J", "avatarColor": "#16A34A", "sortOrder": 10, "email": "jasper@example.com" },
-    { "slug": "koen", "displayName": "Koen", "initials": "K", "avatarColor": "#9333EA", "sortOrder": 11, "email": "koen@example.com" },
-    { "slug": "lars", "displayName": "Lars", "initials": "L", "avatarColor": "#0D9488", "sortOrder": 12, "email": "lars@example.com" },
-    { "slug": "milan", "displayName": "Milan", "initials": "M", "avatarColor": "#CA8A04", "sortOrder": 13, "email": "milan@example.com" },
-    { "slug": "nina", "displayName": "Nina", "initials": "N", "avatarColor": "#E11D48", "sortOrder": 14, "email": "nina@example.com" },
-    { "slug": "olaf", "displayName": "Olaf", "initials": "O", "avatarColor": "#475569", "sortOrder": 15, "email": "olaf@example.com" }
+    { "slug": "sam", "displayName": "Sam", "initials": "S", "avatarColor": "#E30613", "sortOrder": 1, "email": "demo@goedvolk.org", "role": "admin" },
+    { "slug": "ilse", "displayName": "Ilse", "initials": "I", "avatarColor": "#2563EB", "sortOrder": 2, "email": "ilse@goedvolk.org" },
+    { "slug": "noor", "displayName": "Noor", "initials": "N", "avatarColor": "#D97706", "sortOrder": 3, "email": "noor@goedvolk.org" },
+    { "slug": "bram", "displayName": "Bram", "initials": "B", "avatarColor": "#059669", "sortOrder": 4, "email": "bram@goedvolk.org" },
+    { "slug": "daan", "displayName": "Daan", "initials": "D", "avatarColor": "#7C3AED", "sortOrder": 5, "email": "daan@goedvolk.org" },
+    { "slug": "eva", "displayName": "Eva", "initials": "E", "avatarColor": "#DB2777", "sortOrder": 6, "email": "eva@goedvolk.org" },
+    { "slug": "finn", "displayName": "Finn", "initials": "F", "avatarColor": "#0891B2", "sortOrder": 7, "email": "finn@goedvolk.org" },
+    { "slug": "gijs", "displayName": "Gijs", "initials": "G", "avatarColor": "#4F46E5", "sortOrder": 8, "email": "gijs@goedvolk.org" },
+    { "slug": "hannah", "displayName": "Hannah", "initials": "H", "avatarColor": "#EA580C", "sortOrder": 9, "email": "hannah@goedvolk.org" },
+    { "slug": "jasper", "displayName": "Jasper", "initials": "J", "avatarColor": "#16A34A", "sortOrder": 10, "email": "jasper@goedvolk.org" },
+    { "slug": "koen", "displayName": "Koen", "initials": "K", "avatarColor": "#9333EA", "sortOrder": 11, "email": "koen@goedvolk.org" },
+    { "slug": "lars", "displayName": "Lars", "initials": "L", "avatarColor": "#0D9488", "sortOrder": 12, "email": "lars@goedvolk.org" },
+    { "slug": "milan", "displayName": "Milan", "initials": "M", "avatarColor": "#CA8A04", "sortOrder": 13, "email": "milan@goedvolk.org" },
+    { "slug": "nina", "displayName": "Nina", "initials": "N", "avatarColor": "#E11D48", "sortOrder": 14, "email": "nina@goedvolk.org" },
+    { "slug": "olaf", "displayName": "Olaf", "initials": "O", "avatarColor": "#475569", "sortOrder": 15, "email": "olaf@goedvolk.org" }
   ],
   "passes": [
     {

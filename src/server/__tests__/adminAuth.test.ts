@@ -32,7 +32,7 @@ describe("adminAuth tests", () => {
     // Create admin user and link to member_goedvolk_sam (who has role: admin)
     const now = new Date();
     const existingSam = await db.query.auth_user.findFirst({
-      where: eq(schema.auth_user.email, "sam@example.com"),
+      where: eq(schema.auth_user.email, "demo@goedvolk.org"),
     });
 
     if (existingSam) {
@@ -45,7 +45,7 @@ describe("adminAuth tests", () => {
       adminUserId = "user_admin_test";
       await db.insert(schema.auth_user).values({
         id: adminUserId,
-        email: "sam@example.com",
+        email: "demo@goedvolk.org",
         name: "Sam",
         emailVerified: true,
         role: "admin",
@@ -61,7 +61,7 @@ describe("adminAuth tests", () => {
       .where(eq(schema.members.slug, "sam"));
 
     const existingDaan = await db.query.auth_user.findFirst({
-      where: eq(schema.auth_user.email, "daan@example.com"),
+      where: eq(schema.auth_user.email, "daan@goedvolk.org"),
     });
 
     if (existingDaan) {
@@ -74,7 +74,7 @@ describe("adminAuth tests", () => {
       regularUserId = "user_regular_test";
       await db.insert(schema.auth_user).values({
         id: regularUserId,
-        email: "daan@example.com",
+        email: "daan@goedvolk.org",
         name: "Daan",
         emailVerified: true,
         role: "user",
@@ -121,7 +121,7 @@ describe("adminAuth tests", () => {
   it("returns principal when admin user is logged in", async () => {
     const principal = await getAdminPrincipal(db, adminHeaders);
     expect(principal).not.toBeNull();
-    expect(principal?.email).toBe("sam@example.com");
+    expect(principal?.email).toBe("demo@goedvolk.org");
     expect(principal?.role).toBe("platform_admin");
   });
 
@@ -129,7 +129,7 @@ describe("adminAuth tests", () => {
     const principal = {
       subject: "test",
       memberId: "m1",
-      email: "sam@example.com",
+      email: "demo@goedvolk.org",
       role: "group_admin" as const,
     };
     expect(assertCapability(principal, "members.read")).toBe(true);

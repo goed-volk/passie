@@ -75,7 +75,7 @@ export async function handleDevLogin(request: Request, customDb?: DbClient) {
   // Ensure member has a linked user_id in dev
   let userId = member.userId;
   if (!userId) {
-    const email = `${member.slug}@example.com`;
+    const email = `${member.slug}@goedvolk.org`;
     const res = await preCreateUserAndLink(db, {
       memberId: member.id,
       email,

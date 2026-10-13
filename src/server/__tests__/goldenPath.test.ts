@@ -11,7 +11,7 @@ describe("Golden path authentication flow tests", () => {
   let proxy: PlatformProxy<{ DB: D1Database }>;
   let db: DbClient;
   let testMemberId: string;
-  const testEmail = "golden-path@example.com";
+  const testEmail = "golden-path@goedvolk.org";
 
   beforeAll(async () => {
     const res = await createTestDb();
@@ -57,7 +57,7 @@ describe("Golden path authentication flow tests", () => {
 
     const otpReq = new Request("http://localhost:3000/api/auth/email-otp/send-verification-otp", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3000" },
       body: JSON.stringify({ email: testEmail, type: "sign-in" }),
     });
     const otpRes = await auth.handler(otpReq);
@@ -74,7 +74,7 @@ describe("Golden path authentication flow tests", () => {
     // 3. Sign in with OTP
     const signInReq = new Request("http://localhost:3000/api/auth/sign-in/email-otp", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3000" },
       body: JSON.stringify({ email: testEmail, otp }),
     });
     const signInRes = await auth.handler(signInReq);
@@ -111,7 +111,7 @@ describe("Golden path authentication flow tests", () => {
     // 6. Sign out / revoke session
     const signOutReq = new Request("http://localhost:3000/api/auth/sign-out", {
       method: "POST",
-      headers: { Cookie: cookieHeader! },
+      headers: { Cookie: cookieHeader!, Origin: "http://localhost:3000" },
     });
     const signOutRes = await auth.handler(signOutReq);
     expect(signOutRes.status).toBe(200);

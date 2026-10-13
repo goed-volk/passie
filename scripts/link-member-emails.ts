@@ -8,7 +8,7 @@ async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
 
-  // Read arguments: e.g. --member sam --email sam@example.com
+  // Read arguments: e.g. --member sam --email demo@goedvolk.org
   let memberSlug: string | undefined;
   let email: string | undefined;
 

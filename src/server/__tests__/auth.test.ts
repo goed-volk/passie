@@ -171,4 +171,42 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
     expect(data.cookie).toBeDefined();
     expect(data.cookie).toContain("passie.session_token=");
   });
+
+  it("trustedOrigins: dynamic localhost ports are accepted and untrusted origins return 403", async () => {
+    const auth = await getAuth({
+      db,
+      env: {
+        PASSIE_ENV: "development",
+        BETTER_AUTH_TRUSTED_ORIGINS: "http://localhost:*,http://127.0.0.1:*",
+      },
+    });
+
+    // Request from a non-3000 localhost port
+    const validDevReq = new Request("http://localhost:3467/api/auth/email-otp/send-verification-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost:3467",
+        Host: "localhost:3467",
+      },
+      body: JSON.stringify({ email: "demo@goedvolk.org", type: "sign-in" }),
+    });
+    const validRes = await auth.handler(validDevReq);
+    expect(validRes.status).toBe(200);
+
+    // Request from an untrusted external origin
+    const untrustedReq = new Request("http://localhost:3467/api/auth/email-otp/send-verification-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://malicious-attacker.com",
+        Host: "localhost:3467",
+      },
+      body: JSON.stringify({ email: "demo@goedvolk.org", type: "sign-in" }),
+    });
+    const untrustedRes = await auth.handler(untrustedReq);
+    expect(untrustedRes.status).toBe(403);
+    const errBody = (await untrustedRes.json()) as { code: string };
+    expect(errBody.code).toBe("INVALID_ORIGIN");
+  });
 });

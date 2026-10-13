@@ -19,5 +19,5 @@ if [ "${PASSIE_PREVIEW:-0}" = "1" ]; then
   echo "Starting OpenNext Cloudflare workerd preview on port $PORT"
   exec pnpm preview --port "$PORT"
 else
-  exec pnpm next dev --port "$PORT" --hostname 127.0.0.1
+  exec pnpm next dev --port "$PORT" --hostname localhost
 fi
