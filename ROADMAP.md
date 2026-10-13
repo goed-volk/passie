@@ -37,6 +37,30 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Description:* Authenticate members securely via WebAuthn passkeys (Face ID, Touch ID, platform lock) and email OTP, replacing the local unauthenticated picker. Full database-backed sessions on Cloudflare D1 with instant revocation and role-based `/beheer` access.
   - *Status:* **Delivered (v0.2.0).** Architecture documented in [`docs/decisions/0014-identity-via-better-auth-on-d1.md`](docs/decisions/0014-identity-via-better-auth-on-d1.md).
 
+- **Admin Email-Edit Hardening (prerequisite for a second group admin; Security Review FND-02):**
+  - *Description:* Today any group admin can take over any member account, including the platform admin's, by editing its email in `/beheer`. Two code paths cause this:
+    - **Rewrite path** (`src/server/authAdmin.ts` `updateMemberEmailAndSync`, new address): the target's `auth_user.email` is replaced with the admin-supplied address. Sessions are revoked, but the `auth_user` keeps its platform `role`, its passkeys and its member links. The admin can then request an OTP to the new address and sign in as that user.
+    - **Relink path** (address already belongs to another `auth_user`): the member is silently relinked to that user. That user's existing sessions and passkeys immediately control the member. `preCreateUserAndLink` likewise links to an existing user without checking its other memberships.
+    - **Contributing factors:** `assertCapability` in `src/server/adminAuth.ts` always returns true, and `PATCH /api/admin/members/[memberId]` has no checks on the target's role.
+  - *Required before more than one group admin exists:*
+    - Group admins may not change the email or role of admins or platform admins. Implement `assertCapability` with real capability checks.
+    - Refuse to relink a member to an existing `auth_user`; return 409 instead.
+    - Require proof of control of the new address (verification or an invite/claim flow) before binding it.
+    - Delete the `auth_user`'s passkeys and sessions whenever its email is reassigned.
+    - Audit-log every email and role change.
+    - Enforce at least one active admin per group (Security Review FND-12).
+    - Add negative tests for each rule.
+  - *Risk acceptance:* Accepted by the owner for Alpha and Beta, while a single person is both the only platform admin and the only group admin. This acceptance lapses as soon as a second group admin is appointed.
+  - *Status:* Planned. Findings in [`.kilo/plans/1791916949466-better-auth-security-review-findings.md`](.kilo/plans/1791916949466-better-auth-security-review-findings.md).
+
+- **Cross-Group Tenant Scoping / IDOR Protection (Security Review FND-14; required for Beta phase):**
+  - *Description:* Multi-group tenant isolation across all route handlers and loaders. In the Alpha single-group deployment, cross-group access is structurally impossible because only one group row exists. Before onboarding a second group in Beta, tenant scoping must be strictly enforced:
+    - Assert `resource.groupId === actor.groupId` across all pool routes (`/api/pool/[gamePoolId]`, `/queue`, `/indicate`, `/cancel`), pass routes (`/api/pass/[passId]/holder`), and page loaders (`/pas/[passId]`).
+    - Scope admin operations to `principal.groupId` rather than the single-group assertion in `resolveAdminGroup` (which currently throws when `groups.length > 1`).
+    - In `getActingSession`, resolve membership relative to the requested group context rather than blindly selecting `userMembers[0]`.
+    - Add multi-group negative test fixtures.
+  - *Status:* Planned (Prerequisite for Beta multi-group rollout).
+
 - **Matchday Deadline Reminders:**
   - *Description:* Automated notifications (e.g. WhatsApp webhook, web push) sent to pass owners who haven't indicated attendance by `deadline - 24h`.
   - *Status:* Planned.
@@ -101,6 +125,45 @@ This document outlines planned features and enhancements for Passie. Technical a
 
 - **Away & Cup Match Fixtures:**
   - *Description:* Support for away games, cup ties, and playoff matches beyond the regular home season.
+
+- **HTTP Security Headers & Clickjacking Defense (Security Review FND-11; Beta/public):**
+  - *Description:* Enforce defense-in-depth HTTP security headers in `next.config.ts` or at the Cloudflare zone level for all environments:
+    - `Content-Security-Policy: frame-ancestors 'none'` and `X-Frame-Options: DENY` to protect `/inloggen` and `/instellingen` from clickjacking and credential prompt framing.
+    - `X-Content-Type-Options: nosniff`.
+    - `Referrer-Policy: strict-origin-when-cross-origin`.
+    - `Permissions-Policy: publickey-credentials-get=(self), publickey-credentials-create=(self)` to explicitly bound WebAuthn execution context.
+    - Strict Transport Security (`HSTS`) header.
+  - *Status:* Planned (Beta / Public launch).
+
+- **Comprehensive Rate-Limiting Hardening (Security Review FND-09 & FND-10; Beta/public):**
+  - *Description:* Expand Better Auth rate-limiting beyond initial basic IP-based rules:
+    - **Passkey Endpoints (FND-09):** Add dedicated custom rules for `/passkey/generate-authenticate-options`, `/passkey/verify-authentication`, `/passkey/generate-register-options`, and `/passkey/verify-registration` so they do not fall back to the broad 100/10s default bucket.
+    - **Per-Email OTP Cooldown & Account Quota (FND-10):** Enforce an application-level rate limit or cooldown keyed on normalized `email` (e.g. max 3 OTP requests per 10 minutes per address) to prevent distributed IP churning, inbox flooding, and Cloudflare Email Sending quota exhaustion.
+    - **KV-Backed Storage:** Evaluate migrating `auth_rate_limit` storage from Cloudflare D1 to Cloudflare KV or Worker memory/secondaryStorage to eliminate SQLite write amplification and database lock contention under high-frequency probing.
+  - *Status:* Planned (Beta / Public launch).
+
+- **Banned User Active Session Rejection (Security Review FND-13; Beta/public):**
+  - *Description:* Currently, user ban status is only validated at session creation (`session.create.before`). If an operator sets `banned = true` via direct D1 database intervention without calling `setBanned()`, or if a race condition occurs, `getActingSession` will return `status: "active"`. Explicitly inspect `user.banned === true` in `getActingSession` and reject existing sessions immediately with `status: "unauthenticated"`.
+  - *Status:* Planned (Beta / Public launch).
+
+---
+
+## Test gaps (from Security Review FND-15)
+
+Systematic negative test coverage to be implemented across automated test suites:
+1. **Banned user session read rejection:** Integration test confirming that an existing session cookie for an `auth_user` flagged `banned = 1` is rejected on read by `getActingSession`.
+2. **Deactivated member denial:** Route-level and snapshot integration tests confirming that an authenticated user linked to `isActive = 0` receives `status: "no_membership"` and is redirected to `/geen-toegang`.
+3. **Auth user without membership:** Route-level tests confirming that every mutating API route returns 401 when called with a valid session belonging to an `auth_user` who has no corresponding `members` record.
+4. **Cross-group access isolation:** Multi-group test fixtures asserting that members of Group A receive 404 or 403 when requesting Group B's pools, passes, or member resources.
+5. **Cross-origin rejection across all 8 mutating routes:** Integration tests asserting that requests carrying cross-origin headers to `/api/pool/...`, `/api/pass/.../holder`, `/api/admin/members/...`, and `/api/fixtures/refresh` receive 403 `CrossOriginRequestError`.
+6. **Disabled Better Auth endpoints:** Parameterized tests for all remaining paths in `disabledPaths` and their trailing-slash variants (`/api/auth/sign-up/email/`, `/api/auth/update-user/`, etc.) confirming HTTP 404.
+7. **OTP for unknown email:** Explicit test verifying that `/email-otp/send-verification-otp` with an unknown email address returns `{ success: true }` without creating an `auth_user` row or dispatching email.
+8. **Production dev login refusal:** Test verifying that `/api/dev/login-as` returns 404 whenever `PASSIE_ENV = "production"` or `PASSIE_DEV_LOGIN` is unset or `Host` is non-localhost.
+9. **Production mailer fail-closed:** Test verifying that `getMailer()` throws an explicit error when `isProduction` is true and Cloudflare `EMAIL` binding is missing.
+10. **Missing production secret fail-closed:** Test verifying that `getAuth()` throws an explicit error when `isProduction` is true and `BETTER_AUTH_SECRET` is unset.
+11. **Admin role & email edit boundaries:** Unit and route tests verifying privilege boundaries and conflict handling for `PATCH /api/admin/members/[memberId]`.
+12. **Fresh migration replay harness:** Automated CI / `/verify` step that runs `wrangler d1 migrations apply` from scratch against an isolated database to prevent untested migration SQL drift.
+13. **Active rate-limiting suite:** Test cases with `rateLimit.enabled = true` asserting HTTP 429 status code handling when request thresholds are exceeded.
 
 ---
 
