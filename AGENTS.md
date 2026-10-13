@@ -109,7 +109,7 @@ Passie is a mobile-first web app for groups of friends sharing season tickets (*
 | `pnpm db:migrate:local` | Apply migrations to local D1 SQLite DB |
 | `pnpm db:migrate:prod` | Apply migrations to production Cloudflare D1 |
 | `pnpm seed:example` | Seed local D1 database with fictional data |
-| `pnpm seed:local` | Seed D1 database with real group data (requires `--confirm` for prod) |
+| `pnpm seed:local` | Seed local D1 database with real group data |
 | `pnpm ingest:local` | Ingest next fixtures from ICS feed into local D1 |
 | `pnpm cf-typegen` | Generate Cloudflare Worker environment types |
 | `/verify` | Run typecheck, lint, test, and build |

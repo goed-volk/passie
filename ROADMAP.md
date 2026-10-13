@@ -74,8 +74,14 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Description:* Real-time device notifications for key events (e.g. *a pass has been assigned to you*, *physical card handover needed*).
   - *Status:* Planned.
 
-- **Staging Subdomain (`passie-dev.goedvolk.org`):**
-  - *Description:* Dedicated remote preview environment with an isolated test database for validating updates before production deployment.
+- **Staging Subdomain (`passie-dev.goedvolk.org`) & Staging Seeding Strategy:**
+  - *Description:* Dedicated remote preview environment with an isolated Cloudflare D1 test database (`passie-staging`) for validating major updates and multi-group features before production cutover.
+  - *Remote Staging Seeding Strategy:*
+    - After significant schema evolutions, domain engine refactors, or test cycles, the staging database may need to be reset and reseeded with representative test data (e.g. `seed/group.staging.json` or `seed/group.example.json`).
+    - **Production Guardrails:**
+      - The production database (`passie`, UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`) must be strictly blocked from any automated or CLI seed execution.
+      - Any future staging seed command (e.g. `pnpm seed:staging`) must explicitly check and assert against the database binding/ID, refusing to run if targeting `passie` or if `PASSIE_ENV === "production"`.
+      - Staging databases must use a distinct Cloudflare binding name (`STAGING_DB`) and database name (`passie-staging`), preventing accidental script or CLI flag misconfigurations from touching production.
   - *Status:* Planned.
 
 - **Twee-staps wisselbevestiging:**

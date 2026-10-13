@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { getPlatformProxy } from "./proxy";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and } from "drizzle-orm";
@@ -203,8 +202,13 @@ export async function runSeed(args = process.argv.slice(2)) {
     }
   }
 
-  if (isRemote && !isConfirmed) {
-    console.error("Refusing to seed remote/production database without --confirm");
+  if (isRemote) {
+    console.error(
+      "Error: Direct remote seeding of production database 'passie' is disabled.\n" +
+      "Production is live with actual games, allocations, and user custody records.\n" +
+      "Manage members and emails via the /beheer admin interface.\n" +
+      "For future remote staging reset strategies, see ROADMAP.md."
+    );
     process.exit(1);
   }
 
@@ -215,15 +219,6 @@ export async function runSeed(args = process.argv.slice(2)) {
       console.error(`Error: Seed file not found at ${seedFilePath}`);
       process.exit(1);
     }
-  } else if (isRemote) {
-    const localSeedPath = path.resolve(process.cwd(), "seed/group.local.json");
-    if (!fs.existsSync(localSeedPath)) {
-      console.error(
-        "Error: Cannot seed remote database: seed/group.local.json not found (or specify --file=<path>)"
-      );
-      process.exit(1);
-    }
-    seedFilePath = localSeedPath;
   } else {
     const localSeedPath = path.resolve(process.cwd(), "seed/group.local.json");
     const exampleSeedPath = path.resolve(process.cwd(), "seed/group.example.json");
@@ -233,30 +228,6 @@ export async function runSeed(args = process.argv.slice(2)) {
   console.log(`Loading seed data from ${seedFilePath}`);
   const rawJson = fs.readFileSync(seedFilePath, "utf-8");
   const seed: SeedData = JSON.parse(rawJson);
-
-  if (isRemote) {
-    console.log("Generating idempotent SQL for remote D1 execution...");
-    const seedSql = generateSeedSql(seed);
-    const wranglerDir = path.resolve(process.cwd(), ".wrangler");
-    if (!fs.existsSync(wranglerDir)) {
-      fs.mkdirSync(wranglerDir, { recursive: true });
-    }
-    const tempSqlPath = path.join(wranglerDir, "seed-remote.sql");
-    fs.writeFileSync(tempSqlPath, seedSql, "utf-8");
-
-    try {
-      console.log("Executing seed script against remote Cloudflare D1 database 'passie'...");
-      execSync(`pnpm exec wrangler d1 execute passie --remote --file="${tempSqlPath}" -y`, {
-        stdio: "inherit",
-      });
-      console.log("Remote seeding complete!");
-    } finally {
-      if (fs.existsSync(tempSqlPath)) {
-        fs.unlinkSync(tempSqlPath);
-      }
-    }
-    return;
-  }
 
   const proxy = await getPlatformProxy<{ DB: D1Database }>({
     configPath: "wrangler.jsonc",

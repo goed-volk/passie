@@ -137,40 +137,22 @@ pnpm tsx scripts/link-member-emails.ts --member daan --email daan@goedvolk.org
 
 ### Production First Admin (Cloudflare D1)
 
-To create the initial admin user in production, choose one of two paths:
+Because public registration is disabled, the initial group administrator must be linked in the production database using Wrangler before deploying the Better Auth update:
 
-#### Path A: Via `seed/group.local.json` (Recommended for initial group setup)
-1. In your gitignored `seed/group.local.json`, add `"email"` and `"role": "admin"` to your member entry:
-   ```json
-   {
-     "slug": "jouwnaam",
-     "displayName": "Jouw Naam",
-     "email": "jouw-email@voorbeeld.nl",
-     "role": "admin",
-     ...
-   }
-   ```
-2. Run the remote seed command (which creates the member, `auth_user`, and link on remote D1):
-   ```bash
-   pnpm seed:local --remote --confirm
-   ```
-
-#### Path B: Direct Cloudflare CLI commands (Existing production database)
-If members were already seeded without email links on remote D1:
 ```bash
-# 1. Insert auth_user on remote D1:
+# 1. Insert admin auth_user record on remote D1:
 pnpm exec wrangler d1 execute passie --remote --command "
   INSERT INTO auth_user (id, name, email, email_verified, role, banned, created_at, updated_at)
-  VALUES ('user_admin_1', 'Jouw Naam', 'jouw-email@voorbeeld.nl', 1, 'admin', 0, cast(unixepoch('subsecond')*1000 as integer), cast(unixepoch('subsecond')*1000 as integer));
+  VALUES ('user_admin_primary', 'Jouw Naam', 'jouw-email@voorbeeld.nl', 1, 'admin', 0, cast(unixepoch('subsecond')*1000 as integer), cast(unixepoch('subsecond')*1000 as integer));
 "
 
-# 2. Link member and set group admin role:
+# 2. Link member slug and grant group admin role:
 pnpm exec wrangler d1 execute passie --remote --command "
-  UPDATE members SET user_id = 'user_admin_1', role = 'admin' WHERE slug = 'jouwnaam';
+  UPDATE members SET user_id = 'user_admin_primary', role = 'admin' WHERE slug = 'jouwnaam';
 "
 ```
 
-Once logged in at `https://passie.goedvolk.org/inloggen`, you can manage all other group members and their email addresses directly in the UI at `/beheer`.
+Once deployed and logged in at `https://passie.goedvolk.org/inloggen`, manage all other group members and their email addresses directly in the UI at `/beheer`.
 
 ---
 
@@ -190,7 +172,7 @@ Once logged in at `https://passie.goedvolk.org/inloggen`, you can manage all oth
 | `pnpm db:migrate:local` | No | No | Applies pending migrations to local D1 SQLite database. |
 | `pnpm db:migrate:prod` | No | Yes | Applies pending migrations to production Cloudflare D1 database. |
 | `pnpm seed:example` | No | No | Populates local D1 database with fictional seed data. |
-| `pnpm seed:local` | No | No | Seeds D1 with local group data (`--confirm` required for production). Members are insert-only to preserve admin renames. |
+| `pnpm seed:local` | No | No | Seeds local D1 database with group data from `seed/group.local.json`. Members are insert-only to preserve admin renames. |
 | `pnpm ingest:local` | No | No | Ingests upcoming fixtures from the iCal feed into local D1. |
 | `pnpm dev-reset` | No | No | Resets local D1 database, re-migrates, re-seeds local group data, and re-ingests fixtures. |
 | `pnpm cf-typegen` | No | No | Generates Cloudflare Worker runtime environment types (`worker-configuration.d.ts`). |
@@ -222,11 +204,8 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
    - Disable the `workers.dev` route for the `passie` Worker in the Cloudflare dashboard as hygiene.
    - Enable Workers Logs / Observability for the `passie` Worker.
 
-4. **Seed production group data from `seed/group.local.json`:**
-   ```bash
-   pnpm seed:local --remote --confirm
-   ```
-   ⚠️ **One-time only.** `passes` rows are upserted with `holder_member_id` taken from the seed file (`scripts/seed.ts`, `ON CONFLICT(group_id, label) DO UPDATE SET ... holder_member_id = excluded.holder_member_id`). Re-running this after real physical handovers have been recorded in production **silently resets every pass back to its original seed-file holder**, discarding live custody state. `members` rows are insert-only (`ON CONFLICT DO NOTHING`) and are safe to reseed at any time.
+4. **Initial production group data bootstrap (Historical, 2026-08-18):**
+   Group structure, members, and initial passes were bootstrapped once on Day 0. Now that production is live, all ongoing member additions, renames, and email assignments are managed safely via the role-gated `/beheer` web interface.
 
 5. **Trigger initial fixture ingestion:**
    ```bash
@@ -261,7 +240,7 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
    ```
    Safe to run every time: Wrangler tracks applied migrations per-database and only executes new files in `drizzle/`. Prints `No migrations to apply!` when there is nothing pending.
 
-4. **Do not re-run `pnpm seed:local --remote --confirm` or the manual ingest trigger** — both are Initial Setup steps only (see warnings above). Skip straight to building and deploying.
+4. **Do not re-seed the production database or trigger manual ingest** — production is live with actual matchday pool states and member custody records. Member and email management is performed directly via `/beheer`. Skip straight to building and deploying.
 
 5. **Record a pre-deploy data baseline** so the release can be proven non-destructive:
    ```bash

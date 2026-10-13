@@ -89,7 +89,7 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 ### Pass Configuration & Naming
 - Every season ticket is defined in `seed/group.local.json` (or `seed/group.example.json` for fictional testing) with a primary name `label` (e.g. `"Pas 1"`, `"Pas Sam"`, `"Vak K Noord"`), optional `seatInfo` (e.g. `"Vak K, Rij 12"`), list of `owners` (`["ilse", "noor"]`), initial physical `holder` (`"ilse"`), and `sortOrder`.
 - The `label` column is the primary display name on cards and detail pages. The co-owners are displayed in clear plain text directly below the card title (*"Pas van: [Namen]"*), while the physical card custody is managed separately via the interactive holder control row.
-- In MVP, pass names can be amended by updating `seed/group.local.json` and running `pnpm seed:local` (or direct D1 `UPDATE passes SET label = ?`). Future admin UI will expose web-based pass editing.
+- In local dev, pass names can be amended by updating `seed/group.local.json` and running `pnpm seed:local` (or in production via direct D1 `UPDATE passes SET label = ?`). Future admin UI will expose web-based pass editing.
 
 ### Member Administration & Passless Members
 - Group members are managed via the role-gated admin interface (`/beheer`), accessible to group administrators (`members.role = 'admin'`) and platform administrators (`auth_user.role = 'admin'`).
@@ -122,5 +122,5 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 - **Cron Triggers:** Automatic background fixture ingestion (`0 */6 * * *`) invokes `ingestClubFixtures(db, "excelsior")` directly via the worker `scheduled` handler.
 - **Custom Domain Routing:** Production traffic routes through `passie.goedvolk.org` configured as a Cloudflare Worker custom domain.
 - **Cloudflare Access for Workers:** Access policy attaches at Worker scope (destination type `worker`), protecting the custom domain, all routes, `workers.dev`, and preview URLs under a single policy. For MVP soft launch, a single Bypass policy conditioned on *Country = Netherlands* is used (admitting Dutch visitors frictionlessly while blocking international scrapers without asserting cryptographically verified identity).
-- **D1 Production Database:** Production database `passie` (UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`, committed in `wrangler.jsonc` per ADR 0011), migrated via `pnpm db:migrate:prod`, and seeded via `pnpm seed:local --remote --confirm`.
+- **D1 Production Database:** Production database `passie` (UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`, committed in `wrangler.jsonc` per ADR 0011), migrated via `pnpm db:migrate:prod`. Post-bootstrap group administration and member email bindings are managed live via `/beheer`.
 
