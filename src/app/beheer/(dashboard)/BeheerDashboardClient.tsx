@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AdminMemberDialog } from "@/components/admin/AdminMemberDialog";
 import { t } from "@/i18n/t";
-import { trackAdminMembersReordered } from "@/lib/posthog";
+import { trackAdminMembersReordered, trackSignOut, resetUser } from "@/lib/posthog";
 import { authClient } from "@/lib/authClient";
 import type { AdminMemberListItem } from "@/server/adminMembers";
 
@@ -47,6 +47,8 @@ export function BeheerDashboardClient({ members: initialMembers }: BeheerDashboa
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      trackSignOut();
+      resetUser();
       await authClient.signOut();
       router.push("/inloggen");
       router.refresh();

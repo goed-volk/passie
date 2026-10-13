@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/authClient";
+import { resetUser, trackSignOut } from "@/lib/posthog";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { t } from "@/i18n/t";
@@ -14,6 +15,8 @@ export function SignOutButton({ className }: { className?: string }) {
   const handleSignOut = async () => {
     setLoading(true);
     try {
+      trackSignOut();
+      resetUser();
       await authClient.signOut();
       router.push("/inloggen");
       router.refresh();

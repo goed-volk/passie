@@ -39,6 +39,12 @@ import {
   trackAdminMemberCreated,
   trackAdminMemberUpdated,
   trackAdminMembersReordered,
+  trackSignInOtpRequested,
+  trackSignInSuccess,
+  trackSignOut,
+  trackPasskeyRegistered,
+  trackPasskeyDeleted,
+  trackSessionsRevoked,
   getHoursToKickoffBucket,
 } from "../posthog";
 
@@ -395,6 +401,32 @@ describe("posthog client telemetry & privacy", () => {
       expect(posthog.capture).toHaveBeenCalledWith("pass.handover", {
         isHolderNow: true,
       });
+
+      // Authentication & Passkey events
+      trackSignInOtpRequested();
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_otp_requested");
+
+      trackSignInSuccess({ method: "otp" });
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_success", {
+        method: "otp",
+      });
+
+      trackSignInSuccess({ method: "passkey" });
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_success", {
+        method: "passkey",
+      });
+
+      trackSignOut();
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sign_out");
+
+      trackPasskeyRegistered();
+      expect(posthog.capture).toHaveBeenCalledWith("auth.passkey_registered");
+
+      trackPasskeyDeleted();
+      expect(posthog.capture).toHaveBeenCalledWith("auth.passkey_deleted");
+
+      trackSessionsRevoked();
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sessions_revoked");
     });
 
     it("resets analytics on resetAnalytics()", () => {

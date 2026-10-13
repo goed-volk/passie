@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/authClient";
-import { resetUser } from "@/lib/posthog";
+import {
+  resetUser,
+  trackPasskeyRegistered,
+  trackPasskeyDeleted,
+  trackSessionsRevoked,
+  trackSignOut,
+} from "@/lib/posthog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Fingerprint, Plus, Trash2, Shield, LogOut, Laptop, CheckCircle2 } from "lucide-react";
@@ -93,6 +99,7 @@ export function SecuritySettings({ userEmail }: { userEmail?: string }) {
         console.error("[settings:addPasskey] Failed:", res.error);
         setError(t("passkeyAddError"));
       } else {
+        trackPasskeyRegistered();
         setMessage(t("passkeyAddSuccess"));
         await loadData();
       }
@@ -107,6 +114,7 @@ export function SecuritySettings({ userEmail }: { userEmail?: string }) {
   const handleDeletePasskey = async (id: string) => {
     try {
       await authClient.passkey.deletePasskey({ id });
+      trackPasskeyDeleted();
       setMessage(t("settingsPasskeyDeleted"));
       await loadData();
     } catch {
@@ -121,6 +129,7 @@ export function SecuritySettings({ userEmail }: { userEmail?: string }) {
 
     try {
       await authClient.revokeOtherSessions();
+      trackSessionsRevoked();
       setMessage(t("settingsRevokedSuccess"));
       await loadData();
     } catch {
@@ -133,6 +142,7 @@ export function SecuritySettings({ userEmail }: { userEmail?: string }) {
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
+      trackSignOut();
       resetUser();
       await authClient.signOut();
       router.push("/inloggen");

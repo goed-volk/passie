@@ -298,6 +298,37 @@ export function trackHandover(props?: {
   posthog.capture("pass.handover", props);
 }
 
+// Authentication & Passkey Events
+export function trackSignInOtpRequested() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.sign_in_otp_requested");
+}
+
+export function trackSignInSuccess(props: { method: "otp" | "passkey" }) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.sign_in_success", props);
+}
+
+export function trackSignOut() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.sign_out");
+}
+
+export function trackPasskeyRegistered() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.passkey_registered");
+}
+
+export function trackPasskeyDeleted() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.passkey_deleted");
+}
+
+export function trackSessionsRevoked() {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.sessions_revoked");
+}
+
 // Admin Events
 export function trackAdminLogin() {
   if (typeof window === "undefined" || !posthog.__loaded) return;

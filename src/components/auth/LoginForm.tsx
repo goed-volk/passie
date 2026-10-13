@@ -3,7 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/authClient";
-import { identifyUser } from "@/lib/posthog";
+import {
+  identifyUser,
+  trackSignInOtpRequested,
+  trackSignInSuccess,
+  trackPasskeyRegistered,
+} from "@/lib/posthog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { KeyRound, Mail, ArrowRight, Fingerprint, RefreshCw } from "lucide-react";
@@ -76,6 +81,7 @@ export function LoginForm() {
           setError(res.error.message || t("loginFailedGeneric"));
         }
       } else {
+        trackSignInOtpRequested();
         setStep("otp");
       }
     } catch {
@@ -106,6 +112,7 @@ export function LoginForm() {
           setError(t("loginInvalidOtp"));
         }
       } else {
+        trackSignInSuccess({ method: "otp" });
         // Successfully verified OTP. Check if device supports WebAuthn passkeys
         if (typeof window !== "undefined" && window.PublicKeyCredential) {
           setStep("prompt-passkey");
@@ -130,6 +137,7 @@ export function LoginForm() {
         console.error("[passkey:signIn] Failed:", res.error);
         setError(t("passkeyAuthError"));
       } else {
+        trackSignInSuccess({ method: "passkey" });
         await syncAfterLogin();
       }
     } catch (err) {
@@ -153,6 +161,7 @@ export function LoginForm() {
         console.error("[passkey:addPasskey] Failed:", res.error);
         setError(t("passkeyAddError"));
       } else {
+        trackPasskeyRegistered();
         await syncAfterLogin();
       }
     } catch (err) {

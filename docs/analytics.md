@@ -71,6 +71,16 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | `$web_vitals` | Telemetry | Core Web Vitals monitor (`LCP`, `INP`, `CLS`) | Metric values, rating | Clean |
 | `$performance_event` | Telemetry | Performance timing event | Duration, metric name | Clean |
 
+### Authentication & Passkey Telemetry Lifecycle
+Passie tracks the passwordless identity lifecycle without capturing sensitive credentials, passkey public keys, or user email addresses:
+- **Unified Sign-in Event (`auth.sign_in_success`)**: Dispatched on every successful login session. Carries a single discriminator property:
+  - `method: "passkey"` when authenticated via WebAuthn biometric or security key credential.
+  - `method: "otp"` when authenticated via 6-digit email OTP.
+- **Passkey Enrollment (`auth.passkey_registered`)**: A dedicated event emitted whenever a new WebAuthn credential is created and verified by the server (both from the post-OTP enrollment prompt in `/inloggen` and from the settings panel in `/instellingen`).
+- **Passkey Removal (`auth.passkey_deleted`)**: Emitted when a member deletes an enrolled passkey in `/instellingen`.
+- **OTP Request (`auth.sign_in_otp_requested`)**: Dispatched when an OTP code is requested; recipient email is strictly omitted.
+- **Sign-out & Session Management (`auth.sign_out`, `auth.sessions_revoked`)**: Emitted when explicit logout or revocation actions occur.
+
 ---
 
 ## 3. Identity Model & Lifecycle
@@ -186,6 +196,30 @@ SELECT
     round(count() * 1.0 / count(DISTINCT distinct_id), 2) AS selections_per_member
 FROM events
 WHERE event = 'member.selected'
+  AND timestamp >= now() - INTERVAL 30 DAY
+```
+
+### 6. Authentication Method Share: Passkey vs. Email OTP
+```sql
+SELECT
+    properties.method AS auth_method,
+    count() AS total_logins,
+    round(count() * 100.0 / sum(count()) OVER (), 1) AS share_pct
+FROM events
+WHERE event = 'auth.sign_in_success'
+  AND timestamp >= now() - INTERVAL 30 DAY
+GROUP BY auth_method
+ORDER BY total_logins DESC
+```
+
+### 7. Passkey Adoption & Enrollment Velocity
+```sql
+SELECT
+    countIf(event = 'auth.passkey_registered') AS passkeys_registered,
+    countIf(event = 'auth.passkey_deleted') AS passkeys_deleted,
+    count(DISTINCT distinct_id) AS unique_members_enrolling
+FROM events
+WHERE event IN ('auth.passkey_registered', 'auth.passkey_deleted')
   AND timestamp >= now() - INTERVAL 30 DAY
 ```
 
