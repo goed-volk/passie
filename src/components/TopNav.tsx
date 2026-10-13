@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, Settings, TicketCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { MemberRef } from "@/server/snapshot";
+import { t } from "@/i18n/t";
 
 export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
   return (
@@ -18,7 +19,7 @@ export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
         <Link
           href="/wedstrijden"
           className="h-11 w-11 p-2.5 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          aria-label="Wedstrijden"
+          aria-label={t("ariaNavFixtures")}
         >
           <Calendar className="h-5 w-5" />
         </Link>
@@ -26,7 +27,7 @@ export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
         <Link
           href="/instellingen"
           className="h-11 w-11 p-2.5 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          aria-label="Instellingen"
+          aria-label={t("ariaNavSettings")}
         >
           <Settings className="h-5 w-5" />
         </Link>
@@ -35,7 +36,7 @@ export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
           <Link
             href="/instellingen"
             className="min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Profiel en instellingen"
+            aria-label={t("ariaNavProfileSettings")}
           >
             <Avatar
               className="h-8 w-8 ring-2 ring-slate-200 dark:ring-slate-700 hover:ring-slate-400 dark:hover:ring-slate-500 transition-all"

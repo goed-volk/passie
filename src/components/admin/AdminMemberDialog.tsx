@@ -104,7 +104,7 @@ function AdminMemberDialogForm({
         if (!res.ok) {
           if (res.status === 409 && data?.reason) {
             if (data.reason === "holds_pass") {
-              setErrorMsg(t("beheerBlockedHolder", { pass: data.details || "een pas" }));
+              setErrorMsg(t("beheerBlockedHolder", { pass: data.details || t("beheerBlockedHolderGeneric") }));
             } else if (data.reason === "is_owner") {
               setErrorMsg(t("beheerBlockedOwner"));
             } else if (data.reason === "in_open_queue") {
@@ -149,7 +149,7 @@ function AdminMemberDialogForm({
       onOpenChange(false);
       router.refresh();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Er is iets misgegaan.");
+      setErrorMsg(err instanceof Error ? err.message : t("error_GENERIC"));
     } finally {
       setLoading(false);
     }
@@ -219,7 +219,7 @@ function AdminMemberDialogForm({
               maxLength={40}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="bijv. Sam"
+              placeholder={t("beheerNamePlaceholder")}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
@@ -248,7 +248,7 @@ function AdminMemberDialogForm({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="bijv. lid@voorbeeld.nl"
+              placeholder={t("beheerEmailPlaceholder")}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -259,15 +259,15 @@ function AdminMemberDialogForm({
           {/* Role */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Rol
+              {t("beheerMemberRole")}
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as "admin" | "member")}
               className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="member">Lid</option>
-              <option value="admin">Beheerder</option>
+              <option value="member">{t("beheerRoleMember")}</option>
+              <option value="admin">{t("beheerRoleAdmin")}</option>
             </select>
           </div>
 

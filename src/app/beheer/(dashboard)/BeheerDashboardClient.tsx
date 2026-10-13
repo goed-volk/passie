@@ -73,7 +73,7 @@ export function BeheerDashboardClient({ members: initialMembers }: BeheerDashboa
         toast.success(t("beheerReorderSuccess"));
       }
     } catch {
-      toast.error("Fout bij opslaan van volgorde.");
+      toast.error(t("beheerReorderError"));
       setMembersList(initialMembers);
     }
   };

@@ -11,7 +11,7 @@ Passie employs a privacy-first, client-side product analytics architecture backe
 ```
 [ Browser Client ]
   ├── posthog-js (capture_pageview: 'history_change') ──> $pageview on SPA route change
-  ├── MemberPicker ────────────────────────────────────> member.selected on identity selection
+  ├── LoginForm (/inloggen) ───────────────────────────> auth.sign_in_* on authentication
   ├── HomeScreen / usePool ────────────────────────────> matchday domain events (pass.*, queue.*)
   ├── Admin Interface (/beheer) ───────────────────────> admin.* events
   │
@@ -45,7 +45,7 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | Event Name | Category | Trigger Location | Allowed Payload Properties | PII Status |
 | --- | --- | --- | --- | --- |
 | `$pageview` | Navigation | SPA route transition (`history_change`) | `$current_url`, `$pathname` (both templated) | Sanitized (no query params, no IDs) |
-| `member.selected` | Identity | Legacy identity selection | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
+| `member.selected` | Identity | Legacy identity selection (deprecated) | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
 | `auth.sign_in_otp_requested` | Auth | Email OTP requested | _None_ | Clean (email omitted) |
 | `auth.sign_in_success` | Auth | Successful sign-in | `method` (`otp` or `passkey`) | Clean |
 | `auth.sign_out` | Auth | Explicit user sign-out | _None_ | Clean |
@@ -89,7 +89,7 @@ PostHog attributes events using a persistent `distinct_id`. In Passie, identity 
 
 ### Core Identity Mechanics
 1. **Anonymous Baseline:** On initial load without identity, `posthog-js` assigns an anonymous UUID. Events prior to identity selection are recorded under this anonymous ID.
-2. **First Identification (Merge):** When a user selects their profile in `/wie-ben-jij`, `trackMemberIdentity(member)` calls `posthog.identify(member.id, properties)`. This merges previous anonymous browsing events into the member profile without rotating session IDs.
+2. **First Identification (Merge):** When a user signs in via `/inloggen` (`LoginForm`), `trackMemberIdentity(member)` calls `posthog.identify(member.id, properties)`. This merges previous anonymous browsing events into the member profile without rotating session IDs.
 3. **Shared Device Switch (`reset()`):** If a different person uses the same browser/device (`posthog.get_property("$user_state") === "identified" && currentDistinctId !== member.id`), `trackMemberIdentity()` explicitly invokes `posthog.reset()` first. This decouples the sessions and prevents distinct user profiles from being merged into one person.
 4. **Polling & Re-hydration Deduplication:** On subsequent renders or during TanStack Query 5-second polling intervals, `trackMemberIdentity()` checks `posthog.get_distinct_id() === member.id`. If already identified, duplicate `identify()` calls are skipped, preventing redundant `$set` property writes.
 5. **Group Analytics (`goedvolk`):** Group association is established via `posthog.group("group", "goedvolk", { name: "Goed Volk" })`. The web SDK attaches `$groups: { group: "goedvolk" }` to all subsequent events in the session automatically. Duplicate `$groupidentify` calls are prevented by checking `posthog.getGroups().group !== groupSlug`.
