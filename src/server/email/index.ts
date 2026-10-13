@@ -20,6 +20,12 @@ export function getMailer(env?: Record<string, unknown>): Mailer {
     (isProduction && isBindingAvailable ? "cloudflare" : "console")
   ).toLowerCase();
 
+  if (isProduction) {
+    if (configuredMailer !== "cloudflare" || !isBindingAvailable) {
+      throw new Error("[mailer] Cloudflare EMAIL binding is required and must be available in production");
+    }
+  }
+
   if (configuredMailer === "cloudflare") {
     if (!isBindingAvailable) {
       console.warn("[mailer] Cloudflare EMAIL binding not found on env, falling back to console mailer");

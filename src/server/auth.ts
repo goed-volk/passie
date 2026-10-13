@@ -50,14 +50,24 @@ export async function getAuth(options?: AuthContextOptions) {
   const secret =
     (env?.BETTER_AUTH_SECRET as string | undefined) ||
     process.env.BETTER_AUTH_SECRET ||
-    "local-dev-better-auth-secret-min-32-characters-change-in-prod";
+    (!isProduction ? "local-dev-better-auth-secret-min-32-characters-change-in-prod" : undefined);
 
   const publicOrigin =
     (env?.PASSIE_PUBLIC_ORIGIN as string | undefined) ||
     process.env.PASSIE_PUBLIC_ORIGIN ||
-    (isProduction ? "https://passie.goedvolk.org" : "http://localhost:3000");
+    (!isProduction ? "http://localhost:3000" : undefined);
 
-  const url = new URL(publicOrigin);
+  if (isProduction) {
+    if (!secret || secret === "local-dev-better-auth-secret-min-32-characters-change-in-prod") {
+      throw new Error("[auth] Missing or default BETTER_AUTH_SECRET configured in production");
+    }
+    if (!publicOrigin) {
+      throw new Error("[auth] Missing PASSIE_PUBLIC_ORIGIN in production");
+    }
+  }
+
+  const effectiveOrigin = publicOrigin || "http://localhost:3000";
+  const url = new URL(effectiveOrigin);
   const rpID = url.hostname;
   const origin = url.origin;
 
@@ -87,7 +97,8 @@ export async function getAuth(options?: AuthContextOptions) {
         const mailer = getMailer(env);
         const payload = renderOtpEmail(email, otp);
         const sendPromise = mailer.send(payload).catch((err) => {
-          console.error("[auth:emailOTP] Failed to send verification OTP:", err);
+          const domain = email.includes("@") ? `@${email.split("@")[1]}` : "unknown";
+          console.error(`[auth:emailOTP] Failed to send verification OTP to domain ${domain}:`, err instanceof Error ? err.message : String(err));
         });
 
         if (cfCtx?.ctx?.waitUntil) {
@@ -201,7 +212,6 @@ export async function getAuth(options?: AuthContextOptions) {
       "/sign-in/email",
       "/sign-in/social",
       "/request-password-reset",
-      "/forget-password",
       "/reset-password",
       "/verify-password",
       "/change-password",
@@ -220,6 +230,7 @@ export async function getAuth(options?: AuthContextOptions) {
       "/get-access-token",
       "/account-info",
       "/email-otp/verify-email",
+      "/email-otp/check-verification-otp",
       "/email-otp/request-password-reset",
       "/email-otp/reset-password",
       "/forget-password/email-otp",

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { getAuth } from "../auth";
 import { setBanned, preCreateUserAndLink } from "../authAdmin";
-import { ConsoleMailer, CloudflareMailer, renderOtpEmail } from "../email";
+import { ConsoleMailer, CloudflareMailer, getMailer, renderOtpEmail } from "../email";
 import { createTestDb } from "./helpers/testDb";
 import type { DbClient } from "../db";
 import * as schema from "../schema";
@@ -41,6 +41,7 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
       "/update-user",
       "/delete-user",
       "/email-otp/verify-email",
+      "/email-otp/check-verification-otp",
       "/email-otp/request-password-reset",
       "/email-otp/reset-password",
     ];
@@ -208,5 +209,68 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
     expect(untrustedRes.status).toBe(403);
     const errBody = (await untrustedRes.json()) as { code: string };
     expect(errBody.code).toBe("INVALID_ORIGIN");
+  });
+
+  it("fail-closed posture: getAuth rejects missing secret or origin in production", async () => {
+    // Missing secret in production
+    await expect(
+      getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "production",
+          PASSIE_PUBLIC_ORIGIN: "https://passie.goedvolk.org",
+        },
+      })
+    ).rejects.toThrow("Missing or default BETTER_AUTH_SECRET configured in production");
+
+    // Default dev secret in production
+    await expect(
+      getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "production",
+          BETTER_AUTH_SECRET: "local-dev-better-auth-secret-min-32-characters-change-in-prod",
+          PASSIE_PUBLIC_ORIGIN: "https://passie.goedvolk.org",
+        },
+      })
+    ).rejects.toThrow("Missing or default BETTER_AUTH_SECRET configured in production");
+
+    // Missing origin in production
+    await expect(
+      getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "production",
+          BETTER_AUTH_SECRET: "production-super-secret-key-32-chars-minimum",
+        },
+      })
+    ).rejects.toThrow("Missing PASSIE_PUBLIC_ORIGIN in production");
+  });
+
+  it("fail-closed posture: getMailer enforces Cloudflare binding in production", () => {
+    // Disallows console mailer in production
+    expect(() =>
+      getMailer({
+        PASSIE_ENV: "production",
+        PASSIE_MAILER: "console",
+      })
+    ).toThrow("Cloudflare EMAIL binding is required and must be available in production");
+
+    // Disallows missing EMAIL binding in production
+    expect(() =>
+      getMailer({
+        PASSIE_ENV: "production",
+        PASSIE_MAILER: "cloudflare",
+      })
+    ).toThrow("Cloudflare EMAIL binding is required and must be available in production");
+
+    // Succeeds when binding is present
+    const mockBinding = { send: vi.fn() };
+    const mailer = getMailer({
+      PASSIE_ENV: "production",
+      PASSIE_MAILER: "cloudflare",
+      EMAIL: mockBinding,
+    });
+    expect(mailer).toBeInstanceOf(CloudflareMailer);
   });
 });
