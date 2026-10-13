@@ -78,7 +78,7 @@ export function LoginForm() {
         if (res.error.status === 429) {
           setError(t("loginRateLimited"));
         } else {
-          setError(res.error.message || t("loginFailedGeneric"));
+          setError(t("loginFailedGeneric"));
         }
       } else {
         trackSignInOtpRequested();
@@ -276,7 +276,8 @@ export function LoginForm() {
                 placeholder="123456"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                className="w-full text-center font-mono tracking-widest text-2xl py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-600 dark:focus:ring-red-500"
+                data-ph-no-capture="true"
+                className="w-full text-center font-mono tracking-widest text-2xl py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-600 dark:focus:ring-red-500 ph-no-capture"
               />
             </div>
 

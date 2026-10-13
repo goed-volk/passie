@@ -25,6 +25,7 @@ import {
   ALLOWED_ANALYTICS_EVENTS,
   initPostHog,
   trackMemberIdentity,
+  identifyUser,
   trackMemberSelected,
   resetAnalytics,
   trackIndicateKeep,
@@ -176,6 +177,7 @@ describe("posthog client telemetry & privacy", () => {
           displayName: "Secret Name",
           passId: "pass_123",
           seatInfo: "Vak K, Rij 4",
+          email: "secret@example.com",
           safeProperty: "kept",
         },
       };
@@ -188,6 +190,7 @@ describe("posthog client telemetry & privacy", () => {
       expect(result?.properties.displayName).toBeUndefined();
       expect(result?.properties.passId).toBeUndefined();
       expect(result?.properties.seatInfo).toBeUndefined();
+      expect(result?.properties.email).toBeUndefined();
       expect(result?.properties.safeProperty).toBe("kept");
     });
 
@@ -432,6 +435,57 @@ describe("posthog client telemetry & privacy", () => {
     it("resets analytics on resetAnalytics()", () => {
       resetAnalytics();
       expect(posthog.reset).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("identifyUser() lifecycle & reset guard", () => {
+    beforeEach(() => {
+      globalThis.window = {} as unknown as Window & typeof globalThis;
+      (posthog as unknown as { __loaded: boolean }).__loaded = true;
+    });
+
+    it("calls reset() when switching from an already-identified distinct ID", () => {
+      vi.mocked(posthog.get_property).mockReturnValue("identified");
+      vi.mocked(posthog.get_distinct_id).mockReturnValue("mem_sam");
+
+      vi.mocked(posthog.reset).mockImplementation(() => {
+        vi.mocked(posthog.get_property).mockReturnValue("anonymous");
+        vi.mocked(posthog.get_distinct_id).mockReturnValue("anon-fresh");
+      });
+
+      identifyUser("mem_noor");
+
+      expect(posthog.reset).toHaveBeenCalledTimes(1);
+      expect(posthog.identify).toHaveBeenCalledWith("mem_noor");
+    });
+
+    it("does not call reset() when in anonymous state", () => {
+      vi.mocked(posthog.get_property).mockReturnValue("anonymous");
+      vi.mocked(posthog.get_distinct_id).mockReturnValue("anon-uuid-123");
+
+      identifyUser("mem_sam");
+
+      expect(posthog.reset).not.toHaveBeenCalled();
+      expect(posthog.identify).toHaveBeenCalledWith("mem_sam");
+    });
+
+    it("skips identify() if distinct_id already matches", () => {
+      vi.mocked(posthog.get_property).mockReturnValue("identified");
+      vi.mocked(posthog.get_distinct_id).mockReturnValue("mem_sam");
+
+      identifyUser("mem_sam");
+
+      expect(posthog.reset).not.toHaveBeenCalled();
+      expect(posthog.identify).not.toHaveBeenCalled();
+    });
+
+    it("does nothing if posthog is not loaded", () => {
+      (posthog as unknown as { __loaded: boolean }).__loaded = false;
+
+      identifyUser("mem_sam");
+
+      expect(posthog.reset).not.toHaveBeenCalled();
+      expect(posthog.identify).not.toHaveBeenCalled();
     });
   });
 

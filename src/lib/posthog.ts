@@ -142,6 +142,7 @@ export function initPostHog(config?: ClientTelemetryConfig) {
         delete event.properties.displayName;
         delete event.properties.passId;
         delete event.properties.seatInfo;
+        delete event.properties.email;
       }
       return event;
     },
@@ -218,6 +219,11 @@ export function resetAnalytics() {
 
 export function identifyUser(memberId: string) {
   if (typeof window === "undefined" || !posthog.__loaded) return;
+  const currentDistinctId = posthog.get_distinct_id();
+  const userState = posthog.get_property("$user_state");
+  if (userState === "identified" && currentDistinctId && currentDistinctId !== memberId) {
+    posthog.reset();
+  }
   if (posthog.get_distinct_id() !== memberId) {
     posthog.identify(memberId);
   }
