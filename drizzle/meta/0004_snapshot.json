@@ -670,11 +670,11 @@
           ],
           "isUnique": true
         },
-        "members_group_user_idx": {
-          "name": "members_group_user_idx",
+        "members_user_group_idx": {
+          "name": "members_user_group_idx",
           "columns": [
-            "group_id",
-            "user_id"
+            "user_id",
+            "group_id"
           ],
           "isUnique": true,
           "where": "user_id IS NOT NULL"
