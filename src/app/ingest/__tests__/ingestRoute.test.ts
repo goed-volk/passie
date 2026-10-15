@@ -80,7 +80,8 @@ describe("/ingest proxy route security & filtering", () => {
         "user-agent": "test-agent",
         cookie: "passie_session=session_token_12345; passie_member=member_secret",
         authorization: "Bearer secret",
-        "x-forwarded-for": "1.2.3.4",
+        "cf-connecting-ip": "84.104.1.2",
+        "x-forwarded-for": "1.2.3.4, 10.0.0.1",
         "cf-ray": "ray123",
       },
     });
@@ -88,12 +89,13 @@ describe("/ingest proxy route security & filtering", () => {
     const res = await GET(req, { params: Promise.resolve({ path: ["decide"] }) });
     expect(res.status).toBe(200);
 
-    // Verify outbound request headers allowlist
+    // Verify outbound request headers allowlist and GeoIP client IP forwarding
     const sentHeaders = capturedHeaders as Headers | null;
     expect(sentHeaders).not.toBeNull();
     expect(sentHeaders?.get("cookie")).toBeNull();
     expect(sentHeaders?.get("authorization")).toBeNull();
-    expect(sentHeaders?.get("x-forwarded-for")).toBeNull();
+    expect(sentHeaders?.get("cf-connecting-ip")).toBeNull();
+    expect(sentHeaders?.get("x-forwarded-for")).toBe("84.104.1.2");
     expect(sentHeaders?.get("cf-ray")).toBeNull();
     expect(sentHeaders?.get("user-agent")).toBe("test-agent");
 

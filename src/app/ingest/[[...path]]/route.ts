@@ -42,6 +42,12 @@ function buildUpstreamHeaders(request: NextRequest): Headers {
       headers.set(name, value);
     }
   }
+  const clientIp =
+    request.headers.get("cf-connecting-ip") ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (clientIp) {
+    headers.set("x-forwarded-for", clientIp);
+  }
   return headers;
 }
 

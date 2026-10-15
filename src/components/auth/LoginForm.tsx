@@ -26,7 +26,7 @@ export function LoginForm() {
   const router = useRouter();
   const mountedRef = useRef(false);
 
-  const syncAfterLogin = useCallback(async () => {
+  const identifyFromSession = useCallback(async () => {
     try {
       const meRes = await fetch("/api/me");
       if (meRes.ok) {
@@ -38,9 +38,13 @@ export function LoginForm() {
     } catch {
       // Non-critical telemetry sync
     }
+  }, []);
+
+  const syncAfterLogin = useCallback(async () => {
+    await identifyFromSession();
     router.push("/");
     router.refresh();
-  }, [router]);
+  }, [identifyFromSession, router]);
 
   // Conditional UI passkey autofill on mount
   useEffect(() => {
@@ -52,14 +56,17 @@ export function LoginForm() {
         .passkey({ autoFill: true })
         .then(async (res) => {
           if (res && !res.error) {
-            await syncAfterLogin();
+            await identifyFromSession();
+            trackSignInSuccess({ method: "passkey" });
+            router.push("/");
+            router.refresh();
           }
         })
         .catch(() => {
           // Conditional mediation abort/cancel is normal
         });
     }
-  }, [syncAfterLogin]);
+  }, [identifyFromSession, router]);
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -112,12 +119,14 @@ export function LoginForm() {
           setError(t("loginInvalidOtp"));
         }
       } else {
+        await identifyFromSession();
         trackSignInSuccess({ method: "otp" });
         // Successfully verified OTP. Check if device supports WebAuthn passkeys
         if (typeof window !== "undefined" && window.PublicKeyCredential) {
           setStep("prompt-passkey");
         } else {
-          await syncAfterLogin();
+          router.push("/");
+          router.refresh();
         }
       }
     } catch {
@@ -137,8 +146,10 @@ export function LoginForm() {
         console.error("[passkey:signIn] Failed:", res.error);
         setError(t("passkeyAuthError"));
       } else {
+        await identifyFromSession();
         trackSignInSuccess({ method: "passkey" });
-        await syncAfterLogin();
+        router.push("/");
+        router.refresh();
       }
     } catch (err) {
       console.error("[passkey:signIn] Exception:", err);
