@@ -256,6 +256,9 @@ export const nl = {
   error_INTERNAL_ERROR: "Er is een interne fout opgetreden.",
   error_UNAUTHORIZED: "Authenticatie vereist.",
   error_GENERIC: "Er is iets misgegaan. Probeer het opnieuw.",
+  errorBoundaryTitle: "Er is iets misgegaan",
+  errorBoundaryDesc: "Er is een onverwachte fout opgetreden bij het weergeven van deze pagina.",
+  errorBoundaryRetry: "Opnieuw proberen",
 
   // Activity Event Descriptions
   events: {

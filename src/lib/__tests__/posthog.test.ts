@@ -5,6 +5,7 @@ vi.mock("posthog-js", () => {
     __loaded: false,
     init: vi.fn(),
     capture: vi.fn(),
+    captureException: vi.fn(),
     identify: vi.fn(),
     group: vi.fn(),
     reset: vi.fn(),
@@ -46,6 +47,7 @@ import {
   trackPasskeyRegistered,
   trackPasskeyDeleted,
   trackSessionsRevoked,
+  trackClientException,
   getHoursToKickoffBucket,
 } from "../posthog";
 
@@ -78,6 +80,8 @@ describe("posthog client telemetry & privacy", () => {
 
       // Identity & Navigation
       expect(ALLOWED_ANALYTICS_EVENTS.has("member.selected")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("email.sent")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("email.send_failed")).toBe(true);
       expect(ALLOWED_ANALYTICS_EVENTS.has("$pageview")).toBe(true);
 
       // Admin Administration
@@ -143,6 +147,11 @@ describe("posthog client telemetry & privacy", () => {
       expect(options?.capture_heatmaps).toBe(false);
       expect(options?.disable_session_recording).toBe(true);
       expect(options?.person_profiles).toBe("identified_only");
+      expect(options?.capture_exceptions).toEqual({
+        capture_unhandled_errors: true,
+        capture_unhandled_rejections: true,
+        capture_console_errors: false,
+      });
     });
 
     it("before_send filters out unlisted events", () => {
@@ -212,6 +221,38 @@ describe("posthog client telemetry & privacy", () => {
       const result = beforeSend(poolEvent as never);
       expect(result?.properties.$current_url).toBe("https://passie.goedvolk.org/api/pool/[gamePoolId]");
       expect(result?.properties.$pathname).toBe("/api/pool/[gamePoolId]");
+    });
+
+    it("before_send sanitizes $exception_message and $exception_list values", () => {
+      globalThis.window = { location: { hostname: "passie.goedvolk.org" } } as unknown as Window & typeof globalThis;
+      initPostHog({ posthogKey: "phc_test_key", posthogHost: "https://eu.i.posthog.com", passieEnv: "development" });
+
+      const options = vi.mocked(posthog.init).mock.calls[0]![1];
+      const beforeSend = options!.before_send as (event: unknown) => { properties: Record<string, unknown> } | null;
+
+      const exceptionEvent = {
+        event: "$exception",
+        properties: {
+          $exception_message: "User 'Secret Person' with email user@example.com failed",
+          $exception_list: [
+            {
+              type: "Error",
+              value: 'Failed for "Secret Guest" (guest@example.com)',
+            },
+          ],
+        },
+      };
+
+      const result = beforeSend(exceptionEvent as never);
+      expect(result?.properties.$exception_message).toBe(
+        "User '[redacted]' with email [email_redacted] failed"
+      );
+      expect(result?.properties.$exception_list).toEqual([
+        {
+          type: "Error",
+          value: 'Failed for "[redacted]" ([email_redacted])',
+        },
+      ]);
     });
   });
 
@@ -430,6 +471,12 @@ describe("posthog client telemetry & privacy", () => {
 
       trackSessionsRevoked();
       expect(posthog.capture).toHaveBeenCalledWith("auth.sessions_revoked");
+
+      const err = new Error("Render crash");
+      trackClientException(err, { boundary: "app_error_boundary" });
+      expect(posthog.captureException).toHaveBeenCalledWith(err, {
+        boundary: "app_error_boundary",
+      });
     });
 
     it("resets analytics on resetAnalytics()", () => {

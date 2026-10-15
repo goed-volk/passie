@@ -5,6 +5,7 @@ export * from "../.open-next/worker.js";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./server/schema";
 import { ingestClubFixtures } from "./server/ingest";
+import { captureServerException } from "./server/telemetryConfig";
 
 const workerHandler = {
   fetch: openNextHandler.fetch,
@@ -24,6 +25,15 @@ const workerHandler = {
           console.log("[cron:ingest] Ingestion completed:", result);
         } catch (error) {
           console.error("[cron:ingest] Scheduled ingestion failed:", error);
+          await captureServerException({
+            error,
+            distinctId: "system_cron",
+            env: env as unknown as Record<string, unknown>,
+            context: {
+              source: "cron_ingest",
+              cron: event.cron,
+            },
+          });
         }
       })()
     );

@@ -4,6 +4,7 @@ import { getDb } from "@/server/db";
 import { requireAdminApi, assertCapability } from "@/server/adminAuth";
 import { updateMember, type MemberUpdatableField } from "@/server/adminMembers";
 import { assertSameOrigin } from "@/server/http/assertSameOrigin";
+import { captureServerException } from "@/server/telemetryConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +93,11 @@ export async function PATCH(
 
     return NextResponse.json(result);
   } catch (err: unknown) {
+    await captureServerException({
+      error: err,
+      distinctId: auth.principal.memberId ?? "system_admin",
+      context: { source: "api_admin_members_update" },
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },
       { status: 500 }

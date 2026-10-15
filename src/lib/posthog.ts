@@ -19,6 +19,8 @@ export const ALLOWED_ANALYTICS_EVENTS = new Set([
   "auth.passkey_registered",
   "auth.passkey_deleted",
   "auth.sessions_revoked",
+  "email.sent",
+  "email.send_failed",
   "$pageview",
 
   // Admin Administration
@@ -59,6 +61,13 @@ function sanitizeUrl(rawUrl: string): string {
   } catch {
     return rawUrl;
   }
+}
+
+function sanitizeExceptionText(raw: string): string {
+  return raw
+    .replace(/'[^']*'/g, "'[redacted]'")
+    .replace(/"[^"]*"/g, '"[redacted]"')
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[email_redacted]");
 }
 
 function sanitizePathname(rawPath: string): string {
@@ -106,7 +115,11 @@ export function initPostHog(config?: ClientTelemetryConfig) {
     capture_pageleave: false,
     disable_session_recording: true,
     disable_surveys: true,
-    capture_exceptions: false,
+    capture_exceptions: {
+      capture_unhandled_errors: true,
+      capture_unhandled_rejections: true,
+      capture_console_errors: false,
+    },
     capture_performance: {
       web_vitals: true,
       network_timing: false,
@@ -136,6 +149,28 @@ export function initPostHog(config?: ClientTelemetryConfig) {
         if (event.properties.$pathname) {
           event.properties.$pathname = sanitizePathname(
             String(event.properties.$pathname)
+          );
+        }
+        if (event.properties.$exception_message) {
+          event.properties.$exception_message = sanitizeExceptionText(
+            String(event.properties.$exception_message)
+          );
+        }
+        if (Array.isArray(event.properties.$exception_list)) {
+          event.properties.$exception_list = event.properties.$exception_list.map(
+            (item: unknown) => {
+              if (item && typeof item === "object" && "value" in item) {
+                const entry = item as Record<string, unknown>;
+                return {
+                  ...entry,
+                  value:
+                    typeof entry.value === "string"
+                      ? sanitizeExceptionText(entry.value)
+                      : entry.value,
+                };
+              }
+              return item;
+            }
           );
         }
         delete event.properties.guestName;
@@ -354,6 +389,16 @@ export function trackAdminMemberUpdated(props?: { changed?: string[] }) {
 export function trackAdminMembersReordered(props?: { memberCount?: number }) {
   if (typeof window === "undefined" || !posthog.__loaded) return;
   posthog.capture("admin.members_reordered", props);
+}
+
+export function trackClientException(
+  error: unknown,
+  additionalProperties?: Record<string, unknown>
+) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  if (typeof posthog.captureException === "function") {
+    posthog.captureException(error, additionalProperties);
+  }
 }
 
 export { posthog };

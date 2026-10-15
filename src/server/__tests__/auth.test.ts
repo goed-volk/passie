@@ -273,4 +273,72 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
     });
     expect(mailer).toBeInstanceOf(CloudflareMailer);
   });
+
+  it("email OTP telemetry: emits email.sent with member distinctId and $geoip_disable on OTP send", async () => {
+    const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const originalFetch = global.fetch;
+    const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (urlStr.includes("/capture/")) {
+        fetchCalls.push({
+          url: urlStr,
+          body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+        });
+        return new Response(JSON.stringify({ status: 1 }), { status: 200 });
+      }
+      return originalFetch(input as RequestInfo, init);
+    });
+
+    try {
+      const member = await db.query.members.findFirst({
+        where: eq(schema.members.slug, "sam"),
+      });
+      expect(member).toBeDefined();
+      const otpEmail = "sam-otp-telemetry@goedvolk.org";
+      await preCreateUserAndLink(db, {
+        email: otpEmail,
+        name: "Sam",
+        memberId: member!.id,
+      });
+
+      const auth = await getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "development",
+          POSTHOG_KEY: "phc_test_otp_key",
+          POSTHOG_HOST: "https://eu.i.posthog.com",
+        },
+      });
+
+      const req = new Request("http://localhost:3000/api/auth/email-otp/send-verification-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "http://localhost:3000",
+          Host: "localhost:3000",
+        },
+        body: JSON.stringify({ email: otpEmail, type: "sign-in" }),
+      });
+
+      const res = await auth.handler(req);
+      expect(res.status).toBe(200);
+
+      expect(fetchCalls.length).toBe(1);
+      const captured = fetchCalls[0]!;
+      expect(captured.url).toBe("https://eu.i.posthog.com/capture/");
+      expect(captured.body.event).toBe("email.sent");
+      expect(captured.body.distinct_id).toBe(member!.id);
+      expect(captured.body.properties).toEqual(
+        expect.objectContaining({
+          kind: "otp",
+          otp_type: "sign-in",
+          provider: "console",
+          $geoip_disable: true,
+          $process_person_profile: true,
+        })
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });

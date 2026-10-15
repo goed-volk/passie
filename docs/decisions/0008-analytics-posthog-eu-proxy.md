@@ -7,12 +7,12 @@ Accepted (Amended by [ADR 0013](0013-runtime-telemetry-env-config.md))
 Understand app usage and queue contention while respecting user privacy and avoiding third-party tracker ad blockers.
 
 ## Decision
-Use PostHog EU cloud via a same-origin `/ingest` API reverse proxy route. Product analytics is client-side only:
+Use PostHog EU cloud via a same-origin `/ingest` API reverse proxy route (with targeted server-side `/capture/` dispatch for transactional email delivery and fatal server exceptions):
 - Autocapture, heatmaps, session recording, dead-clicks, and rageclicks are strictly disabled.
-- Web vitals are captured with sanitized URL templates (no pass IDs or dynamic route parameters).
-- Only 8 explicit functional domain events are tracked without personal names, guest names, or pass identifiers in event payloads.
+- Web vitals and client/server exceptions (`$exception`) are captured with sanitized URL templates and redacted error messages (no pass IDs, dynamic route parameters, quoted string literals, or email addresses).
+- Only explicit allowlisted functional domain, authentication, email delivery, and admin events are tracked without personal names, guest names, email addresses, or pass identifiers in event payloads.
 - Person identity (`distinct_id`) is bound to member ID on person profiles only, and reset on member switch.
-- The `/ingest` proxy allowlists request headers, enforces a 64 KB payload limit, strips sensitive cookies/credentials, and restricts allowed path prefixes.
+- The `/ingest` proxy allowlists request headers, forwards the client IP (`cf-connecting-ip` as `x-forwarded-for`) for accurate GeoIP resolution, enforces a 64 KB payload limit, strips sensitive cookies/credentials, and restricts allowed path prefixes. Server-side `/capture/` events explicitly set `$geoip_disable: true`.
 - Fully deactivated when `POSTHOG_KEY` is not set or on localhost (see ADR 0013 for runtime configuration).
 
 ## Consequences

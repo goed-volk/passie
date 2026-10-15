@@ -11,27 +11,34 @@ Passie employs a privacy-first, client-side product analytics architecture backe
 ```
 [ Browser Client ]
   ├── posthog-js (capture_pageview: 'history_change') ──> $pageview on SPA route change
-  ├── LoginForm (/inloggen) ───────────────────────────> auth.sign_in_* on authentication
+  ├── posthog-js (capture_exceptions) + error.tsx ──────> $exception on client/boundary errors
+  ├── LoginForm (/inloggen) ───────────────────────────> $identify then auth.sign_in_* on authentication
   ├── HomeScreen / usePool ────────────────────────────> matchday domain events (pass.*, queue.*)
   ├── Admin Interface (/beheer) ───────────────────────> admin.* events
   │
   ├── [ before_send Hook ] (src/lib/posthog.ts)
   │     ├── Strict Allowlist: ALLOWED_ANALYTICS_EVENTS
   │     ├── Route Templating: /pas/[passId], /api/pool/[gamePoolId]
-  │     └── PII Scrubber: strips guestName, displayName, passId, seatInfo
+  │     └── PII Scrubber: strips guestName, displayName, passId, seatInfo, redacts $exception strings/emails
   │
   ▼
 [ Next.js Same-Origin Proxy: /ingest/[[...path]] ]
   ├── Strict Opt-in: returns 404 immediately if POSTHOG_KEY is unset in runtime config
   ├── Path Prefix Allowlist: e, i/v0/e, decide, array, flags, s, batch, static
-  ├── Header Filtering & Sensitive Header Stripping
+  ├── Header Filtering, Sensitive Header Stripping & Client IP Forwarding (X-Forwarded-For)
   └── 64 KB Payload Limit
   ▼
 [ PostHog Upstream (configured via POSTHOG_HOST, defaults to eu.i.posthog.com) ]
+  ▲
+  │ Direct Server Dispatch (/capture/ with $geoip_disable: true)
+[ Cloudflare Worker Server ]
+  ├── sendVerificationOTP (src/server/auth.ts) ────────> email.sent / email.send_failed
+  └── captureServerException (src/server/telemetryConfig.ts) ──> $exception (D1, cron, API routes)
 ```
 
 ### Privacy & Compliance Guarantees
 - **No Autocapture or Session Replay:** `autocapture: false`, `disable_session_recording: true`, `capture_heatmaps: false`, `capture_dead_clicks: false`, and `rageclick: false` are enforced in `initPostHog()`.
+- **Privacy-Preserving Exception Tracking:** Unhandled browser exceptions (`window.onerror`), unhandled promise rejections (`unhandledrejection`), React error boundary crashes (`src/app/error.tsx`, `src/app/global-error.tsx`), and server-side fatal errors (`captureServerException`) are captured as `$exception` events with automatic redaction of quoted string literals and email addresses.
 - **Zero Third-Party Tracking / Ad Blocker Immunity:** Telemetry is forwarded via the same-origin `/ingest` route, eliminating third-party cookie access and preventing tracking script blockades.
 - **Strict Data Minimization:** Event payloads omit personal names, guest names, seat numbers, and pass identifiers.
 - **Strict Opt-in Behavior:** When `POSTHOG_KEY` is omitted, the client SDK does not initialize and the `/ingest` proxy returns HTTP 404 without making upstream calls. In local development (`localhost`, `127.0.0.1`), production telemetry is suppressed.
@@ -46,7 +53,9 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | --- | --- | --- | --- | --- |
 | `$pageview` | Navigation | SPA route transition (`history_change`) | `$current_url`, `$pathname` (both templated) | Sanitized (no query params, no IDs) |
 | `member.selected` | Identity | Legacy identity selection (deprecated) | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
-| `auth.sign_in_otp_requested` | Auth | Email OTP requested | _None_ | Clean (email omitted) |
+| `auth.sign_in_otp_requested` | Auth | Email OTP requested (client) | _None_ | Clean (email omitted) |
+| `email.sent` | Email | Transactional email dispatched (server) | `kind` (`otp`), `otp_type` (`sign-in`), `provider` (`cloudflare` or `console`), `$geoip_disable: true` | Clean (recipient email & OTP omitted) |
+| `email.send_failed` | Email | Transactional email dispatch failed (server) | `kind` (`otp`), `otp_type` (`sign-in`), `provider` (`cloudflare` or `console`), `$geoip_disable: true` | Clean (recipient email & error PII omitted) |
 | `auth.sign_in_success` | Auth | Successful sign-in | `method` (`otp` or `passkey`) | Clean |
 | `auth.sign_out` | Auth | Explicit user sign-out | _None_ | Clean |
 | `auth.passkey_registered` | Auth | New passkey enrolled | _None_ | Clean |
@@ -64,7 +73,7 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | `admin.member_created` | Admin | New member added in `/beheer` | _None_ | Clean (`displayName` stripped) |
 | `admin.member_updated` | Admin | Member edited in `/beheer` | `changed: string[]` (e.g. `["displayName"]`) | Clean (field names only, no values) |
 | `admin.members_reordered` | Admin | Drag-and-drop sort saved in `/beheer` | `memberCount: number` | Clean |
-| `$exception` | Errors | Application error boundary capture | `$exception_message`, `$exception_type` | Sanitized stack trace |
+| `$exception` | Errors | Browser unhandled errors/rejections, Next.js error boundaries (`error.tsx`, `global-error.tsx`), and server route/worker error handlers | `$exception_message`, `$exception_type`, `$exception_list`, `source` / `boundary` | Sanitized message & stack trace (quoted literals & emails redacted) |
 | `$identify` | Internal | PostHog user identification event | Person properties (see Section 3) | Bound to distinct_id |
 | `$set` | Internal | Person property update | Person properties | Bound to distinct_id |
 | `$groupidentify` | Internal | Group analytics registration | Group properties | Bound to group key |
@@ -78,7 +87,7 @@ Passie tracks the passwordless identity lifecycle without capturing sensitive cr
   - `method: "otp"` when authenticated via 6-digit email OTP.
 - **Passkey Enrollment (`auth.passkey_registered`)**: A dedicated event emitted whenever a new WebAuthn credential is created and verified by the server (both from the post-OTP enrollment prompt in `/inloggen` and from the settings panel in `/instellingen`).
 - **Passkey Removal (`auth.passkey_deleted`)**: Emitted when a member deletes an enrolled passkey in `/instellingen`.
-- **OTP Request (`auth.sign_in_otp_requested`)**: Dispatched when an OTP code is requested; recipient email is strictly omitted.
+- **OTP Request & Email Delivery (`auth.sign_in_otp_requested`, `email.sent`, `email.send_failed`)**: `auth.sign_in_otp_requested` is dispatched on the client when an OTP code is requested; `email.sent` (or `email.send_failed`) is dispatched server-side from the `sendVerificationOTP` hook with `kind: "otp"`, `otp_type`, `provider` (`cloudflare` or `console`), and `$geoip_disable: true`, attributed directly to the resolved `member.id` when the email matches an active group member. Recipient email addresses and OTP codes are strictly omitted.
 - **Sign-out & Session Management (`auth.sign_out`, `auth.sessions_revoked`)**: Emitted when explicit logout or revocation actions occur.
 
 ---
@@ -121,7 +130,7 @@ To prevent season ticket IDs, game pool IDs, and personal query parameters from 
 The reverse proxy at `src/app/ingest/[[...path]]/route.ts` provides strict boundary defense:
 - **Environment Gate:** Returns HTTP 404 `{ error: "Telemetry disabled" }` immediately if `POSTHOG_KEY` is undefined or empty in runtime config.
 - **Allowed Path Prefixes:** Only `e`, `i/v0/e`, `decide`, `array`, `flags`, `s`, `batch`, `static` are forwarded to the upstream `POSTHOG_HOST` (default `https://eu.i.posthog.com/`). All others return HTTP 404.
-- **Allowed Inbound Request Headers:** `content-type`, `content-encoding`, `user-agent`, `accept`, `accept-encoding`. All other headers (including `Cookie`, `Authorization`, `CF-Ray`) are discarded.
+- **Allowed Inbound Request Headers:** `content-type`, `content-encoding`, `user-agent`, `accept`, `accept-encoding`, plus `x-forwarded-for` populated from `cf-connecting-ip` (or the first hop of `x-forwarded-for`) so PostHog's GeoIP enrichment resolves the client's true location rather than the proxy server's location. All other headers (including `Cookie`, `Authorization`, `CF-Ray`) are discarded. Server-originated events (`/capture/`) explicitly set `$geoip_disable: true`.
 - **Allowed Outbound Response Headers:** `content-type`, `cache-control`. Sensitive headers (e.g. `Set-Cookie`) are stripped.
 - **Payload Size Enforcement:** Enforces a maximum body size of 64 KB (65,536 bytes). Excessively large requests receive HTTP 413.
 
@@ -221,6 +230,32 @@ SELECT
 FROM events
 WHERE event IN ('auth.passkey_registered', 'auth.passkey_deleted')
   AND timestamp >= now() - INTERVAL 30 DAY
+```
+
+### 8. Email OTP Delivery & Failure Rate
+```sql
+SELECT
+    properties.provider AS mailer_provider,
+    countIf(event = 'email.sent') AS emails_sent,
+    countIf(event = 'email.send_failed') AS emails_failed,
+    round(countIf(event = 'email.send_failed') * 100.0 / nullIf(count(), 0), 1) AS failure_rate_pct
+FROM events
+WHERE event IN ('email.sent', 'email.send_failed')
+  AND timestamp >= now() - INTERVAL 30 DAY
+GROUP BY mailer_provider
+```
+
+### 9. Client & Server Exception Breakdown
+```sql
+SELECT
+    coalesce(properties.source, properties.boundary, 'browser_unhandled') AS error_origin,
+    properties.$exception_type AS exception_type,
+    count() AS occurrences
+FROM events
+WHERE event = '$exception'
+  AND timestamp >= now() - INTERVAL 30 DAY
+GROUP BY error_origin, exception_type
+ORDER BY occurrences DESC
 ```
 
 ---

@@ -4,7 +4,7 @@ import * as schema from "./schema";
 import { loadGamePoolState, diffToStatements } from "./repo";
 import { reduce } from "../domain/engine";
 import type { Action, MemberId, DomainError, ReduceContext, ActivityEventType } from "../domain/types";
-import { getTelemetryConfig } from "@/server/telemetryConfig";
+import { captureServerException } from "@/server/telemetryConfig";
 
 export interface MutateOptions {
   idempotencyKey?: string | null;
@@ -200,62 +200,13 @@ async function captureServerDatabaseError(
   err: unknown,
   action: Action
 ): Promise<void> {
-  const { posthogKey, posthogHost, passieEnv } = await getTelemetryConfig();
-  if (!posthogKey) return;
-
-  // Safeguard: if passieEnv is "production" but we are NOT running inside a
-  // Cloudflare Workers request context (e.g. Vitest locally, a CLI script, or
-  // a Node.js process where NODE_ENV !== "production"), skip the dispatch.
-  // This prevents dev/test errors from polluting the production PostHog project.
-  if (passieEnv === "production" && process.env.NODE_ENV !== "production") {
-    return;
-  }
-
-  const errName = err instanceof Error ? err.name : "UnknownError";
-  const rawMsg = err instanceof Error ? err.message : String(err);
-  // Redact potential PII (e.g. quoted string literals in SQLite errors)
-  const sanitize = (str: string) =>
-    str
-      .replace(/'[^']*'/g, "'[redacted]'")
-      .replace(/"[^"]*"/g, '"[redacted]"');
-
-  const sanitizedMsg = sanitize(rawMsg).slice(0, 500);
-  const sanitizedStack =
-    err instanceof Error && err.stack ? sanitize(err.stack).slice(0, 1000) : undefined;
-
-  const payload = {
-    api_key: posthogKey,
-    event: "$exception",
-    distinct_id: `pool_${gamePoolId}`,
-    properties: {
-      $exception_type: errName,
-      $exception_message: sanitizedMsg,
-      $exception_stack_trace: sanitizedStack,
-      $exception_list: [
-        {
-          type: errName,
-          value: sanitizedMsg,
-        },
-      ],
-      $process_person_profile: false,
+  await captureServerException({
+    error: err,
+    distinctId: `pool_${gamePoolId}`,
+    context: {
+      source: "mutate_db",
       game_pool_id: gamePoolId,
       action_type: action.type,
-      environment: passieEnv,
     },
-    timestamp: new Date().toISOString(),
-  };
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    await fetch(`${posthogHost}/capture/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-  } catch {
-    // Non-blocking fallback: never fail mutation return on analytics delivery
-  }
+  });
 }

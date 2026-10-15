@@ -7,6 +7,7 @@ import {
   checkIngestCooldown,
   getIngestCooldownSeconds,
 } from "@/server/ingest";
+import { captureServerException } from "@/server/telemetryConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,11 @@ export async function handleRefreshPost(d1Override?: D1Database) {
       cooldownSeconds: getIngestCooldownSeconds(),
     });
   } catch (err: unknown) {
+    await captureServerException({
+      error: err,
+      distinctId: actor.id,
+      context: { source: "api_fixtures_refresh" },
+    });
     return NextResponse.json(
       { ok: false, error: err instanceof Error ? err.message : String(err) },
       { status: 500 }

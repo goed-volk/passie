@@ -4,6 +4,7 @@ import { getDb } from "@/server/db";
 import { requireAdminApi, assertCapability } from "@/server/adminAuth";
 import { createMember, listAdminMembers, resolveAdminGroup } from "@/server/adminMembers";
 import { assertSameOrigin } from "@/server/http/assertSameOrigin";
+import { captureServerException } from "@/server/telemetryConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,11 @@ export async function POST(request: Request) {
     const newMember = await createMember(db, group.id, parsed.data, auth.principal);
     return NextResponse.json({ ok: true, member: newMember }, { status: 201 });
   } catch (err: unknown) {
+    await captureServerException({
+      error: err,
+      distinctId: auth.principal.memberId ?? "system_admin",
+      context: { source: "api_admin_members_create" },
+    });
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },
       { status: 500 }
