@@ -32,8 +32,8 @@ Passie employs a privacy-first, client-side product analytics architecture backe
   ▲
   │ Direct Server Dispatch (/capture/ with $geoip_disable: true)
 [ Cloudflare Worker Server ]
-  ├── sendVerificationOTP (src/server/auth.ts) ────────> email.sent / email.send_failed
-  └── captureServerException (src/server/telemetryConfig.ts) ──> $exception (D1, cron, API routes)
+  ├── dispatchTransactionalEmail (src/server/email/dispatch.ts) ──> email.sent / email.send_failed (otp, welcome)
+  └── captureServerException (src/server/telemetryConfig.ts) ────> $exception (D1, cron, API routes, email_dispatch)
 ```
 
 ### Privacy & Compliance Guarantees
@@ -54,8 +54,8 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | `$pageview` | Navigation | SPA route transition (`history_change`) | `$current_url`, `$pathname` (both templated) | Sanitized (no query params, no IDs) |
 | `member.selected` | Identity | Legacy identity selection (deprecated) | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
 | `auth.sign_in_otp_requested` | Auth | Email OTP requested (client) | _None_ | Clean (email omitted) |
-| `email.sent` | Email | Transactional email dispatched (server) | `kind` (`otp`), `otp_type` (`sign-in`), `provider` (`cloudflare` or `console`), `$geoip_disable: true` | Clean (recipient email & OTP omitted) |
-| `email.send_failed` | Email | Transactional email dispatch failed (server) | `kind` (`otp`), `otp_type` (`sign-in`), `provider` (`cloudflare` or `console`), `$geoip_disable: true` | Clean (recipient email & error PII omitted) |
+| `email.sent` | Email | Transactional email dispatched (`src/server/email/dispatch.ts`) | `kind` (`otp` or `welcome`), `trigger` (`sign-in`, `member_created`, `member_email_linked`, `cli_link`), `otp_type` (when `kind === 'otp'`), `provider` (`cloudflare` or `console`), `$geoip_disable: true`, `$process_person_profile: boolean` | Clean (recipient email, name & OTP omitted) |
+| `email.send_failed` | Email | Transactional email dispatch failed (`src/server/email/dispatch.ts`) | `kind` (`otp` or `welcome`), `trigger` (`sign-in`, `member_created`, `member_email_linked`, `cli_link`), `otp_type` (when `kind === 'otp'`), `provider` (`cloudflare` or `console`), `$geoip_disable: true`, `$process_person_profile: boolean` | Clean (recipient email & error PII omitted) |
 | `auth.sign_in_success` | Auth | Successful sign-in | `method` (`otp` or `passkey`) | Clean |
 | `auth.sign_out` | Auth | Explicit user sign-out | _None_ | Clean |
 | `auth.passkey_registered` | Auth | New passkey enrolled | _None_ | Clean |
@@ -87,7 +87,7 @@ Passie tracks the passwordless identity lifecycle without capturing sensitive cr
   - `method: "otp"` when authenticated via 6-digit email OTP.
 - **Passkey Enrollment (`auth.passkey_registered`)**: A dedicated event emitted whenever a new WebAuthn credential is created and verified by the server (both from the post-OTP enrollment prompt in `/inloggen` and from the settings panel in `/instellingen`).
 - **Passkey Removal (`auth.passkey_deleted`)**: Emitted when a member deletes an enrolled passkey in `/instellingen`.
-- **OTP Request & Email Delivery (`auth.sign_in_otp_requested`, `email.sent`, `email.send_failed`)**: `auth.sign_in_otp_requested` is dispatched on the client when an OTP code is requested; `email.sent` (or `email.send_failed`) is dispatched server-side from the `sendVerificationOTP` hook with `kind: "otp"`, `otp_type`, `provider` (`cloudflare` or `console`), and `$geoip_disable: true`, attributed directly to the resolved `member.id` when the email matches an active group member. Recipient email addresses and OTP codes are strictly omitted.
+- **OTP Request & Transactional Email Delivery (`auth.sign_in_otp_requested`, `email.sent`, `email.send_failed`)**: `auth.sign_in_otp_requested` is dispatched on the client when an OTP code is requested. All server-side transactional emails (OTP login codes and member onboarding welcome emails) flow through `dispatchTransactionalEmail` (`src/server/email/dispatch.ts`), which emits `email.sent` (or `email.send_failed` + `$exception` with `source: "email_dispatch"`) carrying `kind` (`"otp"` or `"welcome"`), `trigger` (`"sign-in"`, `"member_created"`, `"member_email_linked"`, or `"cli_link"`), `provider` (`"cloudflare"` or `"console"`), `$geoip_disable: true`, and `$process_person_profile: Boolean(memberId)` attributed directly to the resolved `member.id` (or `"system_mailer"` fallback). Recipient email addresses, display names, and OTP codes are strictly stripped by a denylist scrubber before transmission.
 - **Sign-out & Session Management (`auth.sign_out`, `auth.sessions_revoked`)**: Emitted when explicit logout or revocation actions occur.
 
 ---
@@ -232,9 +232,11 @@ WHERE event IN ('auth.passkey_registered', 'auth.passkey_deleted')
   AND timestamp >= now() - INTERVAL 30 DAY
 ```
 
-### 8. Email OTP Delivery & Failure Rate
+### 8. Transactional Email Delivery & Failure Rate by Campaign Kind
 ```sql
 SELECT
+    properties.kind AS email_kind,
+    properties.trigger AS email_trigger,
     properties.provider AS mailer_provider,
     countIf(event = 'email.sent') AS emails_sent,
     countIf(event = 'email.send_failed') AS emails_failed,
@@ -242,7 +244,8 @@ SELECT
 FROM events
 WHERE event IN ('email.sent', 'email.send_failed')
   AND timestamp >= now() - INTERVAL 30 DAY
-GROUP BY mailer_provider
+GROUP BY email_kind, email_trigger, mailer_provider
+ORDER BY emails_sent DESC
 ```
 
 ### 9. Client & Server Exception Breakdown
