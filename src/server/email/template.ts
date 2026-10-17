@@ -225,3 +225,166 @@ export function renderWelcomeEmail(params: RenderWelcomeEmailParams): EmailPaylo
 
   return { to: params.to, subject, html, text };
 }
+
+export interface RenderPassAssignedEmailParams {
+  to: string;
+  claimantName: string;
+  kind: "self" | "guest";
+  guestName?: string | null;
+  matchLabel: string;
+  kickoffFormatted: string;
+  venue: string;
+  passLabel: string;
+  seatInfo?: string | null;
+  currentHolderName: string;
+  groupName?: string;
+  baseUrl?: string;
+}
+
+export function renderPassAssignedEmail(params: RenderPassAssignedEmailParams): EmailPayload {
+  const groupName = params.groupName?.trim() || "Excelsior";
+  const normalizedBaseUrl = (params.baseUrl?.trim() || "https://passie.goedvolk.org").replace(/\/+$/, "");
+  const ctaUrl = `${normalizedBaseUrl}/`;
+
+  const passDisplay = params.seatInfo ? `${params.passLabel} (${params.seatInfo})` : params.passLabel;
+  const isGuest = params.kind === "guest";
+
+  const subject = isGuest
+    ? t("emailAssignedGuestSubject", { match: params.matchLabel })
+    : t("emailAssignedSubject", { match: params.matchLabel });
+
+  const title = isGuest
+    ? t("emailAssignedGuestTitle")
+    : t("emailAssignedTitle");
+
+  const intro = isGuest
+    ? t("emailAssignedGuestIntro", { guest: params.guestName || "je gast", match: params.matchLabel })
+    : t("emailAssignedSelfIntro", { match: params.matchLabel });
+
+  const preheader = t("emailAssignedPreheader", {
+    pass: passDisplay,
+    match: params.matchLabel,
+    kickoff: params.kickoffFormatted,
+  });
+
+  const text = t("emailAssignedBodyText", {
+    name: params.claimantName,
+    intro,
+    match: params.matchLabel,
+    kickoff: params.kickoffFormatted,
+    venue: params.venue,
+    pass: passDisplay,
+    holder: params.currentHolderName,
+    url: ctaUrl,
+  });
+
+  const detailsHeading = escapeHtml(t("emailAssignedDetailsHeading"));
+  const handoverHint = escapeHtml(t("emailAssignedHandoverHint"));
+
+  const bodyHtml = `<div class="email-callout" style="background-color: #F4F4F5; border: 1px solid #E4E4E7; border-radius: 12px; padding: 16px 18px; margin-bottom: 20px;">
+      <p class="email-title" style="font-size: 14px; font-weight: 700; color: #09090B; margin-top: 0; margin-bottom: 10px;">
+        ${detailsHeading}
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 14px; line-height: 1.6; color: #3F3F46;">
+        <tr>
+          <td style="padding: 2px 0; font-weight: 600; width: 120px;" class="email-muted">Wedstrijd:</td>
+          <td style="padding: 2px 0;" class="email-body">${escapeHtml(params.matchLabel)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 2px 0; font-weight: 600;" class="email-muted">Aftrap:</td>
+          <td style="padding: 2px 0;" class="email-body">${escapeHtml(params.kickoffFormatted)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 2px 0; font-weight: 600;" class="email-muted">Stadion:</td>
+          <td style="padding: 2px 0;" class="email-body">${escapeHtml(params.venue)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 2px 0; font-weight: 600;" class="email-muted">Pas:</td>
+          <td style="padding: 2px 0; font-weight: 600;" class="email-title">${escapeHtml(passDisplay)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 2px 0; font-weight: 600;" class="email-muted">Nu bij:</td>
+          <td style="padding: 2px 0;" class="email-body">${escapeHtml(params.currentHolderName)}</td>
+        </tr>
+      </table>
+    </div>
+    <p class="email-body" style="font-size: 14px; line-height: 1.5; color: #3F3F46; margin-top: 0; margin-bottom: 16px;">
+      ${handoverHint}
+    </p>`;
+
+  const html = renderPassieEmailLayout({
+    subject,
+    preheader,
+    title,
+    greeting: t("emailAssignedGreeting", { name: params.claimantName }),
+    leadText: intro,
+    bodyHtml,
+    ctaLabel: t("emailAssignedCta"),
+    ctaUrl,
+    groupBadge: groupName,
+  });
+
+  return { to: params.to, subject, html, text };
+}
+
+export interface RenderDeadlineReminderEmailParams {
+  to: string;
+  ownerName: string;
+  passLabels: string[];
+  matchLabel: string;
+  kickoffFormatted: string;
+  deadlineFormatted: string;
+  groupName?: string;
+  baseUrl?: string;
+}
+
+export function renderDeadlineReminderEmail(params: RenderDeadlineReminderEmailParams): EmailPayload {
+  const groupName = params.groupName?.trim() || "Excelsior";
+  const normalizedBaseUrl = (params.baseUrl?.trim() || "https://passie.goedvolk.org").replace(/\/+$/, "");
+  const ctaUrl = `${normalizedBaseUrl}/`;
+
+  const passes = params.passLabels.join(", ");
+  const subject = t("emailReminderSubject", { match: params.matchLabel });
+  const preheader = t("emailReminderPreheader", {
+    deadline: params.deadlineFormatted,
+    match: params.matchLabel,
+  });
+  const title = t("emailReminderTitle", { match: params.matchLabel });
+  const intro = t("emailReminderIntro", {
+    passes,
+    match: params.matchLabel,
+    kickoff: params.kickoffFormatted,
+  });
+  const deadlineNote = t("emailReminderDeadlineNote", {
+    deadline: params.deadlineFormatted,
+  });
+
+  const text = t("emailReminderBodyText", {
+    name: params.ownerName,
+    passes,
+    match: params.matchLabel,
+    kickoff: params.kickoffFormatted,
+    deadline: params.deadlineFormatted,
+    url: ctaUrl,
+  });
+
+  const calloutBoxHtml = `<div class="email-callout" style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;">
+      <p class="email-body" style="font-size: 13px; line-height: 1.5; color: #991B1B; margin: 0; font-weight: 500;">
+        ${escapeHtml(deadlineNote)}
+      </p>
+    </div>`;
+
+  const html = renderPassieEmailLayout({
+    subject,
+    preheader,
+    title,
+    greeting: t("emailReminderGreeting", { name: params.ownerName }),
+    leadText: intro,
+    calloutBoxHtml,
+    ctaLabel: t("emailReminderCta"),
+    ctaUrl,
+    groupBadge: groupName,
+  });
+
+  return { to: params.to, subject, html, text };
+}

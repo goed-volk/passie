@@ -145,6 +145,47 @@ export const nl = {
   emailWelcomeCta: "Naar Passie",
   emailWelcomeBodyText: "Hoi {name},\n\nJe bent toegevoegd aan Passie voor {group}. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.\n\nZo log je in:\n1. Ga naar {url}\n2. Vul je e-mailadres in en vraag een 6-cijferige inlogcode aan.\n3. Vul de code in. Je bent direct ingelogd.\n\nTip: Stel na het inloggen een passkey in (zoals Face ID, Touch ID of je schermvergrendeling). De volgende keer log je dan zonder code in.\n\nOpen Passie: {url}",
 
+  // Email template — Plek toegewezen ("Je bent erbij!")
+  emailAssignedSubject: "Je bent erbij! Pas toegewezen voor {match}",
+  emailAssignedGuestSubject: "Pas toegewezen voor je gast bij {match}",
+  emailAssignedPreheader: "{pass} is aan jou toegewezen voor {match} op {kickoff}.",
+  emailAssignedTitle: "Je bent erbij!",
+  emailAssignedGuestTitle: "Je gast is erbij!",
+  emailAssignedGreeting: "Hoi {name},",
+  emailAssignedSelfIntro: "Goed nieuws! Je stond op de bank en er is een seizoenkaart voor je vrijgekomen voor {match}.",
+  emailAssignedGuestIntro: "Goed nieuws! Er is een seizoenkaart vrijgekomen voor je gast ({guest}) voor {match}.",
+  emailAssignedDetailsHeading: "Wedstrijd & pasgegevens:",
+  emailAssignedMatchLabel: "Wedstrijd: {match}",
+  emailAssignedKickoffLabel: "Aftrap: {kickoff}",
+  emailAssignedVenueLabel: "Stadion: {venue}",
+  emailAssignedPassLabel: "Toegewezen pas: {pass}",
+  emailAssignedHolderLabel: "Fysieke pas nu bij: {holder}",
+  emailAssignedHandoverHint: "Stem onderling even af hoe de fysieke pas bij jou terechtkomt.",
+  emailAssignedCta: "Bekijk wedstrijd in Passie",
+  emailAssignedBodyText: "Hoi {name},\n\n{intro}\n\nWedstrijd & pasgegevens:\n- Wedstrijd: {match}\n- Aftrap: {kickoff}\n- Stadion: {venue}\n- Toegewezen pas: {pass}\n- Fysieke pas nu bij: {holder}\n\nStem onderling even af hoe de fysieke pas bij jou terechtkomt.\n\nBekijk de wedstrijd in Passie: {url}",
+
+  // Email template — Herinnering pas aangeven
+  emailReminderSubject: "Laat weten of je gaat: {match}",
+  emailReminderPreheader: "Geef vóór {deadline} aan of je je seizoenkaart gebruikt voor {match}.",
+  emailReminderTitle: "Ga je naar {match}?",
+  emailReminderGreeting: "Hoi {name},",
+  emailReminderIntro: "Je hebt nog niet aangegeven of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}.",
+  emailReminderDeadlineNote: "Geef dit uiterlijk vóór {deadline} door in Passie. Als je je pas vrijgeeft, gaat de plek direct naar de eerstvolgende op de bank.",
+  emailReminderCta: "Nu aangeven in Passie",
+  emailReminderBodyText: "Hoi {name},\n\nJe hebt nog niet aangegeven of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}.\n\nGeef dit uiterlijk vóór {deadline} door in Passie. Als je je pas vrijgeeft, gaat de plek direct naar de eerstvolgende op de bank.\n\nGeef je keuze door: {url}",
+
+  // Admin Reminder UI in TopNav
+  ariaRemindUnindicated: "Herinnering sturen naar pashouders",
+  remindDialogTitle: "Herinnering versturen?",
+  remindDialogDesc: "Stuur een e-mail naar alle eigenaren die hun pas nog niet hebben aangegeven voor {match}.",
+  remindRecipientsHeading: "Ontvangers ({count})",
+  remindSkippedNoEmail: "Geen e-mailadres gekoppeld ({count})",
+  remindNoRecipientsWithEmail: "Geen van de eigenaren met een niet-aangegeven pas heeft een gekoppeld e-mailadres.",
+  remindSendButton: "Verstuur herinnering ({count})",
+  remindSendingButton: "Versturen...",
+  remindSuccessToast: "Herinnering verstuurd naar {count} pashouder(s).",
+  remindErrorToast: "Kon herinnering niet versturen.",
+
   // Settings & Navigation
   navHome: "Volgende wedstrijd",
   navFixtures: "Wedstrijden",
