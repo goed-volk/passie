@@ -15,9 +15,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function POST(
+export async function handleRemindPost(
   request: Request,
-  props: { params: Promise<{ gamePoolId: string }> }
+  gamePoolId: string,
+  customDb?: import("@/server/db").DbClient
 ) {
   try {
     assertSameOrigin(request);
@@ -28,8 +29,7 @@ export async function POST(
     );
   }
 
-  const { gamePoolId } = await props.params;
-  const db = await getDb();
+  const db = customDb ?? (await getDb());
   const actor = await getActingMember(db);
 
   if (!actor) {
@@ -223,4 +223,12 @@ export async function POST(
   });
 
   return NextResponse.json({ ok: true, sentCount, skippedCount });
+}
+
+export async function POST(
+  request: Request,
+  props: { params: Promise<{ gamePoolId: string }> }
+) {
+  const { gamePoolId } = await props.params;
+  return handleRemindPost(request, gamePoolId);
 }
