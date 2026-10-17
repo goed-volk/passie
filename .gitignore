@@ -12,6 +12,7 @@ next-env.d.ts
 
 # cloudflare
 .wrangler/
+.mf/
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
@@ -31,6 +32,11 @@ worker-configuration.d.ts
 *.sqlite
 *.sqlite3
 *.db
+*.dump
+*.sql.dump
+*.bak
+*.backup
+*.sql.bak
 
 # private seed / personal data
 seed/*.local.json
@@ -41,14 +47,15 @@ docs/reference/vendor/
 .verify/
 screenshots/
 .playwright-mcp/
+playwright-report/
+test-results/
 
 # kilo code: keep shared config, ignore generated state
 .kilo/worktrees/
 .kilo/agent-manager.json
 .kilo/cache/
-.kilo/plans/*
-!.kilo/plans/1786885513481-passie-mvp-code-review-findings.md
-!.kilo/plans/1787002200000-ux-audit-findings.md
+.kilo/plans/
+.kilo/.gitignore
 .kilo/node_modules/
 .kilo/package-lock.json
 .kilo/package.json
