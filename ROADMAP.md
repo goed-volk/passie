@@ -83,14 +83,14 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Status:* Planned.
 
 - **Staging Subdomain (`passie-dev.goedvolk.org`) & Staging Seeding Strategy:**
-  - *Description:* Dedicated remote preview environment with an isolated Cloudflare D1 test database (`passie-staging`) for validating major updates and multi-group features before production cutover.
+  - *Description:* Dedicated remote preview environment with an isolated Cloudflare D1 test database (`passie-staging-db`, UUID `1c936aac-181c-47dc-98c2-6f6d64416595`) and Worker `passie-staging` for validating major updates and multi-group features before production cutover.
   - *Remote Staging Seeding Strategy:*
-    - After significant schema evolutions, domain engine refactors, or test cycles, the staging database may need to be reset and reseeded with representative test data (e.g. `seed/group.staging.json` or `seed/group.example.json`).
+    - After significant schema evolutions, domain engine refactors, or test cycles, the staging database can be reset and reseeded with representative test data via `pnpm seed:staging` (`tsx scripts/seed.ts --env=staging --remote`).
     - **Production Guardrails:**
-      - The production database (`passie`, UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`) must be strictly blocked from any automated or CLI seed execution.
-      - Any future staging seed command (e.g. `pnpm seed:staging`) must explicitly check and assert against the database binding/ID, refusing to run if targeting `passie` or if `PASSIE_ENV === "production"`.
-      - Staging databases must use a distinct Cloudflare binding name (`STAGING_DB`) and database name (`passie-staging`), preventing accidental script or CLI flag misconfigurations from touching production.
-  - *Status:* Planned.
+      - The production database (`passie`, UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`) is strictly blocked from any automated or CLI seed execution.
+      - Staging seed commands explicitly assert against database binding/ID and require `--env=staging`, refusing to run if targeting `passie` or if `PASSIE_ENV === "production"`.
+      - Staging runs under `env.staging` in `wrangler.jsonc` targeting custom domain `passie-dev.goedvolk.org` (single-level subdomain covered by Cloudflare Universal SSL at $0.00 cost).
+  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1792264849195-staging-environment-plan.md`](.kilo/plans/1792264849195-staging-environment-plan.md).
 
 - **Twee-staps wisselbevestiging:**
   - *Description:* Twee-fasen paswissel waarbij de huidige houder de wissel registreert en de ontvanger de ontvangst bevestigt (met een automatische bevestiging na 24 uur).
