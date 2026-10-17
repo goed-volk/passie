@@ -3,10 +3,17 @@ import { drizzle } from "drizzle-orm/d1";
 import { eq } from "drizzle-orm";
 import * as schema from "../src/server/schema";
 import { preCreateUserAndLink } from "../src/server/authAdmin";
+import {
+  dispatchTransactionalEmail,
+  renderWelcomeEmail,
+  resolvePublicOrigin,
+} from "../src/server/email";
 
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
+  const noWelcome = args.includes("--no-welcome");
+  const forceWelcome = args.includes("--send-welcome");
 
   // Read arguments: e.g. --member sam --email demo@goedvolk.org
   let memberSlug: string | undefined;
@@ -44,6 +51,8 @@ async function main() {
       process.exit(0);
     }
 
+    const wasPreviouslyUnlinked = !member.userId;
+
     const res = await preCreateUserAndLink(db, {
       memberId: member.id,
       email,
@@ -51,6 +60,30 @@ async function main() {
     });
 
     console.log(`Linked successfully! userId: ${res.userId} (created: ${res.created})`);
+
+    if (!noWelcome && (wasPreviouslyUnlinked || forceWelcome)) {
+      const group = await db.query.groups.findFirst({
+        where: eq(schema.groups.id, member.groupId),
+      });
+      const env = proxy.env as unknown as Record<string, unknown>;
+      const payload = renderWelcomeEmail({
+        to: email.toLowerCase().trim(),
+        displayName: member.displayName,
+        groupName: group?.name,
+        baseUrl: resolvePublicOrigin(env),
+      });
+      await dispatchTransactionalEmail({
+        payload,
+        kind: "welcome",
+        trigger: "cli_link",
+        memberId: member.id,
+        db,
+        env,
+        blocking: true,
+      });
+      console.log(`Dispatched welcome email to ${email}.`);
+    }
+
     await proxy.dispose();
     process.exit(0);
   }

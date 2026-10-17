@@ -3,6 +3,11 @@ import type { DbClient } from "./db";
 import * as schema from "./schema";
 import type { AdminPrincipal } from "./adminAuth";
 import { updateMemberEmailAndSync } from "./authAdmin";
+import {
+  dispatchTransactionalEmail,
+  renderWelcomeEmail,
+  resolvePublicOrigin,
+} from "./email";
 import { deriveInitials, deriveSlugBase } from "@/lib/memberNames";
 
 export { deriveInitials, deriveSlugBase };
@@ -229,11 +234,17 @@ export async function assertDeactivatable(db: DbClient, memberId: string): Promi
   return { ok: true };
 }
 
+export interface MemberMutationDispatchOptions {
+  env?: Record<string, unknown>;
+  cfCtx?: { ctx?: { waitUntil?: (p: Promise<unknown>) => void } };
+}
+
 export async function createMember(
   db: DbClient,
   groupId: string,
   input: CreateMemberInput,
-  principal: AdminPrincipal
+  principal: AdminPrincipal,
+  options?: MemberMutationDispatchOptions
 ) {
   // Note: Direct D1 write, not mutate().
   // Members sit outside the GamePoolState aggregate, have no version column,
@@ -340,6 +351,25 @@ export async function createMember(
   statements.push(insertMemberStmt, insertAuditStmt);
   await db.batch(statements as any);
 
+  if (input.email && input.email.trim() !== "") {
+    const normalizedEmail = input.email.toLowerCase().trim();
+    const payload = renderWelcomeEmail({
+      to: normalizedEmail,
+      displayName: memberValues.displayName,
+      groupName: group.name,
+      baseUrl: resolvePublicOrigin(options?.env),
+    });
+    await dispatchTransactionalEmail({
+      payload,
+      kind: "welcome",
+      trigger: "member_created",
+      memberId,
+      db,
+      env: options?.env,
+      cfCtx: options?.cfCtx,
+    });
+  }
+
   return memberValues;
 }
 
@@ -416,7 +446,8 @@ export async function updateMember(
     role: "admin" | "member";
   }>,
   allowedFields: MemberUpdatableField[],
-  principal: AdminPrincipal
+  principal: AdminPrincipal,
+  options?: MemberMutationDispatchOptions
 ) {
   // Note: Direct D1 write, not mutate(). Members sit outside GamePoolState.
   const existing = await db.query.members.findFirst({
@@ -425,6 +456,9 @@ export async function updateMember(
   if (!existing) {
     throw new Error(`Member ${memberId} not found`);
   }
+
+  const wasPreviouslyUnlinked = !existing.userId;
+  let newlyLinkedEmail: string | null = null;
 
   const updateData: Record<string, unknown> = {};
   const changedFields: string[] = [];
@@ -471,13 +505,17 @@ export async function updateMember(
           changedFields.push("role");
         }
       } else if (field === "email" && typeof patch.email === "string" && patch.email.trim() !== "") {
+        const normalizedEmail = patch.email.toLowerCase().trim();
         await updateMemberEmailAndSync(
           db,
           memberId,
-          patch.email,
+          normalizedEmail,
           (patch.displayName as string) || existing.displayName
         );
         changedFields.push("email");
+        if (wasPreviouslyUnlinked) {
+          newlyLinkedEmail = normalizedEmail;
+        }
       }
     }
   }
@@ -522,6 +560,27 @@ export async function updateMember(
   const updatedMember = await db.query.members.findFirst({
     where: eq(schema.members.id, memberId),
   });
+
+  if (newlyLinkedEmail && updatedMember) {
+    const group = await db.query.groups.findFirst({
+      where: eq(schema.groups.id, updatedMember.groupId),
+    });
+    const payload = renderWelcomeEmail({
+      to: newlyLinkedEmail,
+      displayName: updatedMember.displayName,
+      groupName: group?.name,
+      baseUrl: resolvePublicOrigin(options?.env),
+    });
+    await dispatchTransactionalEmail({
+      payload,
+      kind: "welcome",
+      trigger: "member_email_linked",
+      memberId: updatedMember.id,
+      db,
+      env: options?.env,
+      cfCtx: options?.cfCtx,
+    });
+  }
 
   return { ok: true as const, member: updatedMember!, changed: changedFields };
 }

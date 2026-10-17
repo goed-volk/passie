@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { createTestDb } from "./helpers/testDb";
 import type { DbClient } from "../db";
 import * as schema from "../schema";
@@ -21,6 +21,7 @@ describe("adminMembers", () => {
   let proxy: PlatformProxy<{ DB: D1Database }>;
   let db: DbClient;
   const createdMemberIds: string[] = [];
+  const createdUserEmails: string[] = [];
 
   const principal: AdminPrincipal = {
     subject: "shared",
@@ -42,6 +43,9 @@ describe("adminMembers", () => {
         await db.delete(schema.activityEvents).where(sql`${schema.activityEvents.payloadJson} LIKE ${`%"memberId":"${id}"%`}`);
       }
       await db.delete(schema.members).where(inArray(schema.members.id, createdMemberIds));
+    }
+    if (createdUserEmails.length > 0 && db) {
+      await db.delete(schema.auth_user).where(inArray(schema.auth_user.email, createdUserEmails));
     }
     if (proxy) {
       await proxy.dispose();
@@ -274,6 +278,298 @@ describe("adminMembers", () => {
       expect(deactivateRes.ok).toBe(true);
       if (deactivateRes.ok) {
         expect(deactivateRes.member.isActive).toBe(0);
+      }
+    });
+  });
+
+  describe("welcome email hook on member creation and first-time email linking", () => {
+    const adminAllowed: MemberUpdatableField[] = [
+      "displayName",
+      "initials",
+      "avatarColor",
+      "sortOrder",
+      "isActive",
+      "email",
+      "role",
+    ];
+
+    it("createMember with an email dispatches welcome email and emits email.sent with zero PII", async () => {
+      const group = await resolveAdminGroup(db);
+      const mockSend = vi.fn().mockResolvedValue(undefined);
+      const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const originalFetch = global.fetch;
+      const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+        const urlStr =
+          typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        if (urlStr.includes("/capture/")) {
+          fetchCalls.push({
+            url: urlStr,
+            body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+          });
+          return new Response(JSON.stringify({ status: 1 }), { status: 200 });
+        }
+        return originalFetch(input as RequestInfo, init);
+      });
+
+      const testEmail = `welkom-create-${Date.now()}@goedvolk.org`;
+      createdUserEmails.push(testEmail);
+
+      try {
+        const member = await createMember(
+          db,
+          group.id,
+          {
+            displayName: "Welkom Lid",
+            email: testEmail,
+            avatarColor: "#10B981",
+          },
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              PASSIE_PUBLIC_ORIGIN: "https://passie.goedvolk.org",
+              EMAIL: { send: mockSend },
+              POSTHOG_KEY: "phc_test_welcome",
+              POSTHOG_HOST: "https://eu.i.posthog.com",
+            },
+          }
+        );
+        createdMemberIds.push(member.id);
+
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        const sentMessage = mockSend.mock.calls[0]![0];
+        expect(sentMessage.to).toBe(testEmail);
+        expect(sentMessage.subject).toContain("Je bent toegevoegd aan Passie");
+        expect(sentMessage.html).toContain("Hoi Welkom Lid,");
+        expect(sentMessage.html).toContain("https://passie.goedvolk.org/inloggen");
+        expect(sentMessage.text).toContain("https://passie.goedvolk.org/inloggen");
+
+        expect(fetchCalls.length).toBe(1);
+        const captured = fetchCalls[0]!.body;
+        expect(captured.event).toBe("email.sent");
+        expect(captured.distinct_id).toBe(member.id);
+        expect(captured.properties).toEqual(
+          expect.objectContaining({
+            kind: "welcome",
+            trigger: "member_created",
+            provider: "cloudflare",
+            $geoip_disable: true,
+            $process_person_profile: true,
+          })
+        );
+        const propsJson = JSON.stringify(captured.properties);
+        expect(propsJson).not.toContain(testEmail);
+        expect(propsJson).not.toContain("Welkom Lid");
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it("createMember without an email does NOT dispatch a welcome email", async () => {
+      const group = await resolveAdminGroup(db);
+      const mockSend = vi.fn().mockResolvedValue(undefined);
+
+      const member = await createMember(
+        db,
+        group.id,
+        {
+          displayName: "Zonder Email Lid",
+          avatarColor: "#6366F1",
+        },
+        principal,
+        {
+          env: {
+            PASSIE_ENV: "development",
+            PASSIE_MAILER: "cloudflare",
+            EMAIL: { send: mockSend },
+          },
+        }
+      );
+      createdMemberIds.push(member.id);
+
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it("updateMember linking an email to an unlinked member dispatches welcome email once, and skips on subsequent updates", async () => {
+      const group = await resolveAdminGroup(db);
+      const mockSend = vi.fn().mockResolvedValue(undefined);
+      const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const originalFetch = global.fetch;
+      const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+        const urlStr =
+          typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        if (urlStr.includes("/capture/")) {
+          fetchCalls.push({
+            url: urlStr,
+            body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+          });
+          return new Response(JSON.stringify({ status: 1 }), { status: 200 });
+        }
+        return originalFetch(input as RequestInfo, init);
+      });
+
+      const testEmail = `welkom-link-${Date.now()}@goedvolk.org`;
+      const secondEmail = `welkom-change-${Date.now()}@goedvolk.org`;
+      createdUserEmails.push(testEmail, secondEmail);
+
+      try {
+        // 1. Create member without email
+        const member = await createMember(
+          db,
+          group.id,
+          { displayName: "Later Gekoppeld" },
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              EMAIL: { send: mockSend },
+            },
+          }
+        );
+        createdMemberIds.push(member.id);
+        expect(mockSend).not.toHaveBeenCalled();
+
+        // 2. Link email for the first time via updateMember -> SHOULD send welcome email
+        const linkRes = await updateMember(
+          db,
+          member.id,
+          { email: testEmail },
+          adminAllowed,
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              EMAIL: { send: mockSend },
+              POSTHOG_KEY: "phc_test_welcome",
+              POSTHOG_HOST: "https://eu.i.posthog.com",
+            },
+          }
+        );
+        expect(linkRes.ok).toBe(true);
+        expect(mockSend).toHaveBeenCalledTimes(1);
+        expect(mockSend.mock.calls[0]![0].to).toBe(testEmail);
+        expect(fetchCalls.length).toBe(1);
+        expect(fetchCalls[0]!.body.event).toBe("email.sent");
+        expect(fetchCalls[0]!.body.properties).toEqual(
+          expect.objectContaining({
+            kind: "welcome",
+            trigger: "member_email_linked",
+            provider: "cloudflare",
+          })
+        );
+
+        // 3. Update displayName or re-submit same email -> should NOT send another welcome email
+        await updateMember(
+          db,
+          member.id,
+          { displayName: "Later Gekoppeld Hernoemd", email: testEmail },
+          adminAllowed,
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              EMAIL: { send: mockSend },
+            },
+          }
+        );
+        expect(mockSend).toHaveBeenCalledTimes(1);
+
+        // 4. Changing an already-linked member's email address -> should NOT trigger first-time welcome email
+        await updateMember(
+          db,
+          member.id,
+          { email: secondEmail },
+          adminAllowed,
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              EMAIL: { send: mockSend },
+            },
+          }
+        );
+        expect(mockSend).toHaveBeenCalledTimes(1);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+
+    it("mailer failure during welcome email dispatch emits email.send_failed + $exception without failing member creation or leaking email PII", async () => {
+      const group = await resolveAdminGroup(db);
+      const failingSend = vi
+        .fn()
+        .mockRejectedValue(new Error("SMTP rejected recipient SecretUser@goedvolk.org"));
+      const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
+      const originalFetch = global.fetch;
+      const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+        const urlStr =
+          typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        if (urlStr.includes("/capture/")) {
+          fetchCalls.push({
+            url: urlStr,
+            body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+          });
+          return new Response(JSON.stringify({ status: 1 }), { status: 200 });
+        }
+        return originalFetch(input as RequestInfo, init);
+      });
+
+      const testEmail = `fail-welcome-${Date.now()}@goedvolk.org`;
+      createdUserEmails.push(testEmail);
+
+      try {
+        const member = await createMember(
+          db,
+          group.id,
+          {
+            displayName: "Foutbij Mail",
+            email: testEmail,
+          },
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              EMAIL: { send: failingSend },
+              POSTHOG_KEY: "phc_test_welcome_fail",
+              POSTHOG_HOST: "https://eu.i.posthog.com",
+            },
+          }
+        );
+        createdMemberIds.push(member.id);
+
+        // Member is still created in DB despite email failure
+        const dbMember = await db.query.members.findFirst({
+          where: eq(schema.members.id, member.id),
+        });
+        expect(dbMember).toBeDefined();
+
+        expect(fetchCalls.length).toBe(2);
+        const failedEvt = fetchCalls.find((c) => c.body.event === "email.send_failed");
+        const exceptionEvt = fetchCalls.find((c) => c.body.event === "$exception");
+
+        expect(failedEvt).toBeDefined();
+        expect(failedEvt!.body.distinct_id).toBe(member.id);
+        expect(failedEvt!.body.properties).toEqual(
+          expect.objectContaining({
+            kind: "welcome",
+            trigger: "member_created",
+            provider: "cloudflare",
+          })
+        );
+
+        expect(exceptionEvt).toBeDefined();
+        const allTelemetryJson = JSON.stringify(fetchCalls);
+        expect(allTelemetryJson).not.toContain(testEmail);
+        expect(allTelemetryJson).not.toContain("SecretUser@goedvolk.org");
+        expect(allTelemetryJson).toContain("[email_redacted]");
+      } finally {
+        fetchSpy.mockRestore();
       }
     });
   });
