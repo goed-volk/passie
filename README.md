@@ -269,6 +269,41 @@ Passie has been live in production since **2026-08-18**. The steps below are spl
 
 ---
 
+## Self-Hosting & Forking for Another Group or Club
+
+Passie is designed so any group sharing season tickets at any football club can self-host an independent instance on Cloudflare Workers and D1. Follow this checklist when forking:
+
+### 1. Club Configuration & Matchday Calendar Feed
+1. **Club Details & Colours:** Define your club in `seed/group.local.json` (or edit `seed/group.example.json`):
+   - `club.slug`: Short club identifier (e.g. `"excelsior"`, `"feyenoord"`, `"nac"`).
+   - `club.name`: Full club name (e.g. `"Excelsior Rotterdam"`).
+   - `club.colorPrimary`, `club.colorSecondary`, `club.colorAccent`, `club.colorOnPrimary`: Hex colour codes for UI buttons, badges, and headers.
+2. **Fixture Feed (RFC 5545 iCal):** Set `club.icsHomeFeedUrl` to your club's home match iCal feed (e.g. from `https://ics.fixtur.es/v2/home/<club>.ics`).
+3. **Ingestion Club Slug:** If changing the club slug from `"excelsior"`, update the club slug passed to `ingestClubFixtures(db, "<your-club-slug>")` in `src/worker.ts`, `src/app/api/cron/ingest/route.ts`, and `src/app/api/fixtures/refresh/route.ts`, as well as club display fallbacks in `src/app/wedstrijden/page.tsx`, `src/components/PassCard.tsx`, and `src/server/snapshot.ts`.
+
+### 2. Group & Season Ticket Setup
+1. **Roster & Cards (`seed/group.local.json`):**
+   - Set `group.slug` and `group.name` to your group's name.
+   - List your group members under `members` with unique slugs, display names, initials, and avatar colours.
+   - Define your season tickets under `passes` with custom `label`, optional `seatInfo`, `owners` (array of member slugs), and initial physical `holder`.
+   - Assign `"role": "admin"` and a valid `email` to at least one member for initial administrator login.
+2. **Seed Local Database:**
+   ```bash
+   pnpm seed:local
+   ```
+
+### 3. Cloudflare & Domain Configuration
+1. **Wrangler Configuration (`wrangler.jsonc`):**
+   - Replace `name` with your Worker name.
+   - Replace `routes[0].pattern` with your custom domain.
+   - Create your own production D1 database (`pnpm exec wrangler d1 create <name>`) and update `d1_databases[0].database_id`.
+   - Update `vars.PASSIE_PUBLIC_ORIGIN` and `vars.BETTER_AUTH_TRUSTED_ORIGINS` to your public HTTPS origin.
+   - Update `send_email[0].allowed_sender_addresses` to match your verified Cloudflare Email Routing sender domain.
+2. **Public URL Metadata & Origin Defaults:**
+   - Update the canonical URL and display domain in `src/app/layout.tsx`, `src/app/opengraph-image.tsx`, `src/server/http/assertSameOrigin.ts`, `src/server/email/dispatch.ts`, and `src/i18n/nl.ts` (`loginOriginError`).
+
+---
+
 ## Project Structure & Documentation
 
 - `AGENTS.md` — Agent and contributor operating manual and architecture constraints.

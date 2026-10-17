@@ -1,6 +1,6 @@
 # ROADMAP — Passie Product Backlog
 
-This document outlines planned features and enhancements for Passie. Technical architecture findings and implementation notes are documented in [`docs/future-architecture.md`](docs/future-architecture.md), and UX/UI audit recommendations are tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
+This document outlines planned features and enhancements for Passie. Technical architecture findings and implementation notes are documented in [`docs/future-architecture.md`](docs/future-architecture.md).
 
 ---
 
@@ -13,15 +13,15 @@ This document outlines planned features and enhancements for Passie. Technical a
     - **Pass Assignment Clarity (F-20):** Change ambiguous *"Toegewezen: [Naam]"* in queue cards to *"Toegewezen: pas van [Naam]"* so users clearly understand that a season ticket was allocated, not the person.
     - **Attendee-First Guest Display (F-21):** Invert queue attendee hierarchy from *"[Lid] (gast: [Naam])"* to *"[Naam] (gast van [Lid])"*, putting the person who actually goes first.
     - **Natural Guest Claim Phrasing (F-22):** Rephrase pass badge from awkward *"[Lid]'s gast"* to natural Dutch *"Geclaimd door gast van [Lid]"*.
-  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
+  - *Status:* **Delivered.**
 
 - **Localized Action Loading & Multi-Pass Disambiguation (UX Audit F-11 & F-07):**
   - *Description:* Fine-grained loading spinners per action button (preventing global button freeze) and contextual pass label captioning on the multi-pass bottom action button.
-  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
+  - *Status:* **Delivered.**
 
 - **Settled Post-Match View Mode (UX Audit F-12):**
   - *Description:* Automatically transition matchday pool display 2 hours after kickoff to a settled match summary with finished badge, hiding pre-match indication action bars.
-  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md`](.kilo/plans/1787002200000-ux-audit-findings.md).
+  - *Status:* **Delivered.**
 
 - **Direct Pass Transfer / Delegation (*Pas Overdragen*):**
   - *Description:* Allow season ticket owners to directly delegate their seat for a match to a specific friend, family member, or group member, bypassing the general FIFO queue.
@@ -51,7 +51,7 @@ This document outlines planned features and enhancements for Passie. Technical a
     - Enforce at least one active admin per group (Security Review FND-12).
     - Add negative tests for each rule.
   - *Risk acceptance:* Accepted by the owner for Alpha and Beta, while a single person is both the only platform admin and the only group admin. This acceptance lapses as soon as a second group admin is appointed.
-  - *Status:* Planned. Findings in [`.kilo/plans/1791916949466-better-auth-security-review-findings.md`](.kilo/plans/1791916949466-better-auth-security-review-findings.md).
+  - *Status:* Planned.
 
 - **Cross-Group Tenant Scoping / IDOR Protection (Security Review FND-14; required for Beta phase):**
   - *Description:* Multi-group tenant isolation across all route handlers and loaders. In the Alpha single-group deployment, cross-group access is structurally impossible because only one group row exists. Before onboarding a second group in Beta, tenant scoping must be strictly enforced:
@@ -75,7 +75,7 @@ This document outlines planned features and enhancements for Passie. Technical a
 
 - **Server-Side Event & Error Analytics:**
   - *Description:* Server-side exception tracking and telemetry to capture backend errors, API usage, and authoritative matchday domain events without reliance on client JavaScript.
-  - *Technical Notes:* Authoritative domain events can be emitted from `mutate()` call sites via Cloudflare Worker `ctx.waitUntil` or direct API calls using the authenticated `passie_member` cookie as `distinct_id` and `$groups: { group: "goedvolk" }`. Touches the transaction commit path, requiring dedicated domain review per Golden Rule 2.
+  - *Technical Notes:* Authoritative domain events can be emitted from `mutate()` call sites via Cloudflare Worker `ctx.waitUntil` or direct API calls using the authenticated Better Auth session (`actingMember.id`) as `distinct_id` and `$groups: { group: groupSlug }`. Touches the transaction commit path, requiring dedicated domain review per Golden Rule 2.
   - *Status:* Planned.
 
 - **Web Push Notifications:**
@@ -105,7 +105,7 @@ This document outlines planned features and enhancements for Passie. Technical a
     - **Today:** Only wall-clock time (e.g. *"11:25"*).
     - **Past 7 days (< 7d):** Abbreviated weekday + time (e.g. *"wo 11:25"*).
     - **Older (> 7d):** Calendar date + time (e.g. *"12 sep 11:25"*).
-  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1787002200000-ux-audit-findings.md#f-23`](.kilo/plans/1787002200000-ux-audit-findings.md).
+  - *Status:* **Delivered.**
 
 ---
 

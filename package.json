@@ -1,8 +1,22 @@
 {
   "name": "passie",
   "version": "0.1.0",
+  "description": "Mobile-first web app for groups sharing football season tickets",
+  "license": "AGPL-3.0-or-later",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goed-volk/passie.git"
+  },
+  "homepage": "https://github.com/goed-volk/passie#readme",
+  "bugs": {
+    "url": "https://github.com/goed-volk/passie/issues"
+  },
+  "engines": {
+    "node": ">=22.22.0",
+    "pnpm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "opennextjs-cloudflare build",
@@ -20,7 +34,7 @@
     "seed:example": "tsx scripts/seed.ts --file=seed/group.example.json",
     "seed:local": "tsx scripts/seed.ts --file=seed/group.local.json",
     "ingest:local": "tsx scripts/ingest-fixtures.ts",
-    "dev-reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && pnpm seed:local && pnpm ingest:local",
+    "dev-reset": "rm -rf .wrangler/state/v3/d1 && pnpm db:migrate:local && tsx scripts/seed.ts && pnpm ingest:local",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv worker-configuration.d.ts"
   },
   "dependencies": {

@@ -71,7 +71,7 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | `queue.cancel` | Matchday | Member cancels queue entry (*"Annuleren"*) | `queuePosition`, `hoursToKickoffBucket` | Clean |
 | `pass.give_back` | Matchday | Claimant yields assigned pass (*"Pas Teruggeven"*) | `hoursToKickoffBucket` | Clean |
 | `pass.handover` | Matchday | Physical custody pill tap (*"Pas nu bij mij"*) | `isHolderNow`, `hoursToKickoffBucket` | Clean |
-| `admin.login` | Admin | Successful password auth in `/beheer/inloggen` | _None_ | Clean |
+| `admin.login` | Admin | Legacy admin auth (deprecated by ADR 0014 role-based sessions) | _None_ | Clean |
 | `admin.member_created` | Admin | New member added in `/beheer` | _None_ | Clean (`displayName` stripped) |
 | `admin.member_updated` | Admin | Member edited in `/beheer` | `changed: string[]` (e.g. `["displayName"]`) | Clean (field names only, no values) |
 | `admin.members_reordered` | Admin | Drag-and-drop sort saved in `/beheer` | `memberCount: number` | Clean |

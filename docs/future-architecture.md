@@ -16,8 +16,8 @@ This document records technical research, domain engine constraints, and forward
 
 ## 2. Member & Pass Administration (`/beheer`)
 
-### Delivered in v0.1.1
-- Password-gated `/beheer` area for member creation, profile edits, distinct avatar color assignment, visual drag-and-drop sort ordering, and guarded deactivation.
+### Delivered in v0.1.1 & v0.2.0
+- Role-gated `/beheer` area (`members.role = 'admin'` or `auth_user.role = 'admin'` via Better Auth, ADR 0014) for member creation, profile edits, distinct avatar color assignment, visual drag-and-drop sort ordering, and guarded deactivation.
 
 ### Pass CRUD & Ownership Constraints (Deferred)
 1. **`passes.isActive` Inconsistency Across Aggregates:**
@@ -33,27 +33,26 @@ This document records technical research, domain engine constraints, and forward
    - Timeline text resolves pass labels live via `passLabelsMap`. Renaming a pass retroactively changes past activity event copy. Future pass CRUD must choose between retroactive label updates or snapshotting `passLabel` into `activity_events.payloadJson`.
 
 ### Member Self-Service Sequencing
-5. **Gated on Verified Identity (v0.2):**
-   - The `passie_member` cookie is an unauthenticated selector (Golden Rule #9). Self-service profile editing before verified identity exists would allow arbitrary users to modify other members' profiles.
+5. **Gated on Verified Identity (v0.2 — Delivered):**
+   - Identity is verified via Better Auth session tokens (ADR 0014). The legacy unauthenticated selector cookie has been retired. Self-service profile editing can now verify the authenticated actor against the member record.
 6. **S5 Allowlist Reusability:**
    - Self-service reuses `updateMember()` with an allowlist restricted to `displayName`, `initials`, and `avatarColor`. `isActive`, `sortOrder`, `slug`, and other members' IDs remain protected.
 
-### Auth Evolution & Forward-Compatibility Seams
-7. **SSO & Group Admin Seams:**
-   - `src/server/adminAuth.ts` uses structured `v1.<b64url>.<hmacHex>` tokens with salted HMAC key derivation, `AdminPrincipal` (`subject`, `method`, `memberId`), and `assertCapability(principal, cap)` to allow transitioning to Cloudflare Access SSO and per-member group admins without rewriting call sites or schemas.
-8. **Role Schema Evolution:**
-   - Prefer `members.role text NOT NULL DEFAULT 'member'` over a boolean flag when per-member admin roles are introduced.
-9. **Rate-Limiting & Access Transition:**
-   - Transition from shared password authentication to Cloudflare Access for Workers verified identity, or introduce IP-based attempt rate-limiting on `POST /api/admin/session` before public deployment.
+### Auth Evolution & Architecture (ADR 0014)
+7. **Authentication Architecture:**
+   - Identity is implemented via Better Auth on Cloudflare D1 with WebAuthn Passkeys (`@better-auth/passkey`) and 6-digit email OTP fallback (`better-auth/plugins/email-otp`).
+8. **Role Schema:**
+   - Platform admin privilege is stored in `auth_user.role = 'admin'` and group administrator privilege is stored in `members.role = 'admin'`. Gating is enforced via `requireAdminPrincipal()` and session verification.
+9. **Rate-Limiting & Security:**
+   - Better Auth rate-limiting is active with custom endpoint rules and DB storage (`auth_rate_limit`), with Cloudflare KV evaluation planned for high-concurrency deployments.
 
 ---
 
-## 3. Verified Identity via Cloudflare Access for Workers (v0.2)
+## 3. Verified Identity via Better Auth (Delivered in v0.2.0 via ADR 0014)
 
-- **Worker-Level Policy:** Switch Worker-level Access policy from `bypass` to `allow` with email OTP / IdP allowlist.
-- **Server Identity Contract:** Read verified identity server-side via `ctx.access.getIdentity()`, eliminating JWT signature parsing or public key certificate rotation.
-- **Email Mapping & Analytics:** Map verified email to `members.access_email`, retain `passie_member` cookie as a development fallback, and bind email to `posthog.identify()`.
-- **Local Dev Simulation:** Configured in `wrangler.jsonc` via `"access": { "dev": { "aud": "...", "identity": { "email": "..." } } }`.
+- **Architecture:** Zero public sign-up; accounts pre-created by group admins; WebAuthn passkeys primary, email OTP fallback.
+- **Database Sessions:** Stored in Cloudflare D1 with instant revocation on logout, member deactivation, or email changes.
+- **Developer Login Harness:** `/api/dev/login-as` enabled strictly on localhost when `PASSIE_DEV_LOGIN=1` and `PASSIE_ENV !== 'production'`.
 
 ---
 

@@ -71,16 +71,18 @@ This document tracks verified external documentation, checked dates, and known p
 
 ---
 
-## 2. Toolchain Snapshot (Verified 2026-08-14)
+## 2. Toolchain Snapshot (Verified 2026-10-17)
 
-| Tool / Package | Baseline / Target Version | Installed Scaffold Version |
+| Tool / Package | Version in `package.json` | Purpose |
 | --- | --- | --- |
-| Node.js | `22.22.2` | `v22.22.2` |
-| npm | `10.9.7` | `10.9.7` |
-| wrangler | `4.123.0` | `4.123.0` |
-| next | `16.3.1` (or latest 15.5.x fallback) | Recorded after Phase 0.9 |
-| @opennextjs/cloudflare | `1.20.2` | Recorded after Phase 0.9 |
-| drizzle-orm | `0.45.2` | Recorded after Phase 0.9 |
-| @tanstack/react-query | `5.101.4` | Recorded after Phase 0.9 |
-| posthog-js | `1.417.0` | Recorded after Phase 0.9 |
-| pnpm | `10.x` | `10.9.7` |
+| Node.js | `>=22.22.0` | Server runtime engine |
+| pnpm | `>=10.0.0` | Local package isolation |
+| wrangler | `^4.123.0` | Cloudflare Workers CLI & local workerd emulator |
+| next | `16.3.1` | Next.js App Router |
+| @opennextjs/cloudflare | `^1.20.2` | Next.js Cloudflare Workers adapter |
+| better-auth | `1.7.7` | Passwordless WebAuthn & Email OTP auth |
+| @better-auth/drizzle-adapter | `1.7.7` | D1 SQLite adapter for Better Auth |
+| @better-auth/passkey | `1.7.7` | WebAuthn passkey client & server plugin |
+| drizzle-orm | `^0.45.2` | Type-safe SQLite ORM for Cloudflare D1 |
+| @tanstack/react-query | `^5.66.0` | Client state polling & server snapshot sync |
+| posthog-js | `^1.220.0` | Privacy-scrubbed product analytics & telemetry |
