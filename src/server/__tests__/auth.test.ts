@@ -341,4 +341,75 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it("logger error telemetry: untrusted origin (e.g. http://passie.goedvolk.org) triggers Better Auth error logger and dispatches sanitized $exception to PostHog", async () => {
+    const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const waitUntilPromises: Array<Promise<unknown>> = [];
+    const originalFetch = global.fetch;
+    const fetchSpy = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+      const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (urlStr.includes("/capture/")) {
+        fetchCalls.push({
+          url: urlStr,
+          body: JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>,
+        });
+        return new Response(JSON.stringify({ status: 1 }), { status: 200 });
+      }
+      return originalFetch(input as RequestInfo, init);
+    });
+
+    try {
+      const auth = await getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "development",
+          PASSIE_PUBLIC_ORIGIN: "https://passie.goedvolk.org",
+          BETTER_AUTH_TRUSTED_ORIGINS: "https://passie.goedvolk.org",
+          POSTHOG_KEY: "phc_test_logger_key",
+          POSTHOG_HOST: "https://eu.i.posthog.com",
+        },
+        cfCtx: {
+          ctx: {
+            waitUntil: (p) => {
+              waitUntilPromises.push(p);
+            },
+          },
+        },
+      });
+
+      const untrustedHttpReq = new Request(
+        "https://passie.goedvolk.org/api/auth/email-otp/send-verification-otp",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Origin: "http://passie.goedvolk.org",
+            Host: "passie.goedvolk.org",
+          },
+          body: JSON.stringify({ email: "demo@goedvolk.org", type: "sign-in" }),
+        }
+      );
+
+      const res = await auth.handler(untrustedHttpReq);
+      expect(res.status).toBe(403);
+      await Promise.all(waitUntilPromises);
+
+      expect(fetchCalls.length).toBe(1);
+      const captured = fetchCalls[0]!;
+      expect(captured.url).toBe("https://eu.i.posthog.com/capture/");
+      expect(captured.body.event).toBe("$exception");
+      expect(captured.body.distinct_id).toBe("system_auth");
+      expect(captured.body.properties).toEqual(
+        expect.objectContaining({
+          source: "better_auth_logger",
+          $geoip_disable: true,
+          $process_person_profile: false,
+          $exception_message: expect.stringContaining("Invalid origin: http://passie.goedvolk.org"),
+          detail: expect.stringContaining("Invalid origin: http://passie.goedvolk.org"),
+        })
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });

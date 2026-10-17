@@ -10,7 +10,11 @@ import * as authSchema from "./authSchema";
 import * as schema from "./schema";
 import { CloudflareMailer, getMailer, renderOtpEmail } from "./email";
 import { createDb, type DbClient } from "./db";
-import { captureServerException, captureServerTelemetryEvent } from "./telemetryConfig";
+import {
+  captureServerException,
+  captureServerTelemetryEvent,
+  sanitizeServerErrorText,
+} from "./telemetryConfig";
 
 import type { BetterAuthPlugin } from "better-auth";
 
@@ -270,6 +274,30 @@ export async function getAuth(options?: AuthContextOptions) {
       customRules: {
         "/email-otp/send-verification-otp": { window: 60, max: 3 },
         "/sign-in/email-otp": { window: 60, max: 5 },
+      },
+    },
+    logger: {
+      level: "warn",
+      log: (level, message, ...args) => {
+        const formatted = [
+          message,
+          ...args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))),
+        ].join(" ");
+        if (level === "error") {
+          console.error(`[Better Auth] ${formatted}`);
+          void captureServerException({
+            error: new Error(`[BetterAuth] ${message}`),
+            distinctId: "system_auth",
+            env,
+            waitUntil: cfCtx?.ctx?.waitUntil?.bind(cfCtx.ctx),
+            context: {
+              source: "better_auth_logger",
+              detail: sanitizeServerErrorText(formatted).slice(0, 500),
+            },
+          });
+        } else {
+          console.warn(`[Better Auth] ${formatted}`);
+        }
       },
     },
     disabledPaths: [

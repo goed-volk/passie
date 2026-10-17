@@ -14,7 +14,9 @@ export const ALLOWED_ANALYTICS_EVENTS = new Set([
   // Identity & Navigation
   "member.selected",
   "auth.sign_in_otp_requested",
+  "auth.sign_in_otp_failed",
   "auth.sign_in_success",
+  "auth.sign_in_failed",
   "auth.sign_out",
   "auth.passkey_registered",
   "auth.passkey_deleted",
@@ -118,7 +120,7 @@ export function initPostHog(config?: ClientTelemetryConfig) {
     capture_exceptions: {
       capture_unhandled_errors: true,
       capture_unhandled_rejections: true,
-      capture_console_errors: false,
+      capture_console_errors: true,
     },
     capture_performance: {
       web_vitals: true,
@@ -345,9 +347,26 @@ export function trackSignInOtpRequested() {
   posthog.capture("auth.sign_in_otp_requested");
 }
 
+export function trackSignInOtpFailed(props: {
+  error_code?: string;
+  status?: number;
+}) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.sign_in_otp_failed", props);
+}
+
 export function trackSignInSuccess(props: { method: "otp" | "passkey" }) {
   if (typeof window === "undefined" || !posthog.__loaded) return;
   posthog.capture("auth.sign_in_success", props);
+}
+
+export function trackSignInFailed(props: {
+  method: "otp" | "passkey";
+  error_code?: string;
+  status?: number;
+}) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("auth.sign_in_failed", props);
 }
 
 export function trackSignOut() {
