@@ -1,11 +1,33 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Settings, TicketCheck } from "lucide-react";
+import { Bell, Calendar, Settings, TicketCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import type { MemberRef } from "@/server/snapshot";
+import type { MemberRef, PoolSnapshot } from "@/server/snapshot";
 import { t } from "@/i18n/t";
+import { RemindOwnersDialog } from "@/components/RemindOwnersDialog";
 
-export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
+export interface RemindContext {
+  gamePoolId: string;
+  matchLabel: string;
+  unindicatedPasses: PoolSnapshot["passes"];
+}
+
+export function TopNav({
+  actingMember,
+  remindContext,
+}: {
+  actingMember: MemberRef | null;
+  remindContext?: RemindContext;
+}) {
+  const [remindOpen, setRemindOpen] = useState(false);
+
+  const canRemind =
+    actingMember?.role === "admin" &&
+    Boolean(remindContext && remindContext.unindicatedPasses.length > 0);
+
   return (
     <nav className="flex items-center justify-between py-2">
       <Link href="/" className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-slate-100 flex items-center space-x-2">
@@ -14,6 +36,28 @@ export function TopNav({ actingMember }: { actingMember: MemberRef | null }) {
       </Link>
 
       <div className="flex items-center space-x-1 sm:space-x-2">
+        {canRemind && remindContext && (
+          <>
+            <button
+              type="button"
+              onClick={() => setRemindOpen(true)}
+              className="h-11 w-11 p-2.5 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
+              aria-label={t("ariaRemindUnindicated")}
+              title={t("ariaRemindUnindicated")}
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[var(--club-primary)]" />
+            </button>
+            <RemindOwnersDialog
+              open={remindOpen}
+              onOpenChange={setRemindOpen}
+              gamePoolId={remindContext.gamePoolId}
+              matchLabel={remindContext.matchLabel}
+              unindicatedPasses={remindContext.unindicatedPasses}
+            />
+          </>
+        )}
+
         <ThemeToggle variant="icon" />
 
         <Link

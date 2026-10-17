@@ -30,6 +30,7 @@ export const ALLOWED_ANALYTICS_EVENTS = new Set([
   "admin.member_created",
   "admin.member_updated",
   "admin.members_reordered",
+  "admin.deadline_reminded",
 
   // Errors & Internal Metrics
   "$exception",
@@ -408,6 +409,15 @@ export function trackAdminMemberUpdated(props?: { changed?: string[] }) {
 export function trackAdminMembersReordered(props?: { memberCount?: number }) {
   if (typeof window === "undefined" || !posthog.__loaded) return;
   posthog.capture("admin.members_reordered", props);
+}
+
+export function trackAdminDeadlineReminded(props: {
+  recipientCount: number;
+  skippedCount: number;
+  unindicatedPassCount: number;
+}) {
+  if (typeof window === "undefined" || !posthog.__loaded) return;
+  posthog.capture("admin.deadline_reminded", props);
 }
 
 export function trackClientException(

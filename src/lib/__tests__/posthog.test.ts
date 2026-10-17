@@ -41,6 +41,7 @@ import {
   trackAdminMemberCreated,
   trackAdminMemberUpdated,
   trackAdminMembersReordered,
+  trackAdminDeadlineReminded,
   trackSignInOtpRequested,
   trackSignInOtpFailed,
   trackSignInSuccess,
@@ -95,6 +96,7 @@ describe("posthog client telemetry & privacy", () => {
       expect(ALLOWED_ANALYTICS_EVENTS.has("admin.member_created")).toBe(true);
       expect(ALLOWED_ANALYTICS_EVENTS.has("admin.member_updated")).toBe(true);
       expect(ALLOWED_ANALYTICS_EVENTS.has("admin.members_reordered")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("admin.deadline_reminded")).toBe(true);
 
       // Errors & Telemetry
       expect(ALLOWED_ANALYTICS_EVENTS.has("$exception")).toBe(true);
@@ -407,6 +409,17 @@ describe("posthog client telemetry & privacy", () => {
       trackAdminMembersReordered({ memberCount: 6 });
       expect(posthog.capture).toHaveBeenCalledWith("admin.members_reordered", {
         memberCount: 6,
+      });
+
+      trackAdminDeadlineReminded({
+        recipientCount: 3,
+        skippedCount: 1,
+        unindicatedPassCount: 4,
+      });
+      expect(posthog.capture).toHaveBeenCalledWith("admin.deadline_reminded", {
+        recipientCount: 3,
+        skippedCount: 1,
+        unindicatedPassCount: 4,
       });
     });
 
