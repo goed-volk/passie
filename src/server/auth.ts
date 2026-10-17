@@ -5,12 +5,10 @@ import { passkey } from "@better-auth/passkey";
 import { nextCookies } from "better-auth/next-js";
 import { testUtils } from "better-auth/plugins";
 import { APIError } from "better-auth/api";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as authSchema from "./authSchema";
-import * as schema from "./schema";
-import { CloudflareMailer, getMailer, renderOtpEmail } from "./email";
+import { dispatchTransactionalEmail, renderOtpEmail } from "./email";
 import { createDb, type DbClient } from "./db";
-import { captureServerException, captureServerTelemetryEvent } from "./telemetryConfig";
 
 import type { BetterAuthPlugin } from "better-auth";
 
@@ -96,81 +94,18 @@ export async function getAuth(options?: AuthContextOptions) {
       allowedAttempts: 3,
       storeOTP: "hashed",
       sendVerificationOTP: async ({ email, otp, type }) => {
-        const mailer = getMailer(env);
-        const provider = mailer instanceof CloudflareMailer ? "cloudflare" : "console";
         const payload = renderOtpEmail(email, otp);
-
-        const resolveRecipientMemberId = async (): Promise<string | null> => {
-          try {
-            const normalizedEmail = email.trim().toLowerCase();
-            const user = await activeDb.query.auth_user.findFirst({
-              where: eq(authSchema.auth_user.email, normalizedEmail),
-            });
-            if (!user) return null;
-            const member = await activeDb.query.members.findFirst({
-              where: and(
-                eq(schema.members.userId, user.id),
-                eq(schema.members.isActive, 1)
-              ),
-            });
-            return member?.id ?? null;
-          } catch {
-            return null;
-          }
-        };
-
-        const sendPromise = (async () => {
-          const memberId = await resolveRecipientMemberId();
-          const distinctId = memberId ?? "system_mailer";
-          const processPersonProfile = Boolean(memberId);
-
-          try {
-            await mailer.send(payload);
-            await captureServerTelemetryEvent({
-              event: "email.sent",
-              distinctId,
-              env,
-              properties: {
-                kind: "otp",
-                otp_type: type ?? "sign-in",
-                provider,
-                $process_person_profile: processPersonProfile,
-              },
-            });
-          } catch (err) {
-            const domain = email.includes("@") ? `@${email.split("@")[1]}` : "unknown";
-            console.error(
-              `[auth:emailOTP] Failed to send verification OTP to domain ${domain}:`,
-              err instanceof Error ? err.message : String(err)
-            );
-            await captureServerTelemetryEvent({
-              event: "email.send_failed",
-              distinctId,
-              env,
-              properties: {
-                kind: "otp",
-                otp_type: type ?? "sign-in",
-                provider,
-                $process_person_profile: processPersonProfile,
-              },
-            });
-            await captureServerException({
-              error: err,
-              distinctId,
-              env,
-              context: {
-                source: "email_otp_send",
-                provider,
-              },
-            });
-          }
-        })();
-
-        if (cfCtx?.ctx?.waitUntil) {
-          cfCtx.ctx.waitUntil(sendPromise);
-        } else {
-          await sendPromise;
-        }
+        await dispatchTransactionalEmail({
+          payload,
+          kind: "otp",
+          trigger: "sign-in",
+          db: activeDb,
+          env,
+          cfCtx,
+          extraProperties: {
+            otp_type: type ?? "sign-in",
+          },
+        });
       },
     }),
     passkey({

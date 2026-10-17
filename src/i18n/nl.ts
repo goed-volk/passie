@@ -118,13 +118,30 @@ export const nl = {
   passkeyAddError: "Kon passkey niet toevoegen. Probeer het opnieuw.",
   passkeyAuthError: "Inloggen met passkey mislukt of geannuleerd.",
 
-  // Email template
+  // Email template — Algemeen & OTP Inlogcode
+  emailFooterTagline: "Passie · Seizoenkaarten delen met vrienden",
+  emailFallbackUrlLabel: "Werkt de knop niet? Open deze link in je browser:",
   emailOtpSubject: "Inloggen bij Passie",
-  emailOtpBodyText: "Je inlogcode voor Passie is: {code}\n\nDeze code is 10 minuten geldig.\n\nAls je deze code niet zelf hebt aangevraagd, kun je dit bericht negeren.",
+  emailOtpPreheader: "Je inlogcode voor Passie is {code}. Deze code is 10 minuten geldig.",
+  emailOtpBodyText: "Je inlogcode voor Passie is: {code}\n\nDeze code is 10 minuten geldig. Deel deze code nooit met anderen.\n\nHeb je deze code niet zelf aangevraagd? Dan kun je dit bericht negeren.",
   emailOtpBodyHtmlTitle: "Inloggen bij Passie",
-  emailOtpBodyHtmlDesc: "Gebruik de onderstaande code om in te loggen op je account:",
+  emailOtpBodyHtmlDesc: "Gebruik de onderstaande code om in te loggen bij Passie:",
   emailOtpBodyHtmlExpiry: "Deze code is 10 minuten geldig. Deel deze code nooit met anderen.",
   emailOtpBodyHtmlIgnore: "Heb je deze code niet zelf aangevraagd? Dan kun je deze e-mail veilig negeren.",
+
+  // Email template — Welkom / Lid toegevoegd
+  emailWelcomeSubject: "Je bent toegevoegd aan Passie ({group})",
+  emailWelcomePreheader: "Je kunt nu inloggen bij Passie voor {group}.",
+  emailWelcomeTitle: "Welkom bij Passie",
+  emailWelcomeGreeting: "Hoi {name},",
+  emailWelcomeIntro: "Je bent toegevoegd aan Passie voor {group}. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.",
+  emailWelcomeHowToLogin: "Zo log je in:",
+  emailWelcomeStep1: "Ga naar Passie via de knop hieronder (of via {url}).",
+  emailWelcomeStep2: "Vul je e-mailadres in en vraag een 6-cijferige inlogcode aan.",
+  emailWelcomeStep3: "Vul de code in. Je bent direct ingelogd.",
+  emailWelcomePasskeyTip: "Tip: Stel na het inloggen een passkey in (zoals Face ID, Touch ID of je schermvergrendeling). De volgende keer log je dan zonder code in.",
+  emailWelcomeCta: "Naar Passie",
+  emailWelcomeBodyText: "Hoi {name},\n\nJe bent toegevoegd aan Passie voor {group}. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.\n\nZo log je in:\n1. Ga naar {url}\n2. Vul je e-mailadres in en vraag een 6-cijferige inlogcode aan.\n3. Vul de code in. Je bent direct ingelogd.\n\nTip: Stel na het inloggen een passkey in (zoals Face ID, Touch ID of je schermvergrendeling). De volgende keer log je dan zonder code in.\n\nOpen Passie: {url}",
 
   // Settings & Navigation
   navHome: "Volgende wedstrijd",
