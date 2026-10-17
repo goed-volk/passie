@@ -5,6 +5,7 @@ import { getActingMember } from "@/server/actingMember";
 import { mutate } from "@/server/commit";
 import { buildPoolSnapshot } from "@/server/snapshot";
 import { assertSameOrigin } from "@/server/http/assertSameOrigin";
+import { dispatchPassAssignedEmails } from "@/server/email";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,8 @@ export async function POST(
       { status }
     );
   }
+
+  await dispatchPassAssignedEmails(db, gamePoolId, result.events);
 
   const snapshot = await buildPoolSnapshot(db, gamePoolId, actorId);
   return NextResponse.json({ pool: snapshot });

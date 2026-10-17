@@ -12,6 +12,7 @@ export interface MemberRef {
   avatarColor: string;
   slug: string;
   role?: "admin" | "member";
+  hasEmail?: boolean;
   email?: string;
   userId?: string | null;
 }
@@ -136,6 +137,23 @@ export async function buildPoolSnapshot(
   const allMembersList = await db.query.members.findMany({
     where: eq(schema.members.groupId, pool.groupId),
   });
+
+  const userIds = allMembersList
+    .map((m) => m.userId)
+    .filter((id): id is string => Boolean(id));
+
+  const userEmailsSet = new Set<string>();
+  if (userIds.length > 0) {
+    const users = await db.query.auth_user.findMany({
+      where: inArray(schema.auth_user.id, userIds),
+    });
+    for (const u of users) {
+      if (u.email && u.email.trim() !== "") {
+        userEmailsSet.add(u.id);
+      }
+    }
+  }
+
   const allMembersMap = new Map<string, MemberRef>();
   const memberNamesMap = new Map<string, string>();
   const activeMembersList: MemberRef[] = [];
@@ -148,6 +166,8 @@ export async function buildPoolSnapshot(
       initials: m.initials,
       avatarColor: m.avatarColor,
       slug: m.slug,
+      role: m.role as "admin" | "member",
+      hasEmail: Boolean(m.userId && userEmailsSet.has(m.userId)),
     };
     allMembersMap.set(m.id, ref);
     memberNamesMap.set(m.id, m.displayName);

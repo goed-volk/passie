@@ -7,6 +7,7 @@ export * from "./console";
 export * from "./cloudflare";
 export * from "./template";
 export * from "./dispatch";
+export * from "./lifecycle";
 
 const defaultConsoleMailer = new ConsoleMailer();
 
