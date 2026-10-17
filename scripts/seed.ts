@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { execFileSync } from "node:child_process";
 import { getPlatformProxy } from "./proxy";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and } from "drizzle-orm";
@@ -150,6 +152,34 @@ VALUES (
 ON CONFLICT(group_id, slug) DO UPDATE SET
   role = excluded.role;
     `.trim());
+
+    if (m.email) {
+      const normalizedEmail = m.email.toLowerCase().trim();
+      const userId = `user_${seed.group.slug}_${m.slug}`;
+      const nowMs = now * 1000;
+      statements.push(`
+INSERT INTO auth_user (id, name, email, email_verified, role, banned, created_at, updated_at)
+VALUES (
+  ${sqlEscape(userId)},
+  ${sqlEscape(m.displayName)},
+  ${sqlEscape(normalizedEmail)},
+  1,
+  ${sqlEscape(m.role === "admin" ? "admin" : "user")},
+  0,
+  ${nowMs},
+  ${nowMs}
+)
+ON CONFLICT(email) DO UPDATE SET
+  name = excluded.name,
+  role = excluded.role;
+      `.trim());
+
+      statements.push(`
+UPDATE members
+SET user_id = (SELECT id FROM auth_user WHERE email = ${sqlEscape(normalizedEmail)})
+WHERE id = ${sqlEscape(memberId)};
+      `.trim());
+    }
   }
 
   for (let index = 0; index < seed.passes.length; index++) {
@@ -191,25 +221,123 @@ ON CONFLICT(pass_id, member_id) DO NOTHING;
   return statements.join("\n\n");
 }
 
-export async function runSeed(args = process.argv.slice(2)) {
+export interface SeedArgs {
+  isRemote: boolean;
+  isConfirmed: boolean;
+  customFile: string | null;
+  env?: string;
+}
+
+export function parseSeedArgs(args: string[]): SeedArgs {
   const isRemote = args.includes("--remote");
   const isConfirmed = args.includes("--confirm");
 
   let customFile: string | null = null;
-  for (const arg of args) {
+  let env: string | undefined = undefined;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
     if (arg.startsWith("--file=")) {
       customFile = arg.slice(7);
+    } else if (arg.startsWith("--env=")) {
+      env = arg.slice(6);
+    } else if (arg === "--env" && args[i + 1]) {
+      env = args[i + 1];
     }
   }
 
-  if (isRemote) {
-    console.error(
-      "Error: Direct remote seeding of production database 'passie' is disabled.\n" +
+  return { isRemote, isConfirmed, customFile, env };
+}
+
+export function assertRemoteSeedAllowed(options: {
+  isRemote: boolean;
+  env?: string;
+  dbName?: string;
+  dbId?: string;
+}): void {
+  if (!options.isRemote) return;
+
+  const targetEnv = options.env?.trim().toLowerCase();
+  if (!targetEnv || targetEnv === "production") {
+    throw new Error(
+      "Direct remote seeding of production database 'passie' is disabled.\n" +
       "Production is live with actual games, allocations, and user custody records.\n" +
       "Manage members and emails via the /beheer admin interface.\n" +
       "For future remote staging reset strategies, see ROADMAP.md."
     );
-    process.exit(1);
+  }
+
+  if (targetEnv !== "staging") {
+    throw new Error(`Remote seeding is only permitted for staging environment, got '${targetEnv}'`);
+  }
+
+  const productionDbName = "passie";
+  const productionDbId = "176bd801-9d6f-4d7e-8306-83ea0a0be157";
+
+  if (options.dbName === productionDbName || options.dbId === productionDbId) {
+    throw new Error("Safety assertion failed: Database matches production database.");
+  }
+}
+
+export async function runSeed(args = process.argv.slice(2)) {
+  const { isRemote, customFile, env } = parseSeedArgs(args);
+
+  let stagingDbName = "passie-staging-db";
+  let stagingDbId = "1c936aac-181c-47dc-98c2-6f6d64416595";
+  try {
+    const wranglerConfigPath = path.resolve(process.cwd(), "wrangler.jsonc");
+    if (fs.existsSync(wranglerConfigPath)) {
+      const content = fs.readFileSync(wranglerConfigPath, "utf-8");
+      const parsed = JSON.parse(content.replace(/\/\/.*$/gm, ""));
+      const stagingD1 = parsed?.env?.staging?.d1_databases?.[0];
+      if (stagingD1?.database_name) stagingDbName = stagingD1.database_name;
+      if (stagingD1?.database_id) stagingDbId = stagingD1.database_id;
+    }
+  } catch {
+    // Fallback to defaults
+  }
+
+  if (isRemote) {
+    assertRemoteSeedAllowed({
+      isRemote,
+      env,
+      dbName: stagingDbName,
+      dbId: stagingDbId,
+    });
+
+    let seedFilePath: string;
+    if (customFile) {
+      seedFilePath = path.resolve(process.cwd(), customFile);
+      if (!fs.existsSync(seedFilePath)) {
+        console.error(`Error: Seed file not found at ${seedFilePath}`);
+        process.exit(1);
+      }
+    } else {
+      const localSeedPath = path.resolve(process.cwd(), "seed/group.local.json");
+      const exampleSeedPath = path.resolve(process.cwd(), "seed/group.example.json");
+      seedFilePath = fs.existsSync(localSeedPath) ? localSeedPath : exampleSeedPath;
+    }
+
+    console.log(`Loading seed data from ${seedFilePath} for remote staging seed...`);
+    const rawJson = fs.readFileSync(seedFilePath, "utf-8");
+    const seed: SeedData = JSON.parse(rawJson);
+    const sql = generateSeedSql(seed);
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "passie-staging-seed-"));
+    const tmpSqlFile = path.join(tmpDir, "seed.sql");
+    try {
+      fs.writeFileSync(tmpSqlFile, sql, "utf-8");
+      console.log(`Executing remote seed on '${stagingDbName}' via wrangler d1 execute...`);
+      execFileSync(
+        "pnpm",
+        ["exec", "wrangler", "d1", "execute", stagingDbName, "--env", "staging", "--remote", `--file=${tmpSqlFile}`, "-y"],
+        { stdio: "inherit" }
+      );
+      console.log("Remote staging seed complete!");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+    return;
   }
 
   let seedFilePath: string;

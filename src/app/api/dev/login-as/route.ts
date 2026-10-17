@@ -5,6 +5,7 @@ import { getDb, type DbClient } from "@/server/db";
 import * as schema from "@/server/schema";
 import { getAuth } from "@/server/auth";
 import { preCreateUserAndLink } from "@/server/authAdmin";
+import { isCloudDeployed } from "@/server/env";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function handleDevLogin(request: Request, customDb?: DbClient) {
   const host = request.headers.get("host") || "";
   const isLocalHost = host.startsWith("localhost") || host.startsWith("127.0.0.1");
 
-  let isProduction = process.env.PASSIE_ENV === "production";
+  let isCloud = isCloudDeployed();
   let devLogin =
     process.env.PASSIE_DEV_LOGIN === "1" || process.env.NODE_ENV === "test";
 
@@ -27,7 +28,7 @@ export async function handleDevLogin(request: Request, customDb?: DbClient) {
     const cf = await getCloudflareContext({ async: true });
     const cfEnv = cf?.env as unknown as Record<string, unknown> | undefined;
     if (cfEnv) {
-      if (cfEnv.PASSIE_ENV) isProduction = cfEnv.PASSIE_ENV === "production";
+      isCloud = isCloudDeployed(cfEnv);
       if (cfEnv.PASSIE_DEV_LOGIN !== undefined) {
         devLogin = String(cfEnv.PASSIE_DEV_LOGIN) === "1";
       }
@@ -36,7 +37,7 @@ export async function handleDevLogin(request: Request, customDb?: DbClient) {
     // Fallback to process.env
   }
 
-  if (isProduction || !devLogin || !isLocalHost) {
+  if (isCloud || !devLogin || !isLocalHost) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

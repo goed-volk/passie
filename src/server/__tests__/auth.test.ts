@@ -274,6 +274,104 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
     expect(mailer).toBeInstanceOf(CloudflareMailer);
   });
 
+  it("fail-closed posture: getAuth rejects missing secret or origin in staging", async () => {
+    // Missing secret in staging
+    await expect(
+      getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "staging",
+          PASSIE_PUBLIC_ORIGIN: "https://passie-dev.goedvolk.org",
+        },
+      })
+    ).rejects.toThrow("Missing or default BETTER_AUTH_SECRET configured in staging");
+
+    // Default dev secret in staging
+    await expect(
+      getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "staging",
+          BETTER_AUTH_SECRET: "local-dev-better-auth-secret-min-32-characters-change-in-prod",
+          PASSIE_PUBLIC_ORIGIN: "https://passie-dev.goedvolk.org",
+        },
+      })
+    ).rejects.toThrow("Missing or default BETTER_AUTH_SECRET configured in staging");
+
+    // Missing origin in staging
+    await expect(
+      getAuth({
+        db,
+        env: {
+          PASSIE_ENV: "staging",
+          BETTER_AUTH_SECRET: "staging-super-secret-key-32-chars-minimum",
+        },
+      })
+    ).rejects.toThrow("Missing PASSIE_PUBLIC_ORIGIN in staging");
+  });
+
+  it("fail-closed posture: getMailer enforces Cloudflare binding in staging", () => {
+    expect(() =>
+      getMailer({
+        PASSIE_ENV: "staging",
+        PASSIE_MAILER: "console",
+      })
+    ).toThrow("Cloudflare EMAIL binding is required and must be available in staging");
+
+    expect(() =>
+      getMailer({
+        PASSIE_ENV: "staging",
+        PASSIE_MAILER: "cloudflare",
+      })
+    ).toThrow("Cloudflare EMAIL binding is required and must be available in staging");
+
+    const mockBinding = { send: vi.fn() };
+    const mailer = getMailer({
+      PASSIE_ENV: "staging",
+      PASSIE_MAILER: "cloudflare",
+      EMAIL: mockBinding,
+    });
+    expect(mailer).toBeInstanceOf(CloudflareMailer);
+  });
+
+  it("staging configuration: getAuth initializes with secure cookies and staging origin", async () => {
+    const auth = await getAuth({
+      db,
+      env: {
+        PASSIE_ENV: "staging",
+        BETTER_AUTH_SECRET: "staging-super-secret-key-32-chars-minimum",
+        PASSIE_PUBLIC_ORIGIN: "https://passie-dev.goedvolk.org",
+        BETTER_AUTH_TRUSTED_ORIGINS: "https://passie-dev.goedvolk.org",
+      },
+    });
+    expect(auth.options.baseURL).toBe("https://passie-dev.goedvolk.org");
+    expect(auth.options.advanced?.useSecureCookies).toBe(true);
+  });
+
+  it("dev login: /api/dev/login-as returns 404 in staging environment", async () => {
+    const { handleDevLogin } = await import("../../app/api/dev/login-as/route");
+    const originalEnv = process.env.PASSIE_ENV;
+    try {
+      process.env.PASSIE_ENV = "staging";
+      const req = new Request("http://localhost:3000/api/dev/login-as", {
+        method: "POST",
+        headers: {
+          host: "localhost:3000",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ memberSlug: "sam" }),
+      });
+      const res = await handleDevLogin(req, db);
+      expect(res.status).toBe(404);
+    } finally {
+      if (originalEnv !== undefined) {
+        process.env.PASSIE_ENV = originalEnv;
+      } else {
+        delete (process.env as Record<string, string | undefined>).PASSIE_ENV;
+      }
+    }
+  });
+
   it("email OTP telemetry: emits email.sent with member distinctId and $geoip_disable on OTP send", async () => {
     const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
     const originalFetch = global.fetch;
