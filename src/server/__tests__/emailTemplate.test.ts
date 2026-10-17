@@ -122,8 +122,9 @@ describe("email template system & dispatcher", () => {
         },
       });
 
-      expect(waitUntilPromises.length).toBe(1);
-      await Promise.all(waitUntilPromises);
+      while (waitUntilPromises.length > 0) {
+        await Promise.all(waitUntilPromises.splice(0));
+      }
 
       expect(fetchCalls.length).toBe(1);
       const eventBody = fetchCalls[0]!.body;

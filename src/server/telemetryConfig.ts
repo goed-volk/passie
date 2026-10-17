@@ -117,6 +117,7 @@ export async function captureServerTelemetryEvent(options: {
 
   if (options.waitUntil) {
     options.waitUntil(work);
+    return;
   }
   await work;
 }

@@ -14,5 +14,5 @@ export type EmailTrigger =
   | "cli_link";
 
 export interface Mailer {
-  send(payload: EmailPayload): Promise<void>;
+  send(payload: EmailPayload): Promise<{ messageId?: string } | void>;
 }
