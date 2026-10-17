@@ -457,7 +457,15 @@ export async function updateMember(
     throw new Error(`Member ${memberId} not found`);
   }
 
-  const wasPreviouslyUnlinked = !existing.userId;
+  let wasPreviouslyUnlinked = !existing.userId;
+  if (!wasPreviouslyUnlinked && existing.userId) {
+    const existingUser = await db.query.auth_user.findFirst({
+      where: eq(schema.auth_user.id, existing.userId),
+    });
+    if (!existingUser || !existingUser.email || existingUser.email.trim() === "") {
+      wasPreviouslyUnlinked = true;
+    }
+  }
   let newlyLinkedEmail: string | null = null;
 
   const updateData: Record<string, unknown> = {};

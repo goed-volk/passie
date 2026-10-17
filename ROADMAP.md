@@ -65,13 +65,13 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Description:* Actionable, zero-fluff Dutch transactional emails built on the shared `renderPassieEmailLayout` HTML design system and `dispatchTransactionalEmail` telemetry pipeline (`src/server/email/`).
   - *Lifecycle Hooks:*
     1. **Member Onboarding / Welcome Email (`kind: "welcome"`):** Sent automatically when a new member is created with an email address (`createMember`), when an existing member has an email linked for the first time (`updateMember`), or via CLI (`scripts/link-member-emails.ts`). Explains how Passie works, links directly to `/inloggen`, and recommends setting up a passkey after first login. (**Delivered.**)
-    2. **Indication Deadline Reminder (`kind: "deadline_reminder"`):** Cron-driven nudge sent at `indication_deadline_at - 24h` strictly to pass owners whose pass is still `unindicated` for an upcoming `open` home match (deduplicated via `activity_events` idempotency key `email_deadline_reminder_${poolId}_${memberId}`).
-    3. **Queue Seat Allocated (`kind: "pass_assigned"`):** Sent when `pass.assigned` transitions a waiting queue entry to `assigned` (triggered by `IndicateRelease` or `GiveBackAssignedPass`), informing the claimant which pass (`label` + `seatInfo`) they received and who currently holds the physical card (`holderMemberId`). Uses a 3-minute delay / debounce check against current DB state before sending so accidental clicks immediately undone by the owner do not spam the queue.
+    2. **Queue Seat Allocated (`kind: "pass_assigned"`):** Sent post-commit whenever `mutate()` produces a `pass.assigned` domain event (from `IndicateRelease`, `GiveBackAssignedPass`, or immediate allocation on `JoinQueue`), providing tailored Dutch self/guest copy, kickoff and venue details, assigned pass label (with seat info), and current physical cardholder info. (**Delivered.**)
+    3. **Indication Deadline Reminder (`kind: "deadline_reminder"`):** On-demand nudge sent by group admins from the matchday header (`TopNav` bell icon dialog) with deduplicated co-owner delivery and unlinked owner preview (**Delivered.**), with automated cron-driven nudge at `indication_deadline_at - 24h` planned.
     4. **Pass Reclaimed Disruption Alert (`kind: "pass_reclaimed"`):** High-priority alert sent when a season ticket owner reclaims an already-assigned pass (`pass.reclaimed`), immediately notifying the bumped claimant (`reclaimedFromMemberId`) that the owner is attending after all and that their request has been returned to the front of the waiting list (*"Op de bank"*).
     5. **Matchday Physical Handover Reminder (`kind: "handover_reminder"`):** Sent on matchday morning (`kickoff_at - 6h`) when a pass's physical holder (`passes.holder_member_id`) still differs from the expected attendee (`expectedHolder`), nudging both parties to arrange the physical card exchange (*wissel*).
     6. **Kickoff Rescheduled / Match Cancelled Alert (`kind: "fixture_changed"`):** Sent when ICS feed ingestion triggers `fixture.rescheduled` or `fixture.cancelled` on an `open` pool, notifying only members with an active stake (`kept` owners, `assigned` claimants, or `waiting` queue members).
     7. **Security: Email Address Change Verification (`kind: "email_change"`):** Confirmation/notice dispatched to both old and new addresses when a linked member's login email is modified (paired with Security Review FND-02 hardening).
-  - *Status:* **Welcome email delivered;** matchday & security lifecycle hooks planned.
+  - *Status:* **Welcome email, queue seat allocation notification, and admin deadline reminder delivered;** pass reclaim disruption alerts and scheduled reminders planned.
 
 - **Server-Side Event & Error Analytics:**
   - *Description:* Server-side exception tracking and telemetry to capture backend errors, API usage, and authoritative matchday domain events without reliance on client JavaScript.
@@ -83,14 +83,14 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Status:* Planned.
 
 - **Staging Subdomain (`passie-dev.goedvolk.org`) & Staging Seeding Strategy:**
-  - *Description:* Dedicated remote preview environment with an isolated Cloudflare D1 test database (`passie-staging`) for validating major updates and multi-group features before production cutover.
+  - *Description:* Dedicated remote preview environment with an isolated Cloudflare D1 test database (`passie-staging-db`, UUID `1c936aac-181c-47dc-98c2-6f6d64416595`) and Worker `passie-staging` for validating major updates and multi-group features before production cutover.
   - *Remote Staging Seeding Strategy:*
-    - After significant schema evolutions, domain engine refactors, or test cycles, the staging database may need to be reset and reseeded with representative test data (e.g. `seed/group.staging.json` or `seed/group.example.json`).
+    - After significant schema evolutions, domain engine refactors, or test cycles, the staging database can be reset and reseeded with representative test data via `pnpm seed:staging` (`tsx scripts/seed.ts --env=staging --remote`).
     - **Production Guardrails:**
-      - The production database (`passie`, UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`) must be strictly blocked from any automated or CLI seed execution.
-      - Any future staging seed command (e.g. `pnpm seed:staging`) must explicitly check and assert against the database binding/ID, refusing to run if targeting `passie` or if `PASSIE_ENV === "production"`.
-      - Staging databases must use a distinct Cloudflare binding name (`STAGING_DB`) and database name (`passie-staging`), preventing accidental script or CLI flag misconfigurations from touching production.
-  - *Status:* Planned.
+      - The production database (`passie`, UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`) is strictly blocked from any automated or CLI seed execution.
+      - Staging seed commands explicitly assert against database binding/ID and require `--env=staging`, refusing to run if targeting `passie` or if `PASSIE_ENV === "production"`.
+      - Staging runs under `env.staging` in `wrangler.jsonc` targeting custom domain `passie-dev.goedvolk.org` (single-level subdomain covered by Cloudflare Universal SSL at $0.00 cost).
+  - *Status:* **Delivered.** Tracked in [`.kilo/plans/1792264849195-staging-environment-plan.md`](.kilo/plans/1792264849195-staging-environment-plan.md).
 
 - **Twee-staps wisselbevestiging:**
   - *Description:* Twee-fasen paswissel waarbij de huidige houder de wissel registreert en de ontvanger de ontvangst bevestigt (met een automatische bevestiging na 24 uur).

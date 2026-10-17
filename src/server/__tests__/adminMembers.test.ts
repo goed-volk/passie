@@ -34,13 +34,20 @@ describe("adminMembers", () => {
     const res = await createTestDb();
     proxy = res.proxy;
     db = res.db;
+
+    // Clean up any test members left over from previously aborted runs
+    await db
+      .delete(schema.members)
+      .where(
+        sql`${schema.members.slug} LIKE 'nieuwe-gebruiker%' OR ${schema.members.slug} LIKE 'guest-member%' OR ${schema.members.slug} LIKE 'later-gekoppeld%' OR ${schema.members.slug} LIKE 'welkom-%' OR ${schema.members.slug} LIKE 'seeded-%' OR ${schema.members.slug} LIKE 'clean-passless%'`
+      );
   });
 
   afterAll(async () => {
     // Clean up created test members and their specific audit events
     if (createdMemberIds.length > 0 && db) {
       for (const id of createdMemberIds) {
-        await db.delete(schema.activityEvents).where(sql`${schema.activityEvents.payloadJson} LIKE ${`%"memberId":"${id}"%`}`);
+        await db.delete(schema.activityEvents).where(sql`${schema.activityEvents.payloadJson} LIKE ${"%" + id + "%"}`);
       }
       await db.delete(schema.members).where(inArray(schema.members.id, createdMemberIds));
     }
@@ -494,6 +501,51 @@ describe("adminMembers", () => {
           }
         );
         expect(mockSend).toHaveBeenCalledTimes(1);
+
+        // 5. Seeded member with pre-existing userId but no email -> linking email treats as first-time link
+        const seededMember = await createMember(
+          db,
+          group.id,
+          { displayName: "Seeded Without Email" },
+          principal
+        );
+        createdMemberIds.push(seededMember.id);
+        const dummyUserId = crypto.randomUUID();
+        const now = new Date();
+        await db.insert(schema.auth_user).values({
+          id: dummyUserId,
+          email: "",
+          name: "Seeded Without Email",
+          emailVerified: false,
+          role: "user",
+          banned: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+        await db
+          .update(schema.members)
+          .set({ userId: dummyUserId })
+          .where(eq(schema.members.id, seededMember.id));
+
+        const seededEmail = `welkom-seeded-${Date.now()}@goedvolk.org`;
+        createdUserEmails.push(seededEmail);
+
+        await updateMember(
+          db,
+          seededMember.id,
+          { email: seededEmail },
+          adminAllowed,
+          principal,
+          {
+            env: {
+              PASSIE_ENV: "development",
+              PASSIE_MAILER: "cloudflare",
+              EMAIL: { send: mockSend },
+            },
+          }
+        );
+        expect(mockSend).toHaveBeenCalledTimes(2);
+        expect(mockSend.mock.calls[1]![0].to).toBe(seededEmail);
       } finally {
         fetchSpy.mockRestore();
       }

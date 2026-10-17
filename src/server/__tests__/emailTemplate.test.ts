@@ -3,6 +3,8 @@ import {
   escapeHtml,
   renderOtpEmail,
   renderWelcomeEmail,
+  renderPassAssignedEmail,
+  renderDeadlineReminderEmail,
   renderPassieEmailLayout,
   resolvePublicOrigin,
   dispatchTransactionalEmail,
@@ -73,6 +75,77 @@ describe("email template system & dispatcher", () => {
     expect(resolvePublicOrigin({})).toBe("https://passie.goedvolk.org");
   });
 
+  it("renderPassAssignedEmail renders self and guest copy, match details, and escapes untrusted strings", () => {
+    // 1. Self variant
+    const selfPayload = renderPassAssignedEmail({
+      to: "sam@goedvolk.org",
+      claimantName: "Sam <tag>",
+      kind: "self",
+      matchLabel: "Excelsior - Feyenoord",
+      kickoffFormatted: "zaterdag 17 oktober, 18:45",
+      venue: "Van Donge & De Roo Stadion",
+      passLabel: "Pas 1",
+      seatInfo: "Vak K, Rij 12",
+      currentHolderName: "Ilse",
+      groupName: "Goedvolk",
+      baseUrl: "https://passie.goedvolk.org/",
+    });
+
+    expect(selfPayload.to).toBe("sam@goedvolk.org");
+    expect(selfPayload.subject).toBe("Je bent erbij! Pas toegewezen voor Excelsior - Feyenoord");
+    expect(selfPayload.text).toContain("Hoi Sam <tag>,");
+    expect(selfPayload.text).toContain("Je stond op de bank");
+    expect(selfPayload.text).toContain("Excelsior - Feyenoord");
+    expect(selfPayload.text).toContain("Pas 1 (Vak K, Rij 12)");
+    expect(selfPayload.text).toContain("Ilse");
+    expect(selfPayload.html).toContain("Je bent erbij!");
+    expect(selfPayload.html).toContain("Hoi Sam &lt;tag&gt;,");
+    expect(selfPayload.html).toContain("Pas 1 (Vak K, Rij 12)");
+    expect(selfPayload.html).toContain("Bekijk wedstrijd in Passie");
+    expect(selfPayload.html).not.toContain("<tag>");
+
+    // 2. Guest variant
+    const guestPayload = renderPassAssignedEmail({
+      to: "sam@goedvolk.org",
+      claimantName: "Sam",
+      kind: "guest",
+      guestName: "Opa Cor",
+      matchLabel: "Excelsior - Ajax",
+      kickoffFormatted: "zondag 25 oktober, 14:30",
+      venue: "Van Donge & De Roo Stadion",
+      passLabel: "Pas 2",
+      currentHolderName: "Noor",
+      groupName: "Goedvolk",
+    });
+
+    expect(guestPayload.subject).toBe("Pas toegewezen voor je gast bij Excelsior - Ajax");
+    expect(guestPayload.text).toContain("Er is een seizoenkaart vrijgekomen voor je gast (Opa Cor)");
+    expect(guestPayload.html).toContain("Je gast is erbij!");
+    expect(guestPayload.html).toContain("Opa Cor");
+  });
+
+  it("renderDeadlineReminderEmail renders reminder subject, deadline alert, and pass list", () => {
+    const payload = renderDeadlineReminderEmail({
+      to: "bram@goedvolk.org",
+      ownerName: "Bram",
+      passLabels: ["Pas 1", "Pas 2"],
+      matchLabel: "Excelsior - Sparta",
+      kickoffFormatted: "vrijdag 30 oktober, 20:00",
+      deadlineFormatted: "woensdag 28 oktober om 20:00",
+      groupName: "Goedvolk",
+    });
+
+    expect(payload.to).toBe("bram@goedvolk.org");
+    expect(payload.subject).toBe("Laat weten of je gaat: Excelsior - Sparta");
+    expect(payload.text).toContain("Hoi Bram,");
+    expect(payload.text).toContain("Pas 1, Pas 2");
+    expect(payload.text).toContain("vóór woensdag 28 oktober om 20:00");
+    expect(payload.html).toContain("Ga je naar Excelsior - Sparta?");
+    expect(payload.html).toContain("Pas 1, Pas 2");
+    expect(payload.html).toContain("woensdag 28 oktober om 20:00");
+    expect(payload.html).toContain("Nu aangeven in Passie");
+  });
+
   it("dispatchTransactionalEmail scrubs PII keys from extraProperties and supports waitUntil", async () => {
     const fetchCalls: Array<{ url: string; body: Record<string, unknown> }> = [];
     const originalFetch = global.fetch;
@@ -122,8 +195,9 @@ describe("email template system & dispatcher", () => {
         },
       });
 
-      expect(waitUntilPromises.length).toBe(1);
-      await Promise.all(waitUntilPromises);
+      while (waitUntilPromises.length > 0) {
+        await Promise.all(waitUntilPromises.splice(0));
+      }
 
       expect(fetchCalls.length).toBe(1);
       const eventBody = fetchCalls[0]!.body;

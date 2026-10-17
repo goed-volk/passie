@@ -118,9 +118,14 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 
 ## 5. Deployment & Cloudflare Infrastructure
 
+- **Dual-Environment Architecture (`production` vs `staging`):**
+  - **Production (`passie`):** Bound to `passie.goedvolk.org`, backed by Worker `passie` and D1 database `passie` (UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`). Deployed via `pnpm deploy` and migrated via `pnpm db:migrate:prod`.
+  - **Staging (`passie-staging`):** Bound to `passie-dev.goedvolk.org` (single-level subdomain covered by Cloudflare Universal SSL at $0.00 extra cost), backed by Worker `passie-staging` and isolated D1 database `passie-staging-db` (UUID `1c936aac-181c-47dc-98c2-6f6d64416595`). Deployed via `pnpm deploy:staging`, migrated via `pnpm db:migrate:staging`, and seeded via `pnpm seed:staging`.
+  - **Environment & Security Posture (`src/server/env.ts`):** Both production and staging are treated as remote cloud deployments (`isCloudDeployed(env) === true`). Both enforce fail-closed requirements: non-default `BETTER_AUTH_SECRET`, explicit `PASSIE_PUBLIC_ORIGIN`, `useSecureCookies: true`, passkey relying party origin validation, Cloudflare `EMAIL` binding availability, and HTTP 404 blocking of local `/api/dev/login-as`.
+  - **Remote Seeding Guardrails:** `scripts/seed.ts` strictly rejects `--remote` execution if targeting `production`, if `--env` is missing, or if the database matches production (`passie` / `176bd801-9d6f-4d7e-8306-83ea0a0be157`).
 - **Worker Entry (`src/worker.ts`):** Wraps `@opennextjs/cloudflare` server bundle with top-level `fetch` and `scheduled` handlers. Enforces HTTPS (`301 Moved Permanently` on plain `http:` requests for non-local hostnames via `src/server/http/enforceHttps.ts`) and attaches `Strict-Transport-Security` (`max-age=31536000; includeSubDomains; preload`), `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin` headers alongside `next.config.ts`.
 - **Cron Triggers:** Automatic background fixture ingestion (`0 */6 * * *`) invokes `ingestClubFixtures(db, "excelsior")` directly via the worker `scheduled` handler.
-- **Custom Domain Routing:** Production traffic routes through `passie.goedvolk.org` configured as a Cloudflare Worker custom domain.
+- **Custom Domain Routing:** Production traffic routes through `passie.goedvolk.org` and staging through `passie-dev.goedvolk.org`, configured as Cloudflare Worker custom domains.
 - **Cloudflare Access for Workers:** Access policy attaches at Worker scope (destination type `worker`), protecting the custom domain, all routes, `workers.dev`, and preview URLs under a single policy. For MVP soft launch, a single Bypass policy conditioned on *Country = Netherlands* is used (admitting Dutch visitors frictionlessly while blocking international scrapers without asserting cryptographically verified identity).
 - **D1 Production Database:** Production database `passie` (UUID `176bd801-9d6f-4d7e-8306-83ea0a0be157`, committed in `wrangler.jsonc` per ADR 0011), migrated via `pnpm db:migrate:prod`. Post-bootstrap group administration and member email bindings are managed live via `/beheer`.
 

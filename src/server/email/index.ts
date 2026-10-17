@@ -1,29 +1,32 @@
 import type { Mailer } from "./types";
 import { ConsoleMailer } from "./console";
 import { CloudflareMailer, type CloudflareSendEmailBinding } from "./cloudflare";
+import { isCloudDeployed, resolvePassieEnv } from "../env";
 
 export * from "./types";
 export * from "./console";
 export * from "./cloudflare";
 export * from "./template";
 export * from "./dispatch";
+export * from "./lifecycle";
 
 const defaultConsoleMailer = new ConsoleMailer();
 
 export function getMailer(env?: Record<string, unknown>): Mailer {
   const emailBinding = env?.EMAIL as CloudflareSendEmailBinding | undefined;
   const isBindingAvailable = Boolean(emailBinding && typeof emailBinding.send === "function");
-  const isProduction = (env?.PASSIE_ENV || process.env.PASSIE_ENV) === "production";
+  const isCloud = isCloudDeployed(env);
+  const passieEnv = resolvePassieEnv(env);
 
   const configuredMailer = (
     (env?.PASSIE_MAILER as string | undefined) ||
     process.env.PASSIE_MAILER ||
-    (isProduction && isBindingAvailable ? "cloudflare" : "console")
+    (isCloud && isBindingAvailable ? "cloudflare" : "console")
   ).toLowerCase();
 
-  if (isProduction) {
+  if (isCloud) {
     if (configuredMailer !== "cloudflare" || !isBindingAvailable) {
-      throw new Error("[mailer] Cloudflare EMAIL binding is required and must be available in production");
+      throw new Error(`[mailer] Cloudflare EMAIL binding is required and must be available in ${passieEnv}`);
     }
   }
 

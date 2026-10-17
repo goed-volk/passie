@@ -3,7 +3,7 @@ import type { DbClient } from "./db";
 import * as schema from "./schema";
 import { loadGamePoolState, diffToStatements } from "./repo";
 import { reduce } from "../domain/engine";
-import type { Action, MemberId, DomainError, ReduceContext, ActivityEventType } from "../domain/types";
+import type { Action, MemberId, DomainError, ReduceContext, ActivityEventType, ActivityEvent } from "../domain/types";
 import { captureServerException } from "@/server/telemetryConfig";
 
 export interface MutateOptions {
@@ -16,6 +16,7 @@ export type MutateResult =
   | {
       ok: true;
       version: number;
+      events: ActivityEvent[];
     }
   | {
       ok: false;
@@ -58,6 +59,7 @@ export async function mutate(
         return {
           ok: true,
           version: snapshot?.version ?? 0,
+          events: [],
         };
       }
     }
@@ -106,6 +108,7 @@ export async function mutate(
       return {
         ok: true,
         version: snapshot.version,
+        events: [],
       };
     }
 
@@ -146,6 +149,7 @@ export async function mutate(
         return {
           ok: true,
           version: targetVersion,
+          events: result.events,
         };
       }
     } catch (err: unknown) {

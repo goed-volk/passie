@@ -115,11 +115,17 @@ export async function dispatchTransactionalEmail(
     };
 
     try {
-      await mailer.send(options.payload);
+      const res = await mailer.send(options.payload);
+      if (mailer instanceof CloudflareMailer) {
+        console.log(
+          `[email:cloudflare] Sent ${options.kind} email (trigger=${options.trigger ?? "none"}, messageId=${res?.messageId ?? "n/a"})`
+        );
+      }
       await captureServerTelemetryEvent({
         event: "email.sent",
         distinctId,
         env,
+        waitUntil: cfCtx?.ctx?.waitUntil?.bind(cfCtx.ctx),
         properties: baseProperties,
       });
     } catch (err) {
@@ -133,12 +139,14 @@ export async function dispatchTransactionalEmail(
         event: "email.send_failed",
         distinctId,
         env,
+        waitUntil: cfCtx?.ctx?.waitUntil?.bind(cfCtx.ctx),
         properties: baseProperties,
       });
       await captureServerException({
         error: err,
         distinctId,
         env,
+        waitUntil: cfCtx?.ctx?.waitUntil?.bind(cfCtx.ctx),
         context: {
           source: "email_dispatch",
           kind: options.kind,

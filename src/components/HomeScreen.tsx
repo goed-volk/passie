@@ -59,6 +59,15 @@ export function HomeScreen({
   );
   const hasUnindicatedOwnedPasses = unindicatedOwnedPasses.length > 0;
 
+  const allUnindicatedPasses = pool.passes.filter((p) => p.status === "unindicated");
+  const remindContext = isPoolOpen
+    ? {
+        gamePoolId,
+        matchLabel: `${pool.club.shortName} - ${pool.fixture.opponent}`,
+        unindicatedPasses: allUnindicatedPasses,
+      }
+    : undefined;
+
   return (
     <div
       className={`min-h-[100dvh] bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 ${
@@ -66,7 +75,7 @@ export function HomeScreen({
       }`}
     >
       <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6 pt-2">
-        <TopNav actingMember={pool.actingMember} />
+        <TopNav actingMember={pool.actingMember} remindContext={remindContext} />
         <FixtureHeader pool={pool} />
 
         {pool.status === "cancelled" && (

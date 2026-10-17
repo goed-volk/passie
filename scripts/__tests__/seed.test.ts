@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { generateSeedSql, type SeedData } from "../seed";
+import {
+  generateSeedSql,
+  parseSeedArgs,
+  assertRemoteSeedAllowed,
+  type SeedData,
+} from "../seed";
 
 describe("generateSeedSql", () => {
   const sampleSeed: SeedData = {
@@ -87,5 +92,99 @@ describe("generateSeedSql", () => {
     };
     const sql = generateSeedSql(seedWithQuote);
     expect(sql).toContain("'L''Excelsior'");
+  });
+
+  it("generates auth_user insertion and member user_id linkage when member has email", () => {
+    const seedWithEmail: SeedData = {
+      ...sampleSeed,
+      members: [
+        {
+          slug: "bram",
+          displayName: "Bram",
+          avatarColor: "#059669",
+          email: "bram@goedvolk.org",
+          role: "admin",
+        },
+      ],
+    };
+    const sql = generateSeedSql(seedWithEmail);
+    expect(sql).toContain("INSERT INTO auth_user");
+    expect(sql).toContain("'bram@goedvolk.org'");
+    expect(sql).toContain("'admin'");
+    expect(sql).toContain("UPDATE members");
+    expect(sql).toContain("WHERE id = 'member_goedvolk_bram'");
+  });
+});
+
+describe("parseSeedArgs", () => {
+  it("parses flags correctly with --env=staging and --remote", () => {
+    const parsed = parseSeedArgs(["--env=staging", "--remote", "--file=seed/group.example.json"]);
+    expect(parsed.isRemote).toBe(true);
+    expect(parsed.env).toBe("staging");
+    expect(parsed.customFile).toBe("seed/group.example.json");
+  });
+
+  it("parses space-separated --env flag", () => {
+    const parsed = parseSeedArgs(["--env", "staging", "--remote"]);
+    expect(parsed.isRemote).toBe(true);
+    expect(parsed.env).toBe("staging");
+  });
+});
+
+describe("assertRemoteSeedAllowed", () => {
+  it("does nothing when isRemote is false", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({ isRemote: false, env: "production", dbName: "passie" })
+    ).not.toThrow();
+  });
+
+  it("rejects remote seed if env is omitted", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({ isRemote: true })
+    ).toThrow("Direct remote seeding of production database 'passie' is disabled");
+  });
+
+  it("rejects remote seed if env is production", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({ isRemote: true, env: "production" })
+    ).toThrow("Direct remote seeding of production database 'passie' is disabled");
+  });
+
+  it("rejects remote seed if env is not staging", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({ isRemote: true, env: "development" })
+    ).toThrow("Remote seeding is only permitted for staging environment, got 'development'");
+  });
+
+  it("rejects remote seed if database name is passie", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({
+        isRemote: true,
+        env: "staging",
+        dbName: "passie",
+      })
+    ).toThrow("Safety assertion failed: Database matches production database.");
+  });
+
+  it("rejects remote seed if database id matches production UUID", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({
+        isRemote: true,
+        env: "staging",
+        dbName: "passie-staging-db",
+        dbId: "176bd801-9d6f-4d7e-8306-83ea0a0be157",
+      })
+    ).toThrow("Safety assertion failed: Database matches production database.");
+  });
+
+  it("permits remote seed for staging with dedicated database", () => {
+    expect(() =>
+      assertRemoteSeedAllowed({
+        isRemote: true,
+        env: "staging",
+        dbName: "passie-staging-db",
+        dbId: "1c936aac-181c-47dc-98c2-6f6d64416595",
+      })
+    ).not.toThrow();
   });
 });
