@@ -118,7 +118,7 @@ Match schedules are ingested automatically via cron trigger (`/api/cron/ingest`)
 
 ## 5. Deployment & Cloudflare Infrastructure
 
-- **Worker Entry (`src/worker.ts`):** Wraps `@opennextjs/cloudflare` server bundle with top-level `fetch` and `scheduled` handlers.
+- **Worker Entry (`src/worker.ts`):** Wraps `@opennextjs/cloudflare` server bundle with top-level `fetch` and `scheduled` handlers. Enforces HTTPS (`301 Moved Permanently` on plain `http:` requests for non-local hostnames via `src/server/http/enforceHttps.ts`) and attaches `Strict-Transport-Security` (`max-age=31536000; includeSubDomains; preload`), `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin` headers alongside `next.config.ts`.
 - **Cron Triggers:** Automatic background fixture ingestion (`0 */6 * * *`) invokes `ingestClubFixtures(db, "excelsior")` directly via the worker `scheduled` handler.
 - **Custom Domain Routing:** Production traffic routes through `passie.goedvolk.org` configured as a Cloudflare Worker custom domain.
 - **Cloudflare Access for Workers:** Access policy attaches at Worker scope (destination type `worker`), protecting the custom domain, all routes, `workers.dev`, and preview URLs under a single policy. For MVP soft launch, a single Bypass policy conditioned on *Country = Netherlands* is used (admitting Dutch visitors frictionlessly while blocking international scrapers without asserting cryptographically verified identity).

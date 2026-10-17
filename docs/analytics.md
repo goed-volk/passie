@@ -38,7 +38,7 @@ Passie employs a privacy-first, client-side product analytics architecture backe
 
 ### Privacy & Compliance Guarantees
 - **No Autocapture or Session Replay:** `autocapture: false`, `disable_session_recording: true`, `capture_heatmaps: false`, `capture_dead_clicks: false`, and `rageclick: false` are enforced in `initPostHog()`.
-- **Privacy-Preserving Exception Tracking:** Unhandled browser exceptions (`window.onerror`), unhandled promise rejections (`unhandledrejection`), React error boundary crashes (`src/app/error.tsx`, `src/app/global-error.tsx`), and server-side fatal errors (`captureServerException`) are captured as `$exception` events with automatic redaction of quoted string literals and email addresses.
+- **Privacy-Preserving Exception Tracking:** Unhandled browser exceptions (`window.onerror`), unhandled promise rejections (`unhandledrejection`), browser `console.error` calls (`capture_console_errors: true`), React error boundary crashes (`src/app/error.tsx`, `src/app/global-error.tsx`), Better Auth server error logs (`source: "better_auth_logger"`), and server-side fatal errors (`captureServerException`) are captured as `$exception` events with automatic redaction of quoted string literals and email addresses.
 - **Zero Third-Party Tracking / Ad Blocker Immunity:** Telemetry is forwarded via the same-origin `/ingest` route, eliminating third-party cookie access and preventing tracking script blockades.
 - **Strict Data Minimization:** Event payloads omit personal names, guest names, seat numbers, and pass identifiers.
 - **Strict Opt-in Behavior:** When `POSTHOG_KEY` is omitted, the client SDK does not initialize and the `/ingest` proxy returns HTTP 404 without making upstream calls. In local development (`localhost`, `127.0.0.1`), production telemetry is suppressed.
@@ -54,9 +54,11 @@ Only events explicitly included in `ALLOWED_ANALYTICS_EVENTS` pass through `befo
 | `$pageview` | Navigation | SPA route transition (`history_change`) | `$current_url`, `$pathname` (both templated) | Sanitized (no query params, no IDs) |
 | `member.selected` | Identity | Legacy identity selection (deprecated) | `is_pass_owner`, `owned_pass_count` | Clean (no member name or ID in properties) |
 | `auth.sign_in_otp_requested` | Auth | Email OTP requested (client) | _None_ | Clean (email omitted) |
+| `auth.sign_in_otp_failed` | Auth | Email OTP request failed (client) | `error_code`, `status` | Clean (email omitted) |
 | `email.sent` | Email | Transactional email dispatched (`src/server/email/dispatch.ts`) | `kind` (`otp` or `welcome`), `trigger` (`sign-in`, `member_created`, `member_email_linked`, `cli_link`), `otp_type` (when `kind === 'otp'`), `provider` (`cloudflare` or `console`), `$geoip_disable: true`, `$process_person_profile: boolean` | Clean (recipient email, name & OTP omitted) |
 | `email.send_failed` | Email | Transactional email dispatch failed (`src/server/email/dispatch.ts`) | `kind` (`otp` or `welcome`), `trigger` (`sign-in`, `member_created`, `member_email_linked`, `cli_link`), `otp_type` (when `kind === 'otp'`), `provider` (`cloudflare` or `console`), `$geoip_disable: true`, `$process_person_profile: boolean` | Clean (recipient email & error PII omitted) |
 | `auth.sign_in_success` | Auth | Successful sign-in | `method` (`otp` or `passkey`) | Clean |
+| `auth.sign_in_failed` | Auth | Failed sign-in verification | `method` (`otp` or `passkey`), `error_code`, `status` | Clean (email & OTP omitted) |
 | `auth.sign_out` | Auth | Explicit user sign-out | _None_ | Clean |
 | `auth.passkey_registered` | Auth | New passkey enrolled | _None_ | Clean |
 | `auth.passkey_deleted` | Auth | Passkey deleted by user | _None_ | Clean |
@@ -87,7 +89,7 @@ Passie tracks the passwordless identity lifecycle without capturing sensitive cr
   - `method: "otp"` when authenticated via 6-digit email OTP.
 - **Passkey Enrollment (`auth.passkey_registered`)**: A dedicated event emitted whenever a new WebAuthn credential is created and verified by the server (both from the post-OTP enrollment prompt in `/inloggen` and from the settings panel in `/instellingen`).
 - **Passkey Removal (`auth.passkey_deleted`)**: Emitted when a member deletes an enrolled passkey in `/instellingen`.
-- **OTP Request & Transactional Email Delivery (`auth.sign_in_otp_requested`, `email.sent`, `email.send_failed`)**: `auth.sign_in_otp_requested` is dispatched on the client when an OTP code is requested. All server-side transactional emails (OTP login codes and member onboarding welcome emails) flow through `dispatchTransactionalEmail` (`src/server/email/dispatch.ts`), which emits `email.sent` (or `email.send_failed` + `$exception` with `source: "email_dispatch"`) carrying `kind` (`"otp"` or `"welcome"`), `trigger` (`"sign-in"`, `"member_created"`, `"member_email_linked"`, or `"cli_link"`), `provider` (`"cloudflare"` or `"console"`), `$geoip_disable: true`, and `$process_person_profile: Boolean(memberId)` attributed directly to the resolved `member.id` (or `"system_mailer"` fallback). Recipient email addresses, display names, and OTP codes are strictly stripped by a denylist scrubber before transmission.
+- **OTP Request, Failures & Transactional Email Delivery (`auth.sign_in_otp_requested`, `auth.sign_in_otp_failed`, `auth.sign_in_failed`, `email.sent`, `email.send_failed`)**: `auth.sign_in_otp_requested` is dispatched on the client when an OTP code is requested; `auth.sign_in_otp_failed` and `auth.sign_in_failed` capture structured funnel failure reasons (`error_code`, `status`, `method`) without polluting Error Tracking with expected user validation errors (while `INVALID_ORIGIN` and `5xx` errors also emit `$exception`). All server-side transactional emails (OTP login codes and member onboarding welcome emails) flow through `dispatchTransactionalEmail` (`src/server/email/dispatch.ts`), which emits `email.sent` (or `email.send_failed` + `$exception` with `source: "email_dispatch"`) carrying `kind` (`"otp"` or `"welcome"`), `trigger` (`"sign-in"`, `"member_created"`, `"member_email_linked"`, or `"cli_link"`), `provider` (`"cloudflare"` or `"console"`), `$geoip_disable: true`, and `$process_person_profile: Boolean(memberId)` attributed directly to the resolved `member.id` (or `"system_mailer"` fallback). Recipient email addresses, display names, and OTP codes are strictly stripped by a denylist scrubber before transmission.
 - **Sign-out & Session Management (`auth.sign_out`, `auth.sessions_revoked`)**: Emitted when explicit logout or revocation actions occur.
 
 ---
@@ -258,6 +260,26 @@ FROM events
 WHERE event = '$exception'
   AND timestamp >= now() - INTERVAL 30 DAY
 GROUP BY error_origin, exception_type
+ORDER BY occurrences DESC
+```
+
+### 10. Authentication Funnel & Failure Breakdown
+```sql
+SELECT
+    event,
+    properties.method AS auth_method,
+    properties.error_code AS error_code,
+    properties.status AS http_status,
+    count() AS occurrences
+FROM events
+WHERE event IN (
+    'auth.sign_in_otp_requested',
+    'auth.sign_in_otp_failed',
+    'auth.sign_in_success',
+    'auth.sign_in_failed'
+  )
+  AND timestamp >= now() - INTERVAL 30 DAY
+GROUP BY event, auth_method, error_code, http_status
 ORDER BY occurrences DESC
 ```
 

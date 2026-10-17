@@ -55,62 +55,70 @@ export async function captureServerTelemetryEvent(options: {
   distinctId: string;
   properties?: Record<string, unknown>;
   env?: Record<string, unknown>;
+  waitUntil?: (p: Promise<unknown>) => void;
 }): Promise<void> {
-  const fallbackConfig = await getTelemetryConfig();
+  const work = (async () => {
+    const fallbackConfig = await getTelemetryConfig();
 
-  const rawKey =
-    typeof options.env?.POSTHOG_KEY === "string" && options.env.POSTHOG_KEY.trim() !== ""
-      ? options.env.POSTHOG_KEY.trim()
-      : fallbackConfig.posthogKey;
+    const rawKey =
+      typeof options.env?.POSTHOG_KEY === "string" && options.env.POSTHOG_KEY.trim() !== ""
+        ? options.env.POSTHOG_KEY.trim()
+        : fallbackConfig.posthogKey;
 
-  if (!rawKey) return;
+    if (!rawKey) return;
 
-  const posthogHost =
-    typeof options.env?.POSTHOG_HOST === "string" && options.env.POSTHOG_HOST.trim() !== ""
-      ? options.env.POSTHOG_HOST.trim()
-      : fallbackConfig.posthogHost;
+    const posthogHost =
+      typeof options.env?.POSTHOG_HOST === "string" && options.env.POSTHOG_HOST.trim() !== ""
+        ? options.env.POSTHOG_HOST.trim()
+        : fallbackConfig.posthogHost;
 
-  const passieEnv =
-    typeof options.env?.PASSIE_ENV === "string" && options.env.PASSIE_ENV.trim() !== ""
-      ? options.env.PASSIE_ENV.trim()
-      : fallbackConfig.passieEnv;
+    const passieEnv =
+      typeof options.env?.PASSIE_ENV === "string" && options.env.PASSIE_ENV.trim() !== ""
+        ? options.env.PASSIE_ENV.trim()
+        : fallbackConfig.passieEnv;
 
-  // Safeguard: if passieEnv is "production" but we are NOT running inside a
-  // production runtime (e.g. Vitest locally or a CLI script where NODE_ENV !== "production"),
-  // skip the dispatch unless explicitly overridden in env.
-  if (
-    passieEnv === "production" &&
-    process.env.NODE_ENV !== "production" &&
-    !options.env?.POSTHOG_KEY
-  ) {
-    return;
+    // Safeguard: if passieEnv is "production" but we are NOT running inside a
+    // production runtime (e.g. Vitest locally or a CLI script where NODE_ENV !== "production"),
+    // skip the dispatch unless explicitly overridden in env.
+    if (
+      passieEnv === "production" &&
+      process.env.NODE_ENV !== "production" &&
+      !options.env?.POSTHOG_KEY
+    ) {
+      return;
+    }
+
+    const payload = {
+      api_key: rawKey,
+      event: options.event,
+      distinct_id: options.distinctId,
+      properties: {
+        $geoip_disable: true,
+        environment: passieEnv,
+        ...options.properties,
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      await fetch(`${posthogHost.replace(/\/$/, "")}/capture/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch {
+      // Non-blocking fallback: never fail application logic on telemetry delivery
+    }
+  })();
+
+  if (options.waitUntil) {
+    options.waitUntil(work);
   }
-
-  const payload = {
-    api_key: rawKey,
-    event: options.event,
-    distinct_id: options.distinctId,
-    properties: {
-      $geoip_disable: true,
-      environment: passieEnv,
-      ...options.properties,
-    },
-    timestamp: new Date().toISOString(),
-  };
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    await fetch(`${posthogHost.replace(/\/$/, "")}/capture/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-  } catch {
-    // Non-blocking fallback: never fail application logic on telemetry delivery
-  }
+  await work;
 }
 
 export function sanitizeServerErrorText(raw: string): string {
@@ -125,6 +133,7 @@ export async function captureServerException(options: {
   distinctId?: string;
   context?: Record<string, unknown>;
   env?: Record<string, unknown>;
+  waitUntil?: (p: Promise<unknown>) => void;
 }): Promise<void> {
   const errName = options.error instanceof Error ? options.error.name : "UnknownError";
   const rawMsg =
@@ -139,6 +148,7 @@ export async function captureServerException(options: {
     event: "$exception",
     distinctId: options.distinctId || "server_worker",
     env: options.env,
+    waitUntil: options.waitUntil,
     properties: {
       $exception_type: errName,
       $exception_message: sanitizedMsg,

@@ -42,7 +42,9 @@ import {
   trackAdminMemberUpdated,
   trackAdminMembersReordered,
   trackSignInOtpRequested,
+  trackSignInOtpFailed,
   trackSignInSuccess,
+  trackSignInFailed,
   trackSignOut,
   trackPasskeyRegistered,
   trackPasskeyDeleted,
@@ -80,6 +82,10 @@ describe("posthog client telemetry & privacy", () => {
 
       // Identity & Navigation
       expect(ALLOWED_ANALYTICS_EVENTS.has("member.selected")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("auth.sign_in_otp_requested")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("auth.sign_in_otp_failed")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("auth.sign_in_success")).toBe(true);
+      expect(ALLOWED_ANALYTICS_EVENTS.has("auth.sign_in_failed")).toBe(true);
       expect(ALLOWED_ANALYTICS_EVENTS.has("email.sent")).toBe(true);
       expect(ALLOWED_ANALYTICS_EVENTS.has("email.send_failed")).toBe(true);
       expect(ALLOWED_ANALYTICS_EVENTS.has("$pageview")).toBe(true);
@@ -150,7 +156,7 @@ describe("posthog client telemetry & privacy", () => {
       expect(options?.capture_exceptions).toEqual({
         capture_unhandled_errors: true,
         capture_unhandled_rejections: true,
-        capture_console_errors: false,
+        capture_console_errors: true,
       });
     });
 
@@ -450,9 +456,26 @@ describe("posthog client telemetry & privacy", () => {
       trackSignInOtpRequested();
       expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_otp_requested");
 
+      trackSignInOtpFailed({ error_code: "INVALID_ORIGIN", status: 403 });
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_otp_failed", {
+        error_code: "INVALID_ORIGIN",
+        status: 403,
+      });
+
       trackSignInSuccess({ method: "otp" });
       expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_success", {
         method: "otp",
+      });
+
+      trackSignInFailed({
+        method: "otp",
+        error_code: "TOO_MANY_ATTEMPTS",
+        status: 400,
+      });
+      expect(posthog.capture).toHaveBeenCalledWith("auth.sign_in_failed", {
+        method: "otp",
+        error_code: "TOO_MANY_ATTEMPTS",
+        status: 400,
       });
 
       trackSignInSuccess({ method: "passkey" });
