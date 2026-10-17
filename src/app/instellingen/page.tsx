@@ -117,7 +117,7 @@ export default async function InstellingenPage() {
           <CardContent className="p-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>Passie ({process.env.NEXT_PUBLIC_GIT_COMMIT_SHA || "dev"})</span>
             <a
-              href="https://github.com/jvanu/passie"
+              href="https://github.com/goed-volk/passie"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 hover:text-slate-900 dark:hover:text-white"

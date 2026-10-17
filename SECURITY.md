@@ -20,7 +20,7 @@ Passie enforces verified, passwordless identity and role-based access control ba
 If you discover a security vulnerability (such as an authentication bypass, database injection, authorization flaw, cross-site request forgery, or credential leakage) in the application code or deployment configuration:
 
 1. **Do not open a public GitHub issue.**
-2. Report the vulnerability privately via [GitHub Security Advisories](https://github.com/jvanu/passie/security/advisories) or by contacting the project maintainers directly.
+2. Report the vulnerability privately via [GitHub Security Advisories](https://github.com/goed-volk/passie/security/advisories) or by contacting the project maintainers directly.
 3. Include detailed reproduction steps, environment details, and the estimated impact.
 
 We take security issues seriously and will acknowledge reports promptly and coordinate a fix prior to public disclosure.

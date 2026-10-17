@@ -230,7 +230,7 @@ export function QueueJoinSheet({
                       type="text"
                       value={guestName}
                       onChange={(e) => setGuestName(e.target.value)}
-                      placeholder="Bijv. Kees"
+                      placeholder={t("guestNamePlaceholder")}
                       className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--club-primary)]"
                       autoFocus
                     />

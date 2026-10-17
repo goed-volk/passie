@@ -77,7 +77,7 @@ cp .dev.vars.example .dev.vars
 
 1. **Clone the repository and install dependencies:**
    ```bash
-   git clone https://github.com/jvanu/passie.git
+   git clone https://github.com/goed-volk/passie.git
    cd passie
    pnpm install
    ```
