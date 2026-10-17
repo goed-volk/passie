@@ -6,8 +6,11 @@ import { authClient } from "@/lib/authClient";
 import {
   identifyUser,
   trackSignInOtpRequested,
+  trackSignInOtpFailed,
   trackSignInSuccess,
+  trackSignInFailed,
   trackPasskeyRegistered,
+  trackClientException,
 } from "@/lib/posthog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,10 +49,25 @@ export function LoginForm() {
     router.refresh();
   }, [identifyFromSession, router]);
 
-  // Conditional UI passkey autofill on mount
+  // Conditional UI passkey autofill & HTTPS guard on mount
   useEffect(() => {
     if (mountedRef.current) return;
     mountedRef.current = true;
+
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname.toLowerCase();
+      const isLocal =
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname === "::1" ||
+        hostname.endsWith(".local");
+      if (window.location.protocol === "http:" && !isLocal) {
+        window.location.replace(
+          window.location.href.replace(/^http:/, "https:")
+        );
+        return;
+      }
+    }
 
     if (typeof window !== "undefined" && window.PublicKeyCredential) {
       authClient.signIn
@@ -82,8 +100,39 @@ export function LoginForm() {
       });
 
       if (res.error) {
-        if (res.error.status === 429) {
+        const status = res.error.status;
+        const errorCode =
+          res.error.code || String(status || "unknown");
+
+        trackSignInOtpFailed({ error_code: errorCode, status });
+
+        if (
+          status === 403 ||
+          errorCode === "INVALID_ORIGIN" ||
+          (typeof status === "number" && status >= 500)
+        ) {
+          trackClientException(
+            new Error(`OTP request failed: ${errorCode}`),
+            {
+              source: "login_send_otp",
+              status,
+              error_code: errorCode,
+            }
+          );
+        }
+
+        if (status === 429) {
           setError(t("loginRateLimited"));
+        } else if (status === 403 || errorCode === "INVALID_ORIGIN") {
+          setError(t("loginOriginError"));
+          if (
+            typeof window !== "undefined" &&
+            window.location.protocol === "http:"
+          ) {
+            window.location.replace(
+              window.location.href.replace(/^http:/, "https:")
+            );
+          }
         } else {
           setError(t("loginFailedGeneric"));
         }
@@ -91,7 +140,9 @@ export function LoginForm() {
         trackSignInOtpRequested();
         setStep("otp");
       }
-    } catch {
+    } catch (err) {
+      trackSignInOtpFailed({ error_code: "network_or_client_error" });
+      trackClientException(err, { source: "login_send_otp" });
       setError(t("loginFailedGeneric"));
     } finally {
       setLoading(false);
@@ -113,9 +164,42 @@ export function LoginForm() {
       });
 
       if (res.error) {
-        if (res.error.status === 429) {
+        const status = res.error.status;
+        const errorCode =
+          res.error.code || String(status || "unknown");
+
+        trackSignInFailed({
+          method: "otp",
+          error_code: errorCode,
+          status,
+        });
+
+        if (errorCode === "TOO_MANY_ATTEMPTS") {
+          setError(t("loginOtpMaxAttempts"));
+          setOtp("");
+        } else if (status === 429) {
           setError(t("loginRateLimited"));
+        } else if (status === 403 || errorCode === "INVALID_ORIGIN") {
+          setError(t("loginOriginError"));
+          trackClientException(
+            new Error(`OTP verification failed: ${errorCode}`),
+            {
+              source: "login_verify_otp",
+              status,
+              error_code: errorCode,
+            }
+          );
         } else {
+          if (typeof status === "number" && status >= 500) {
+            trackClientException(
+              new Error(`OTP verification failed: ${errorCode}`),
+              {
+                source: "login_verify_otp",
+                status,
+                error_code: errorCode,
+              }
+            );
+          }
           setError(t("loginInvalidOtp"));
         }
       } else {
@@ -129,7 +213,12 @@ export function LoginForm() {
           router.refresh();
         }
       }
-    } catch {
+    } catch (err) {
+      trackSignInFailed({
+        method: "otp",
+        error_code: "network_or_client_error",
+      });
+      trackClientException(err, { source: "login_verify_otp" });
       setError(t("loginInvalidOtp"));
     } finally {
       setLoading(false);
@@ -144,6 +233,15 @@ export function LoginForm() {
       const res = await authClient.signIn.passkey();
       if (res && res.error) {
         console.error("[passkey:signIn] Failed:", res.error);
+        const passkeyErrorCode =
+          "code" in res.error && typeof res.error.code === "string"
+            ? res.error.code
+            : "passkey_error";
+        trackSignInFailed({
+          method: "passkey",
+          error_code: passkeyErrorCode,
+          status: res.error.status,
+        });
         setError(t("passkeyAuthError"));
       } else {
         await identifyFromSession();
@@ -153,6 +251,10 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error("[passkey:signIn] Exception:", err);
+      trackSignInFailed({
+        method: "passkey",
+        error_code: "passkey_exception",
+      });
       setError(t("passkeyAuthError"));
     } finally {
       setPasskeyLoading(false);
@@ -186,7 +288,7 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md dark:bg-[#131B2E] dark:border-slate-800 shadow-xl">
       <CardHeader className="text-center space-y-1 pb-4">
-        <div className="mx-auto w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center mb-2">
+        <div className="mx-auto w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center mb-2">
           {step === "prompt-passkey" ? (
             <Fingerprint className="w-6 h-6" />
           ) : step === "otp" ? (
@@ -233,14 +335,14 @@ export function LoginForm() {
                 placeholder={t("loginEmailPlaceholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-600 dark:focus:ring-red-500 text-base"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 text-base"
               />
             </div>
 
             <Button
               type="submit"
               disabled={loading || !email}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl shadow-sm"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 font-medium py-2.5 rounded-xl shadow-sm"
             >
               {loading ? t("loginSendingCode") : t("loginSendCode")}
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -288,14 +390,14 @@ export function LoginForm() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                 data-ph-no-capture="true"
-                className="w-full text-center font-mono tracking-widest text-2xl py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-600 dark:focus:ring-red-500 ph-no-capture"
+                className="w-full text-center font-mono tracking-widest text-2xl py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-slate-400 dark:focus:border-slate-500 ph-no-capture"
               />
             </div>
 
             <Button
               type="submit"
               disabled={loading || otp.length < 6}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 font-medium py-2.5 rounded-xl"
             >
               {loading ? t("loginVerifying") : t("loginVerifyCode")}
             </Button>
@@ -305,7 +407,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => handleSendOtp()}
                 disabled={loading}
-                className="text-red-600 dark:text-red-400 hover:underline flex items-center"
+                className="text-slate-700 dark:text-slate-300 hover:underline flex items-center"
               >
                 <RefreshCw className="w-3 h-3 mr-1" />
                 {t("loginResendCode")}
@@ -330,7 +432,7 @@ export function LoginForm() {
             <Button
               onClick={handleRegisterPasskey}
               disabled={passkeyLoading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 font-medium py-2.5 rounded-xl"
             >
               <Fingerprint className="w-4 h-4 mr-2" />
               {passkeyLoading ? t("loginVerifying") : t("loginAddPasskeyNow")}
