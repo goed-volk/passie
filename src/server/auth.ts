@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import * as authSchema from "./authSchema";
 import { dispatchTransactionalEmail, renderOtpEmail } from "./email";
 import { createDb, type DbClient } from "./db";
+import { isCloudDeployed, resolvePassieEnv } from "./env";
 import {
   captureServerException,
   sanitizeServerErrorText,
@@ -45,28 +46,28 @@ export async function getAuth(options?: AuthContextOptions) {
     throw new Error("[getAuth] Database client is required to initialize auth");
   }
 
-  const passieEnv = (env?.PASSIE_ENV as string | undefined) || process.env.PASSIE_ENV || "development";
-  const isProduction = passieEnv === "production";
+  const isCloud = isCloudDeployed(env);
+  const passieEnv = resolvePassieEnv(env);
   const isDevLoginEnabled =
-    !isProduction &&
+    !isCloud &&
     ((env?.PASSIE_DEV_LOGIN || process.env.PASSIE_DEV_LOGIN) === "1" || process.env.NODE_ENV === "test");
 
   const secret =
     (env?.BETTER_AUTH_SECRET as string | undefined) ||
     process.env.BETTER_AUTH_SECRET ||
-    (!isProduction ? "local-dev-better-auth-secret-min-32-characters-change-in-prod" : undefined);
+    (!isCloud ? "local-dev-better-auth-secret-min-32-characters-change-in-prod" : undefined);
 
   const publicOrigin =
     (env?.PASSIE_PUBLIC_ORIGIN as string | undefined) ||
     process.env.PASSIE_PUBLIC_ORIGIN ||
-    (!isProduction ? "http://localhost:3000" : undefined);
+    (!isCloud ? "http://localhost:3000" : undefined);
 
-  if (isProduction) {
+  if (isCloud) {
     if (!secret || secret === "local-dev-better-auth-secret-min-32-characters-change-in-prod") {
-      throw new Error("[auth] Missing or default BETTER_AUTH_SECRET configured in production");
+      throw new Error(`[auth] Missing or default BETTER_AUTH_SECRET configured in ${passieEnv}`);
     }
     if (!publicOrigin) {
-      throw new Error("[auth] Missing PASSIE_PUBLIC_ORIGIN in production");
+      throw new Error(`[auth] Missing PASSIE_PUBLIC_ORIGIN in ${passieEnv}`);
     }
   }
 
@@ -84,7 +85,7 @@ export async function getAuth(options?: AuthContextOptions) {
         .split(",")
         .map((o) => o.trim())
         .filter(Boolean)
-    : (!isProduction
+    : (!isCloud
         ? ["http://localhost:*", "http://127.0.0.1:*"]
         : []);
 
@@ -115,7 +116,7 @@ export async function getAuth(options?: AuthContextOptions) {
     passkey({
       rpID,
       rpName: "Passie",
-      ...(isProduction ? { origin } : {}),
+      ...(isCloud ? { origin } : {}),
       authenticatorSelection: {
         residentKey: "preferred",
         userVerification: "preferred",
@@ -192,7 +193,7 @@ export async function getAuth(options?: AuthContextOptions) {
     },
     advanced: {
       cookiePrefix: "passie",
-      useSecureCookies: isProduction,
+      useSecureCookies: isCloud,
       disableOriginCheck: false,
       disableCSRFCheck: false,
       ipAddress: {
