@@ -5,10 +5,19 @@ export * from "../.open-next/worker.js";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./server/schema";
 import { ingestClubFixtures } from "./server/ingest";
+import { enforceHttpsAndSecurityHeaders } from "./server/http/enforceHttps";
 import { captureServerException } from "./server/telemetryConfig";
 
 const workerHandler = {
-  fetch: openNextHandler.fetch,
+  async fetch(
+    request: Request,
+    env: CloudflareEnv,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    return enforceHttpsAndSecurityHeaders(request, () =>
+      openNextHandler.fetch(request, env, ctx)
+    );
+  },
   async scheduled(
     event: ScheduledEvent,
     env: CloudflareEnv,
