@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Mail, AlertCircle, Loader2 } from "lucide-react";
+import { Megaphone, AlertCircle, Loader2 } from "lucide-react";
 import { t } from "@/i18n/t";
 import { trackAdminDeadlineReminded } from "@/lib/posthog";
 import type { MemberRef, PoolSnapshot } from "@/server/snapshot";
@@ -100,7 +100,7 @@ export function RemindOwnersDialog({
       <DialogContent className="max-w-md max-h-[90dvh] flex flex-col p-6">
         <DialogHeader className="space-y-1.5 pb-2">
           <DialogTitle className="text-lg font-bold flex items-center space-x-2">
-            <Mail className="h-5 w-5 text-[var(--club-primary)]" />
+            <Megaphone className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             <span>{t("remindDialogTitle")}</span>
           </DialogTitle>
           <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">

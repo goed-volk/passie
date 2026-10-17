@@ -176,6 +176,7 @@ export const nl = {
 
   // Admin Reminder UI in TopNav
   ariaRemindUnindicated: "Herinnering sturen naar pashouders",
+  remindButtonLabel: "Herinneren",
   remindDialogTitle: "Herinnering versturen?",
   remindDialogDesc: "Stuur een e-mail naar alle eigenaren die hun pas nog niet hebben aangegeven voor {match}.",
   remindRecipientsHeading: "Ontvangers ({count})",
