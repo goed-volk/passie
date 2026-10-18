@@ -37,9 +37,11 @@ export function getMailer(env?: Record<string, unknown>): Mailer {
     }
     const fromAddress =
       (env?.PASSIE_MAIL_FROM as string | undefined) ||
-      process.env.PASSIE_MAIL_FROM ||
-      "inloggen@passie.goedvolk.org";
-    return new CloudflareMailer(emailBinding!, fromAddress);
+      process.env.PASSIE_MAIL_FROM;
+    const defaultSender = fromAddress
+      ? { name: "Passie", email: fromAddress }
+      : undefined;
+    return new CloudflareMailer(emailBinding!, defaultSender);
   }
 
   return defaultConsoleMailer;

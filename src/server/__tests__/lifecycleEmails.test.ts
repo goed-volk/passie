@@ -164,7 +164,8 @@ describe("lifecycle transactional email triggers & manual reminders", () => {
       expect(mockSend).toHaveBeenCalledTimes(1);
       const callPayload = mockSend.mock.calls[0]![0];
       expect(callPayload.to).toBe(testClaimantEmail);
-      expect(callPayload.subject).toContain("Je bent erbij!");
+      expect(callPayload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+      expect(callPayload.subject).toContain("Passie - Je bent erbij!");
       expect(callPayload.subject).toContain("Excelsior - Test FC");
       expect(callPayload.text).toContain("Hoi Daan,");
       expect(callPayload.text).toContain("Je stond op de bank");
@@ -329,7 +330,8 @@ describe("lifecycle transactional email triggers & manual reminders", () => {
       const bramCall = mockSend.mock.calls.find((c) => c[0].to === testOwnerEmail);
       expect(bramCall).toBeDefined();
       const payload = bramCall![0];
-      expect(payload.subject).toContain("Laat weten of je gaat: Excelsior - Test FC");
+      expect(payload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+      expect(payload.subject).toContain("Passie - Laat weten of je gaat: Excelsior - Test FC");
       expect(payload.text).toContain("Hoi Bram,");
       expect(payload.text).toContain("Pas 3");
       expect(payload.html).toContain("Ga je naar Excelsior - Test FC?");

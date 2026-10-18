@@ -188,6 +188,8 @@ export async function handleRemindPost(
       deadlineFormatted,
       groupName,
       baseUrl,
+      colorPrimary: club?.colorPrimary,
+      colorOnPrimary: club?.colorOnPrimary,
     });
 
     await dispatchTransactionalEmail({

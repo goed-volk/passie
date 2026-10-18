@@ -140,7 +140,7 @@ describe("Better Auth core, guards, disabledPaths & mailer tests", () => {
 
     expect(mockSend).toHaveBeenCalledWith({
       to: "test@example.com",
-      from: "inloggen@passie.goedvolk.org",
+      from: { name: "Passie", email: "inloggen@passie.goedvolk.org" },
       subject: payload.subject,
       html: payload.html,
       text: payload.text,

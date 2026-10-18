@@ -124,7 +124,7 @@ export const nl = {
   // Email template — Algemeen & OTP Inlogcode
   emailFooterTagline: "Passie · Seizoenkaarten delen met vrienden",
   emailFallbackUrlLabel: "Werkt de knop niet? Open deze link in je browser:",
-  emailOtpSubject: "Inloggen bij Passie",
+  emailOtpSubject: "Passie - Inloggen",
   emailOtpPreheader: "Je inlogcode voor Passie is {code}. Deze code is 10 minuten geldig.",
   emailOtpBodyText: "Je inlogcode voor Passie is: {code}\n\nDeze code is 10 minuten geldig. Deel deze code nooit met anderen.\n\nHeb je deze code niet zelf aangevraagd? Dan kun je dit bericht negeren.",
   emailOtpBodyHtmlTitle: "Inloggen bij Passie",
@@ -133,22 +133,22 @@ export const nl = {
   emailOtpBodyHtmlIgnore: "Heb je deze code niet zelf aangevraagd? Dan kun je deze e-mail veilig negeren.",
 
   // Email template — Welkom / Lid toegevoegd
-  emailWelcomeSubject: "Je bent toegevoegd aan Passie ({group})",
-  emailWelcomePreheader: "Je kunt nu inloggen bij Passie voor {group}.",
+  emailWelcomeSubject: "Passie - Welkom bij Passie",
+  emailWelcomePreheader: "Je kunt nu inloggen bij Passie om seizoenkaarten te gebruiken.",
   emailWelcomeTitle: "Welkom bij Passie",
   emailWelcomeGreeting: "Hoi {name},",
-  emailWelcomeIntro: "Je bent toegevoegd aan Passie voor {group}. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.",
+  emailWelcomeIntro: "Je bent toegevoegd aan Passie. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.",
   emailWelcomeHowToLogin: "Zo log je in:",
   emailWelcomeStep1: "Ga naar Passie via de knop hieronder (of via {url}).",
   emailWelcomeStep2: "Vul je e-mailadres in en vraag een 6-cijferige inlogcode aan.",
   emailWelcomeStep3: "Vul de code in. Je bent direct ingelogd.",
-  emailWelcomePasskeyTip: "Tip: Stel na het inloggen een passkey in (zoals Face ID, Touch ID of je schermvergrendeling). De volgende keer log je dan zonder code in.",
+  emailWelcomePasskeyTip: "Tip: Voeg na het inloggen een passkey toe (Face ID of vingerafdruk). Dan log je voortaan direct zonder code in.",
   emailWelcomeCta: "Naar Passie",
-  emailWelcomeBodyText: "Hoi {name},\n\nJe bent toegevoegd aan Passie voor {group}. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.\n\nZo log je in:\n1. Ga naar {url}\n2. Vul je e-mailadres in en vraag een 6-cijferige inlogcode aan.\n3. Vul de code in. Je bent direct ingelogd.\n\nTip: Stel na het inloggen een passkey in (zoals Face ID, Touch ID of je schermvergrendeling). De volgende keer log je dan zonder code in.\n\nOpen Passie: {url}",
+  emailWelcomeBodyText: "Hoi {name},\n\nJe bent toegevoegd aan Passie. Hier zien we wie er naar wedstrijden gaan, geef je aan of je zelf gaat en kun je beschikbare passen gebruiken.\n\nZo log je in:\n1. Ga naar {url}\n2. Vul je e-mailadres in en vraag een 6-cijferige inlogcode aan.\n3. Vul de code in. Je bent direct ingelogd.\n\nTip: Voeg na het inloggen een passkey toe (Face ID of vingerafdruk). Dan log je voortaan direct zonder code in.\n\nOpen Passie: {url}",
 
   // Email template — Plek toegewezen ("Je bent erbij!")
-  emailAssignedSubject: "Je bent erbij! Pas toegewezen voor {match}",
-  emailAssignedGuestSubject: "Pas toegewezen voor je gast bij {match}",
+  emailAssignedSubject: "Passie - Je bent erbij! Pas toegewezen voor {match}",
+  emailAssignedGuestSubject: "Passie - Pas toegewezen voor je gast bij {match}",
   emailAssignedPreheader: "{pass} is aan jou toegewezen voor {match} op {kickoff}.",
   emailAssignedTitle: "Je bent erbij!",
   emailAssignedGuestTitle: "Je gast is erbij!",
@@ -165,15 +165,15 @@ export const nl = {
   emailAssignedCta: "Bekijk wedstrijd in Passie",
   emailAssignedBodyText: "Hoi {name},\n\n{intro}\n\nWedstrijd & pasgegevens:\n- Wedstrijd: {match}\n- Aftrap: {kickoff}\n- Stadion: {venue}\n- Toegewezen pas: {pass}\n- Fysieke pas nu bij: {holder}\n\nStem onderling even af hoe de fysieke pas bij jou terechtkomt.\n\nBekijk de wedstrijd in Passie: {url}",
 
-  // Email template — Herinnering pas aangeven
-  emailReminderSubject: "Laat weten of je gaat: {match}",
-  emailReminderPreheader: "Geef vóór {deadline} aan of je je seizoenkaart gebruikt voor {match}.",
+  // Email template — Herinnering pas aangeven (vriendelijke toon)
+  emailReminderSubject: "Passie - Laat weten of je gaat: {match}",
+  emailReminderPreheader: "Laat even weten of je je seizoenkaart gebruikt voor {match}.",
   emailReminderTitle: "Ga je naar {match}?",
   emailReminderGreeting: "Hoi {name},",
-  emailReminderIntro: "Je hebt nog niet aangegeven of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}.",
-  emailReminderDeadlineNote: "Geef dit uiterlijk vóór {deadline} door in Passie. Als je je pas vrijgeeft, gaat de plek direct naar de eerstvolgende op de bank.",
-  emailReminderCta: "Nu aangeven in Passie",
-  emailReminderBodyText: "Hoi {name},\n\nJe hebt nog niet aangegeven of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}.\n\nGeef dit uiterlijk vóór {deadline} door in Passie. Als je je pas vrijgeeft, gaat de plek direct naar de eerstvolgende op de bank.\n\nGeef je keuze door: {url}",
+  emailReminderIntro: "Laat je even weten of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}?",
+  emailReminderCallout: "Ga je niet? Geef je pas dan even vrij in Passie — dan maken we er direct iemand anders op de bank blij mee! (Het liefst vóór {deadline}, zodat diegene tijd heeft om te gaan).",
+  emailReminderCta: "Aangeven in Passie",
+  emailReminderBodyText: "Hoi {name},\n\nLaat je even weten of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}?\n\nGa je niet? Geef je pas dan even vrij in Passie — dan maken we er direct iemand anders op de bank blij mee! (Het liefst vóór {deadline}, zodat diegene tijd heeft om te gaan).\n\nGeef je keuze door: {url}",
 
   // Admin Reminder UI in TopNav
   ariaRemindUnindicated: "Herinnering sturen naar pashouders",
@@ -326,6 +326,9 @@ export const nl = {
     possessionCorrected: "Locatie van {pass} gecorrigeerd: nu bij {to}",
     fixtureRescheduled: "Aftrap gewijzigd naar {kickoff}",
     fixtureCancelled: "Wedstrijd afgelast",
+    deadlineRemindedOne: "{actor} heeft een herinnering gestuurd naar 1 pashouder",
+    deadlineRemindedMany: "{actor} heeft een herinnering gestuurd naar {count} pashouders",
+    deadlineRemindedGeneric: "{actor} heeft een herinnering gestuurd naar pashouders",
   },
 } as const;
 

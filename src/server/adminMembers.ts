@@ -353,11 +353,18 @@ export async function createMember(
 
   if (input.email && input.email.trim() !== "") {
     const normalizedEmail = input.email.toLowerCase().trim();
+    const club = group.clubId
+      ? await db.query.clubs.findFirst({
+          where: eq(schema.clubs.id, group.clubId),
+        })
+      : null;
     const payload = renderWelcomeEmail({
       to: normalizedEmail,
       displayName: memberValues.displayName,
       groupName: group.name,
       baseUrl: resolvePublicOrigin(options?.env),
+      colorPrimary: club?.colorPrimary,
+      colorOnPrimary: club?.colorOnPrimary,
     });
     await dispatchTransactionalEmail({
       payload,
@@ -573,11 +580,18 @@ export async function updateMember(
     const group = await db.query.groups.findFirst({
       where: eq(schema.groups.id, updatedMember.groupId),
     });
+    const club = group?.clubId
+      ? await db.query.clubs.findFirst({
+          where: eq(schema.clubs.id, group.clubId),
+        })
+      : null;
     const payload = renderWelcomeEmail({
       to: newlyLinkedEmail,
       displayName: updatedMember.displayName,
       groupName: group?.name,
       baseUrl: resolvePublicOrigin(options?.env),
+      colorPrimary: club?.colorPrimary,
+      colorOnPrimary: club?.colorOnPrimary,
     });
     await dispatchTransactionalEmail({
       payload,

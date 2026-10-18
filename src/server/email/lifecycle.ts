@@ -142,6 +142,8 @@ export async function dispatchPassAssignedEmails(
       currentHolderName,
       groupName,
       baseUrl,
+      colorPrimary: club?.colorPrimary,
+      colorOnPrimary: club?.colorOnPrimary,
     });
 
     await dispatchTransactionalEmail({

@@ -20,10 +20,12 @@ describe("email template system & dispatcher", () => {
   it("renderOtpEmail produces valid Dutch subject, plain text, and dark-mode aware HTML", () => {
     const payload = renderOtpEmail("lid@goedvolk.org", "849201");
     expect(payload.to).toBe("lid@goedvolk.org");
-    expect(payload.subject).toBe("Inloggen bij Passie");
+    expect(payload.from).toEqual({ name: "Passie", email: "inloggen@passie.goedvolk.org" });
+    expect(payload.subject).toBe("Passie - Inloggen");
     expect(payload.text).toContain("849201");
     expect(payload.text).toContain("Deze code is 10 minuten geldig");
     expect(payload.html).toContain("849201");
+    expect(payload.html).toContain("🎟️");
     expect(payload.html).toContain("prefers-color-scheme: dark");
     expect(payload.html).toContain("#0B0F19");
     expect(payload.html).toContain("#131B2E");
@@ -37,10 +39,12 @@ describe("email template system & dispatcher", () => {
       displayName: `Sam <script>evil()</script>`,
       groupName: `Goedvolk & "Vrienden"`,
       baseUrl: "https://passie.goedvolk.org/",
+      colorPrimary: "#10B981",
     });
 
     expect(payload.to).toBe("nieuw@goedvolk.org");
-    expect(payload.subject).toBe(`Je bent toegevoegd aan Passie (Goedvolk & "Vrienden")`);
+    expect(payload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+    expect(payload.subject).toBe("Passie - Welkom bij Passie");
     expect(payload.text).toContain("Hoi Sam <script>evil()</script>,");
     expect(payload.text).toContain("https://passie.goedvolk.org/inloggen");
     expect(payload.text).toContain("Zo log je in:");
@@ -50,9 +54,10 @@ describe("email template system & dispatcher", () => {
     expect(payload.html).toContain("Welkom bij Passie");
     expect(payload.html).toContain("Hoi Sam &lt;script&gt;evil()&lt;/script&gt;,");
     expect(payload.html).not.toContain("<script>evil()</script>");
-    expect(payload.html).toContain("Goedvolk &amp; &quot;Vrienden&quot;");
     expect(payload.html).toContain('href="https://passie.goedvolk.org/inloggen"');
     expect(payload.html).toContain("Naar Passie");
+    expect(payload.html).toContain("#10B981");
+    expect(payload.html).toContain("🎟️");
   });
 
   it("renderPassieEmailLayout renders optional fields cleanly", () => {
@@ -62,10 +67,11 @@ describe("email template system & dispatcher", () => {
       title: "Titel",
       leadText: "Inleiding",
     });
-    expect(html).toContain("Test Onderwerp");
+    expect(html).toContain("Passie - Test Onderwerp");
     expect(html).toContain("Test Preheader");
     expect(html).toContain("Titel");
     expect(html).toContain("Inleiding");
+    expect(html).toContain("🎟️");
   });
 
   it("resolvePublicOrigin normalizes trailing slashes and respects env overrides", () => {
@@ -89,10 +95,12 @@ describe("email template system & dispatcher", () => {
       currentHolderName: "Ilse",
       groupName: "Goedvolk",
       baseUrl: "https://passie.goedvolk.org/",
+      colorPrimary: "#0284C7",
     });
 
     expect(selfPayload.to).toBe("sam@goedvolk.org");
-    expect(selfPayload.subject).toBe("Je bent erbij! Pas toegewezen voor Excelsior - Feyenoord");
+    expect(selfPayload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+    expect(selfPayload.subject).toBe("Passie - Je bent erbij! Pas toegewezen voor Excelsior - Feyenoord");
     expect(selfPayload.text).toContain("Hoi Sam <tag>,");
     expect(selfPayload.text).toContain("Je stond op de bank");
     expect(selfPayload.text).toContain("Excelsior - Feyenoord");
@@ -102,6 +110,7 @@ describe("email template system & dispatcher", () => {
     expect(selfPayload.html).toContain("Hoi Sam &lt;tag&gt;,");
     expect(selfPayload.html).toContain("Pas 1 (Vak K, Rij 12)");
     expect(selfPayload.html).toContain("Bekijk wedstrijd in Passie");
+    expect(selfPayload.html).toContain("#0284C7");
     expect(selfPayload.html).not.toContain("<tag>");
 
     // 2. Guest variant
@@ -118,13 +127,14 @@ describe("email template system & dispatcher", () => {
       groupName: "Goedvolk",
     });
 
-    expect(guestPayload.subject).toBe("Pas toegewezen voor je gast bij Excelsior - Ajax");
+    expect(guestPayload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+    expect(guestPayload.subject).toBe("Passie - Pas toegewezen voor je gast bij Excelsior - Ajax");
     expect(guestPayload.text).toContain("Er is een seizoenkaart vrijgekomen voor je gast (Opa Cor)");
     expect(guestPayload.html).toContain("Je gast is erbij!");
     expect(guestPayload.html).toContain("Opa Cor");
   });
 
-  it("renderDeadlineReminderEmail renders reminder subject, deadline alert, and pass list", () => {
+  it("renderDeadlineReminderEmail renders reminder subject, friendly callout, and pass list", () => {
     const payload = renderDeadlineReminderEmail({
       to: "bram@goedvolk.org",
       ownerName: "Bram",
@@ -133,17 +143,20 @@ describe("email template system & dispatcher", () => {
       kickoffFormatted: "vrijdag 30 oktober, 20:00",
       deadlineFormatted: "woensdag 28 oktober om 20:00",
       groupName: "Goedvolk",
+      colorPrimary: "#DC2626",
     });
 
     expect(payload.to).toBe("bram@goedvolk.org");
-    expect(payload.subject).toBe("Laat weten of je gaat: Excelsior - Sparta");
+    expect(payload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+    expect(payload.subject).toBe("Passie - Laat weten of je gaat: Excelsior - Sparta");
     expect(payload.text).toContain("Hoi Bram,");
     expect(payload.text).toContain("Pas 1, Pas 2");
     expect(payload.text).toContain("vóór woensdag 28 oktober om 20:00");
     expect(payload.html).toContain("Ga je naar Excelsior - Sparta?");
     expect(payload.html).toContain("Pas 1, Pas 2");
     expect(payload.html).toContain("woensdag 28 oktober om 20:00");
-    expect(payload.html).toContain("Nu aangeven in Passie");
+    expect(payload.html).toContain("Aangeven in Passie");
+    expect(payload.html).toContain("#DC2626");
   });
 
   it("dispatchTransactionalEmail scrubs PII keys from extraProperties and supports waitUntil", async () => {

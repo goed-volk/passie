@@ -347,7 +347,8 @@ describe("adminMembers", () => {
         expect(mockSend).toHaveBeenCalledTimes(1);
         const sentMessage = mockSend.mock.calls[0]![0];
         expect(sentMessage.to).toBe(testEmail);
-        expect(sentMessage.subject).toContain("Je bent toegevoegd aan Passie");
+        expect(sentMessage.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
+        expect(sentMessage.subject).toContain("Passie - Welkom bij Passie");
         expect(sentMessage.html).toContain("Hoi Welkom Lid,");
         expect(sentMessage.html).toContain("https://passie.goedvolk.org/inloggen");
         expect(sentMessage.text).toContain("https://passie.goedvolk.org/inloggen");

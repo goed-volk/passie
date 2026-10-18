@@ -1,5 +1,9 @@
 import { t } from "../../i18n/t";
-import type { EmailPayload } from "./types";
+import {
+  type EmailPayload,
+  PASSIE_SENDER_AUTH,
+  PASSIE_SENDER_NOREPLY,
+} from "./types";
 
 export function escapeHtml(str: string): string {
   return str
@@ -8,6 +12,14 @@ export function escapeHtml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+export function formatPassieSubject(subject: string): string {
+  const trimmed = subject.trim();
+  if (trimmed.startsWith("Passie - ")) {
+    return trimmed;
+  }
+  return `Passie - ${trimmed}`;
 }
 
 export interface PassieEmailLayoutOptions {
@@ -23,21 +35,32 @@ export interface PassieEmailLayoutOptions {
   helperText?: string;
   ignoreNotice?: string;
   groupBadge?: string;
+  colorPrimary?: string;
+  colorOnPrimary?: string;
 }
 
 export function renderPassieEmailLayout(options: PassieEmailLayoutOptions): string {
-  const safeSubject = escapeHtml(options.subject);
+  const formattedSubject = formatPassieSubject(options.subject);
+  const safeSubject = escapeHtml(formattedSubject);
   const safePreheader = escapeHtml(options.preheader);
   const safeTitle = escapeHtml(options.title);
   const safeGreeting = options.greeting ? escapeHtml(options.greeting) : null;
   const safeLead = escapeHtml(options.leadText);
-  const safeGroupBadge = options.groupBadge ? escapeHtml(options.groupBadge) : null;
   const safeHelperText = options.helperText ? escapeHtml(options.helperText) : null;
   const safeIgnoreNotice = options.ignoreNotice ? escapeHtml(options.ignoreNotice) : null;
   const safeCtaLabel = options.ctaLabel ? escapeHtml(options.ctaLabel) : null;
   const safeCtaUrl = options.ctaUrl ? escapeHtml(options.ctaUrl) : null;
   const safeFooterTagline = escapeHtml(t("emailFooterTagline"));
   const safeFallbackUrlLabel = escapeHtml(t("emailFallbackUrlLabel"));
+
+  const safeColorPrimary =
+    options.colorPrimary && /^#[0-9a-fA-F]{3,8}$/.test(options.colorPrimary)
+      ? options.colorPrimary
+      : "#E2001A";
+  const safeColorOnPrimary =
+    options.colorOnPrimary && /^#[0-9a-fA-F]{3,8}$/.test(options.colorOnPrimary)
+      ? options.colorOnPrimary
+      : "#FFFFFF";
 
   return `<!DOCTYPE html>
 <html lang="nl">
@@ -58,7 +81,7 @@ export function renderPassieEmailLayout(options: PassieEmailLayoutOptions): stri
       .email-callout { background-color: #0B0F19 !important; border-color: #232F46 !important; }
       .email-badge { background-color: #1E293B !important; color: #E2E8F0 !important; border-color: #334155 !important; }
       .email-divider { border-top-color: #232F46 !important; }
-      .email-link { color: #F87171 !important; }
+      .email-link { color: ${safeColorPrimary} !important; }
     }
   </style>
 </head>
@@ -74,16 +97,9 @@ export function renderPassieEmailLayout(options: PassieEmailLayoutOptions): stri
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td valign="middle">
-                  <span style="display: inline-block; width: 10px; height: 10px; border-radius: 9999px; background-color: #E2001A; margin-right: 8px; vertical-align: middle;"></span>
+                  <span style="display: inline-block; font-size: 16px; line-height: 1; margin-right: 8px; vertical-align: middle;" role="img" aria-label="ticket">🎟️</span>
                   <span class="email-title" style="font-size: 16px; font-weight: 800; letter-spacing: -0.02em; color: #09090B; vertical-align: middle;">${escapeHtml(t("appName"))}</span>
                 </td>
-                ${
-                  safeGroupBadge
-                    ? `<td align="right" valign="middle">
-                  <span class="email-badge" style="display: inline-block; font-size: 12px; font-weight: 600; color: #3F3F46; background-color: #F4F4F5; border: 1px solid #E4E4E7; border-radius: 9999px; padding: 3px 10px;">${safeGroupBadge}</span>
-                </td>`
-                    : ""
-                }
               </tr>
             </table>
           </div>
@@ -106,13 +122,13 @@ export function renderPassieEmailLayout(options: PassieEmailLayoutOptions): stri
             ${
               safeCtaLabel && safeCtaUrl
                 ? `<div style="margin-top: 24px; margin-bottom: 24px;">
-              <a href="${safeCtaUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #E2001A; color: #FFFFFF; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 10px; text-align: center;">
+              <a href="${safeCtaUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: ${safeColorPrimary}; color: ${safeColorOnPrimary}; font-size: 15px; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 10px; text-align: center;">
                 ${safeCtaLabel}
               </a>
             </div>
             <p class="email-muted" style="font-size: 12px; line-height: 1.5; color: #71717A; margin-top: 0; margin-bottom: 16px; word-break: break-all;">
               ${safeFallbackUrlLabel}<br>
-              <a href="${safeCtaUrl}" class="email-link" style="color: #E2001A; text-decoration: underline;">${safeCtaUrl}</a>
+              <a href="${safeCtaUrl}" class="email-link" style="color: ${safeColorPrimary}; text-decoration: underline;">${safeCtaUrl}</a>
             </p>`
                 : ""
             }
@@ -144,10 +160,25 @@ export function renderPassieEmailLayout(options: PassieEmailLayoutOptions): stri
 </html>`;
 }
 
-export function renderOtpEmail(to: string, otp: string): EmailPayload {
-  const safeOtp = escapeHtml(otp);
-  const subject = t("emailOtpSubject");
-  const text = t("emailOtpBodyText", { code: otp });
+export interface RenderOtpEmailParams {
+  to: string;
+  otp: string;
+  colorPrimary?: string;
+  colorOnPrimary?: string;
+}
+
+export function renderOtpEmail(
+  toOrParams: string | RenderOtpEmailParams,
+  maybeOtp?: string
+): EmailPayload {
+  const params: RenderOtpEmailParams =
+    typeof toOrParams === "string"
+      ? { to: toOrParams, otp: maybeOtp! }
+      : toOrParams;
+
+  const safeOtp = escapeHtml(params.otp);
+  const subject = formatPassieSubject(t("emailOtpSubject"));
+  const text = t("emailOtpBodyText", { code: params.otp });
 
   const calloutBoxHtml = `<div class="email-callout" style="background-color: #F4F4F5; border: 1px solid #E4E4E7; border-radius: 12px; padding: 18px 16px; text-align: center; margin-bottom: 20px;">
       <span class="email-title" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #09090B;">
@@ -157,15 +188,23 @@ export function renderOtpEmail(to: string, otp: string): EmailPayload {
 
   const html = renderPassieEmailLayout({
     subject,
-    preheader: t("emailOtpPreheader", { code: otp }),
+    preheader: t("emailOtpPreheader", { code: params.otp }),
     title: t("emailOtpBodyHtmlTitle"),
     leadText: t("emailOtpBodyHtmlDesc"),
     calloutBoxHtml,
     helperText: t("emailOtpBodyHtmlExpiry"),
     ignoreNotice: t("emailOtpBodyHtmlIgnore"),
+    colorPrimary: params.colorPrimary,
+    colorOnPrimary: params.colorOnPrimary,
   });
 
-  return { to, subject, html, text };
+  return {
+    to: params.to,
+    from: PASSIE_SENDER_AUTH,
+    subject,
+    html,
+    text,
+  };
 }
 
 export interface RenderWelcomeEmailParams {
@@ -173,17 +212,17 @@ export interface RenderWelcomeEmailParams {
   displayName: string;
   groupName?: string;
   baseUrl?: string;
+  colorPrimary?: string;
+  colorOnPrimary?: string;
 }
 
 export function renderWelcomeEmail(params: RenderWelcomeEmailParams): EmailPayload {
-  const groupName = params.groupName?.trim() || "Excelsior";
   const normalizedBaseUrl = (params.baseUrl?.trim() || "https://passie.goedvolk.org").replace(/\/+$/, "");
   const loginUrl = `${normalizedBaseUrl}/inloggen`;
 
-  const subject = t("emailWelcomeSubject", { group: groupName });
+  const subject = formatPassieSubject(t("emailWelcomeSubject"));
   const text = t("emailWelcomeBodyText", {
     name: params.displayName,
-    group: groupName,
     url: loginUrl,
   });
 
@@ -212,18 +251,25 @@ export function renderWelcomeEmail(params: RenderWelcomeEmailParams): EmailPaylo
 
   const html = renderPassieEmailLayout({
     subject,
-    preheader: t("emailWelcomePreheader", { group: groupName }),
+    preheader: t("emailWelcomePreheader"),
     title: t("emailWelcomeTitle"),
     greeting: t("emailWelcomeGreeting", { name: params.displayName }),
-    leadText: t("emailWelcomeIntro", { group: groupName }),
+    leadText: t("emailWelcomeIntro"),
     bodyHtml,
     calloutBoxHtml,
     ctaLabel: t("emailWelcomeCta"),
     ctaUrl: loginUrl,
-    groupBadge: groupName,
+    colorPrimary: params.colorPrimary,
+    colorOnPrimary: params.colorOnPrimary,
   });
 
-  return { to: params.to, subject, html, text };
+  return {
+    to: params.to,
+    from: PASSIE_SENDER_NOREPLY,
+    subject,
+    html,
+    text,
+  };
 }
 
 export interface RenderPassAssignedEmailParams {
@@ -239,19 +285,21 @@ export interface RenderPassAssignedEmailParams {
   currentHolderName: string;
   groupName?: string;
   baseUrl?: string;
+  colorPrimary?: string;
+  colorOnPrimary?: string;
 }
 
 export function renderPassAssignedEmail(params: RenderPassAssignedEmailParams): EmailPayload {
-  const groupName = params.groupName?.trim() || "Excelsior";
   const normalizedBaseUrl = (params.baseUrl?.trim() || "https://passie.goedvolk.org").replace(/\/+$/, "");
   const ctaUrl = `${normalizedBaseUrl}/`;
 
   const passDisplay = params.seatInfo ? `${params.passLabel} (${params.seatInfo})` : params.passLabel;
   const isGuest = params.kind === "guest";
 
-  const subject = isGuest
+  const rawSubject = isGuest
     ? t("emailAssignedGuestSubject", { match: params.matchLabel })
     : t("emailAssignedSubject", { match: params.matchLabel });
+  const subject = formatPassieSubject(rawSubject);
 
   const title = isGuest
     ? t("emailAssignedGuestTitle")
@@ -321,10 +369,17 @@ export function renderPassAssignedEmail(params: RenderPassAssignedEmailParams): 
     bodyHtml,
     ctaLabel: t("emailAssignedCta"),
     ctaUrl,
-    groupBadge: groupName,
+    colorPrimary: params.colorPrimary,
+    colorOnPrimary: params.colorOnPrimary,
   });
 
-  return { to: params.to, subject, html, text };
+  return {
+    to: params.to,
+    from: PASSIE_SENDER_NOREPLY,
+    subject,
+    html,
+    text,
+  };
 }
 
 export interface RenderDeadlineReminderEmailParams {
@@ -336,26 +391,25 @@ export interface RenderDeadlineReminderEmailParams {
   deadlineFormatted: string;
   groupName?: string;
   baseUrl?: string;
+  colorPrimary?: string;
+  colorOnPrimary?: string;
 }
 
 export function renderDeadlineReminderEmail(params: RenderDeadlineReminderEmailParams): EmailPayload {
-  const groupName = params.groupName?.trim() || "Excelsior";
   const normalizedBaseUrl = (params.baseUrl?.trim() || "https://passie.goedvolk.org").replace(/\/+$/, "");
   const ctaUrl = `${normalizedBaseUrl}/`;
 
   const passes = params.passLabels.join(", ");
-  const subject = t("emailReminderSubject", { match: params.matchLabel });
-  const preheader = t("emailReminderPreheader", {
-    deadline: params.deadlineFormatted,
-    match: params.matchLabel,
-  });
+  const rawSubject = t("emailReminderSubject", { match: params.matchLabel });
+  const subject = formatPassieSubject(rawSubject);
+  const preheader = t("emailReminderPreheader", { match: params.matchLabel });
   const title = t("emailReminderTitle", { match: params.matchLabel });
   const intro = t("emailReminderIntro", {
     passes,
     match: params.matchLabel,
     kickoff: params.kickoffFormatted,
   });
-  const deadlineNote = t("emailReminderDeadlineNote", {
+  const calloutNote = t("emailReminderCallout", {
     deadline: params.deadlineFormatted,
   });
 
@@ -368,9 +422,9 @@ export function renderDeadlineReminderEmail(params: RenderDeadlineReminderEmailP
     url: ctaUrl,
   });
 
-  const calloutBoxHtml = `<div class="email-callout" style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px;">
-      <p class="email-body" style="font-size: 13px; line-height: 1.5; color: #991B1B; margin: 0; font-weight: 500;">
-        ${escapeHtml(deadlineNote)}
+  const calloutBoxHtml = `<div class="email-callout" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;">
+      <p class="email-body" style="font-size: 14px; line-height: 1.5; color: #1E293B; margin: 0; font-weight: 500;">
+        ${escapeHtml(calloutNote)}
       </p>
     </div>`;
 
@@ -383,8 +437,15 @@ export function renderDeadlineReminderEmail(params: RenderDeadlineReminderEmailP
     calloutBoxHtml,
     ctaLabel: t("emailReminderCta"),
     ctaUrl,
-    groupBadge: groupName,
+    colorPrimary: params.colorPrimary,
+    colorOnPrimary: params.colorOnPrimary,
   });
 
-  return { to: params.to, subject, html, text };
+  return {
+    to: params.to,
+    from: PASSIE_SENDER_NOREPLY,
+    subject,
+    html,
+    text,
+  };
 }

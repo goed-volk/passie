@@ -65,12 +65,19 @@ async function main() {
       const group = await db.query.groups.findFirst({
         where: eq(schema.groups.id, member.groupId),
       });
+      const club = group?.clubId
+        ? await db.query.clubs.findFirst({
+            where: eq(schema.clubs.id, group.clubId),
+          })
+        : null;
       const env = proxy.env as unknown as Record<string, unknown>;
       const payload = renderWelcomeEmail({
         to: email.toLowerCase().trim(),
         displayName: member.displayName,
         groupName: group?.name,
         baseUrl: resolvePublicOrigin(env),
+        colorPrimary: club?.colorPrimary,
+        colorOnPrimary: club?.colorOnPrimary,
       });
       await dispatchTransactionalEmail({
         payload,
