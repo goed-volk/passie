@@ -2,6 +2,8 @@
 
 Passie is a mobile-first web app for groups of friends sharing season tickets (*seizoenkaarten*) for football clubs (Excelsior Rotterdam in MVP). It replaces ambiguous WhatsApp polls with a deterministic, first-come-first-served ledger and physical card possession tracker. The architecture is built on Next.js 16 App Router on Cloudflare Workers (`@opennextjs/cloudflare`) with Cloudflare D1 (SQLite) and Drizzle ORM. Detailed documentation is in `docs/architecture.md`, pinned reference in `docs/reference/README.md`, and future plans in `ROADMAP.md`.
 
+This manual is written primarily for LLM coding agents, which is why it states rules and constraints as explicit imperatives. It is also a sound way of working for human contributors: the same architecture rules, commit discipline, and verification steps apply to everyone. Human readers can treat the agent-specific tooling notes (tool selection, subagents, plan mode) as guidance rather than hard rules.
+
 ---
 
 ## 1. Golden Rules

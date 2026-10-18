@@ -100,6 +100,14 @@ This document outlines planned features and enhancements for Passie. Technical a
   - *Description:* One-tap button to copy a clean, formatted matchday roster and pass distribution summary directly into the group WhatsApp chat.
   - *Status:* Planned.
 
+- **Central Club Configuration:**
+  - *Description:* The club slug and public URL are currently hardcoded in several places (worker entry, cron and refresh routes, `src/server/snapshot.ts`, UI fallbacks in `src/app/wedstrijden/page.tsx` and `src/components/PassCard.tsx`, plus metadata and origin defaults in `src/app/layout.tsx`, `src/app/opengraph-image.tsx`, `src/server/http/assertSameOrigin.ts`, `src/server/email/dispatch.ts`, and `src/i18n/nl.ts`). Anyone forking the project has to find and change each of them, and the README list goes stale quickly. Bundle these into one explicit configuration constant (for example `CLUB_SLUG` and the public origin in an environment-driven config), so forking becomes setting a single value.
+  - *Status:* Planned.
+
+- **Project Screenshot:**
+  - *Description:* Add a screenshot of a matchday card to the README and the GitHub link preview. This helps human readers more than any text explanation can: it shows at a glance what a matchday card, the queue, and the handover look like.
+  - *Status:* Planned.
+
 - **Adaptive Timeline Timestamp Formatting (UX Audit F-23):**
   - *Description:* Format timeline timestamps with 3-tier adaptive granularity in Dutch (`Europe/Amsterdam`) so events are instantly contextualized across days:
     - **Today:** Only wall-clock time (e.g. *"11:25"*).
