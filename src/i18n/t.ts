@@ -200,6 +200,18 @@ export function formatEventText(
     }
     case "fixture.cancelled":
       return nl.events.fixtureCancelled;
+    case "deadline.reminded": {
+      const count = typeof payload.sentCount === "number" ? payload.sentCount : undefined;
+      if (count === 1) {
+        return nl.events.deadlineRemindedOne.replace("{actor}", actor);
+      }
+      if (typeof count === "number" && count > 1) {
+        return nl.events.deadlineRemindedMany
+          .replace("{actor}", actor)
+          .replace("{count}", String(count));
+      }
+      return nl.events.deadlineRemindedGeneric.replace("{actor}", actor);
+    }
     default:
       return type;
   }

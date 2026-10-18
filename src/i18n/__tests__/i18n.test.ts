@@ -103,6 +103,24 @@ describe("i18n discipline", () => {
       "Sam"
     );
     expect(textHandover).toBe("Pas 1 gewisseld van Sam naar Daan");
+
+    const textRemindOne = formatEventText(
+      "deadline.reminded",
+      { sentCount: 1 },
+      membersMap,
+      passLabelsMap,
+      "Bram"
+    );
+    expect(textRemindOne).toBe("Bram heeft een herinnering gestuurd naar 1 pashouder");
+
+    const textRemindMany = formatEventText(
+      "deadline.reminded",
+      { sentCount: 3 },
+      membersMap,
+      passLabelsMap,
+      "Bram"
+    );
+    expect(textRemindMany).toBe("Bram heeft een herinnering gestuurd naar 3 pashouders");
   });
 
   it("formats timeline timestamps adaptively based on age (today, <7d, >7d)", () => {
