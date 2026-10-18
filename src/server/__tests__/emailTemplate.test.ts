@@ -150,11 +150,12 @@ describe("email template system & dispatcher", () => {
     expect(payload.from).toEqual({ name: "Passie", email: "noreply@passie.goedvolk.org" });
     expect(payload.subject).toBe("Passie - Laat weten of je gaat: Excelsior - Sparta");
     expect(payload.text).toContain("Hoi Bram,");
+    expect(payload.text).toContain("Ga je naar Excelsior - Sparta op vrijdag 30 oktober, 20:00?");
     expect(payload.text).toContain("Pas 1, Pas 2");
-    expect(payload.text).toContain("vóór woensdag 28 oktober om 20:00");
+    expect(payload.text).toContain("Geef je pas dan vrij in Passie, dan maken we er direct iemand op de bank blij mee.");
     expect(payload.html).toContain("Ga je naar Excelsior - Sparta?");
     expect(payload.html).toContain("Pas 1, Pas 2");
-    expect(payload.html).toContain("woensdag 28 oktober om 20:00");
+    expect(payload.html).toContain("Geef je pas dan vrij in Passie, dan maken we er direct iemand op de bank blij mee.");
     expect(payload.html).toContain("Aangeven in Passie");
     expect(payload.html).toContain("#DC2626");
   });

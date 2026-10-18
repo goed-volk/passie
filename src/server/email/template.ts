@@ -388,7 +388,7 @@ export interface RenderDeadlineReminderEmailParams {
   passLabels: string[];
   matchLabel: string;
   kickoffFormatted: string;
-  deadlineFormatted: string;
+  deadlineFormatted?: string;
   groupName?: string;
   baseUrl?: string;
   colorPrimary?: string;
@@ -409,16 +409,13 @@ export function renderDeadlineReminderEmail(params: RenderDeadlineReminderEmailP
     match: params.matchLabel,
     kickoff: params.kickoffFormatted,
   });
-  const calloutNote = t("emailReminderCallout", {
-    deadline: params.deadlineFormatted,
-  });
+  const calloutNote = t("emailReminderCallout");
 
   const text = t("emailReminderBodyText", {
     name: params.ownerName,
     passes,
     match: params.matchLabel,
     kickoff: params.kickoffFormatted,
-    deadline: params.deadlineFormatted,
     url: ctaUrl,
   });
 

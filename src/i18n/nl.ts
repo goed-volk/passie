@@ -167,13 +167,13 @@ export const nl = {
 
   // Email template — Herinnering pas aangeven (vriendelijke toon)
   emailReminderSubject: "Passie - Laat weten of je gaat: {match}",
-  emailReminderPreheader: "Laat even weten of je je seizoenkaart gebruikt voor {match}.",
+  emailReminderPreheader: "Laat weten of je naar {match} gaat.",
   emailReminderTitle: "Ga je naar {match}?",
   emailReminderGreeting: "Hoi {name},",
-  emailReminderIntro: "Laat je even weten of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}?",
-  emailReminderCallout: "Ga je niet? Geef je pas dan even vrij in Passie — dan maken we er direct iemand anders op de bank blij mee! (Het liefst vóór {deadline}, zodat diegene tijd heeft om te gaan).",
+  emailReminderIntro: "Ga je naar {match} op {kickoff}? Geef aan of je jouw seizoenkaart ({passes}) gebruikt.",
+  emailReminderCallout: "Ga je niet? Geef je pas dan vrij in Passie, dan maken we er direct iemand op de bank blij mee.",
   emailReminderCta: "Aangeven in Passie",
-  emailReminderBodyText: "Hoi {name},\n\nLaat je even weten of je jouw seizoenkaart ({passes}) gebruikt voor {match} op {kickoff}?\n\nGa je niet? Geef je pas dan even vrij in Passie — dan maken we er direct iemand anders op de bank blij mee! (Het liefst vóór {deadline}, zodat diegene tijd heeft om te gaan).\n\nGeef je keuze door: {url}",
+  emailReminderBodyText: "Hoi {name},\n\nGa je naar {match} op {kickoff}? Geef aan of je jouw seizoenkaart ({passes}) gebruikt.\n\nGa je niet? Geef je pas dan vrij in Passie, dan maken we er direct iemand op de bank blij mee.\n\nGeef je keuze door: {url}",
 
   // Admin Reminder UI in TopNav
   ariaRemindUnindicated: "Herinnering sturen naar pashouders",
